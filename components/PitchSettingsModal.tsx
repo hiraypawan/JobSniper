@@ -37,13 +37,17 @@ export function PitchSettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6 overflow-y-auto"
+      onClick={onClose}
     >
       <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-lg rounded-3xl border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-950 shadow-2xl overflow-hidden"
+        onSubmit={(e) => {
+          e.stopPropagation();
+          handleSubmit(e);
+        }}
+        className="w-full max-w-lg rounded-3xl border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-950 shadow-2xl overflow-y-auto max-h-[90vh] flex flex-col"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 dark:border-obsidian-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 dark:border-obsidian-800 shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-500" />
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -52,14 +56,17 @@ export function PitchSettingsModal({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             className="p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-5 sm:p-6 space-y-5">
+        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
           <p className="text-xs text-slate-500 leading-relaxed">
             Leave fields blank to auto-tailor each pitch based on the startup&apos;s
             industry & open roles, or set your signature offer below.
@@ -149,7 +156,7 @@ export function PitchSettingsModal({
           </div>
 
           {/* AI Keys (BYOK) */}
-          <div className="pt-4 border-t border-white/10 dark:border-obsidian-800">
+          <div className="pt-4 border-t border-white/10 dark:border-obsidian-800 shrink-0">
             <p className="text-xs font-medium text-slate-900 dark:text-white mb-3">
               AI Provider Keys (Bring Your Own Key)
             </p>
@@ -172,7 +179,8 @@ export function PitchSettingsModal({
                   />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setDraft({ ...draft, geminiApiKey: "" });
                       clearApiKey("gemini");
                     }}
@@ -209,7 +217,8 @@ export function PitchSettingsModal({
                   />
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setDraft({ ...draft, openrouterApiKey: "" });
                       clearApiKey("openrouter");
                     }}
@@ -229,10 +238,13 @@ export function PitchSettingsModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-5 py-4 bg-slate-50/50 dark:bg-obsidian-950/80 border-t border-white/10 dark:border-obsidian-800">
+        <div className="flex items-center justify-between px-5 py-4 bg-slate-50/50 dark:bg-obsidian-950/80 border-t border-white/10 dark:border-obsidian-800 shrink-0">
           <button
             type="button"
-            onClick={() => setDraft(DEFAULT_PITCH_SETTINGS)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDraft(DEFAULT_PITCH_SETTINGS);
+            }}
             className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset
@@ -240,7 +252,10 @@ export function PitchSettingsModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
               className="px-4 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
             >
               Cancel
