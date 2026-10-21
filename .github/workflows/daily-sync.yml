@@ -1,0 +1,21 @@
+name: Daily StartupSniper Live Refresh (6am IST)
+
+on:
+  schedule:
+    # 00:30 UTC every day = 6:00 AM IST
+    - cron: "30 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-live-worker-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Live Worker Sync Endpoint
+        env:
+          APP_URL: ${{ vars.STARTUPSNIPER_URL }}
+        run: |
+          if [ -z "$APP_URL" ]; then
+            echo "Set repository variable STARTUPSNIPER_URL (e.g. https://startupsniper.pages.dev) to enable remote daily pre-warm."
+            exit 0
+          fi
+          curl -fsSL -X POST "${APP_URL%/}/api/sync?mode=full&force=1"

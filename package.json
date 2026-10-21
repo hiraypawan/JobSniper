@@ -1,0 +1,35 @@
+{
+  "name": "startupsniper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "StartupSniper (JobSniper) - Live Funded Startup & Remote Hiring Tracker for 5-Day Build Outreach",
+  "scripts": {
+    "dev": "node scripts/with-ca.mjs npx next dev -H 0.0.0.0 -p 3000",
+    "build": "node scripts/with-ca.mjs npx next build",
+    "start": "node scripts/with-ca.mjs npx next start -H 0.0.0.0 -p 3000",
+    "build:cf": "node scripts/with-ca.mjs node scripts/build-cf-static.mjs",
+    "deploy:cf": "npm run build:cf && npx wrangler deploy",
+    "deploy:pages": "npm run build:cf && npx wrangler pages deploy out --project-name=startupsniper",
+    "db:migrate:local": "npx wrangler d1 execute startupsniper-db --local --file=./migrations/0001_init.sql",
+    "db:migrate:remote": "npx wrangler d1 execute startupsniper-db --remote --file=./migrations/0001_init.sql",
+    "sync": "node scripts/with-ca.mjs npx tsx scripts/run-sync.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lucide-react": "^0.460.0",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.15",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "wrangler": "^3.88.0"
+  }
+}
