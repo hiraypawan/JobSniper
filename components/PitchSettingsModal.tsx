@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { RotateCcw, Sparkles, X } from "lucide-react";
 import { DEFAULT_PITCH_SETTINGS } from "@/lib/pitchTemplates";
 import { PitchSettings } from "@/lib/types";
+import { setApiKey, clearApiKey } from "@/lib/aiPitches";
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,12 @@ export function PitchSettingsModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (draft.geminiApiKey) {
+      setApiKey("gemini", draft.geminiApiKey);
+    }
+    if (draft.openrouterApiKey) {
+      setApiKey("openrouter", draft.openrouterApiKey);
+    }
     onSave(draft);
     onClose();
   };
@@ -139,6 +146,84 @@ export function PitchSettingsModal({
               />
             </div>
           </div>
+        </div>
+
+        {/* Gemini API Key (BYOK) */}
+        <div>
+          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <span>🔑</span>
+            Gemini API Key (Bring Your Own Key)
+          </label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Stored in your browser only. Never sent to any server. Used solely
+            for generating AI pitches.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="password"
+              value={draft.geminiApiKey ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, geminiApiKey: e.target.value })
+              }
+              placeholder="sk-... your Gemini API key"
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 font-mono text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setDraft({ ...draft, geminiApiKey: "" });
+                clearApiKey("gemini");
+              }}
+              className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+              disabled={!draft.geminiApiKey}
+            >
+              Clear
+            </button>
+          </div>
+          {draft.geminiApiKey ? (
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
+              Key saved locally ✓
+            </p>
+          ) : null}
+        </div>
+
+        {/* OpenRouter API Key (BYOK) */}
+        <div>
+          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <span>🔑</span>
+            OpenRouter API Key (Bring Your Own Key)
+          </label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+            Access 100+ models (Gemini, Claude, GPT, Llama). Stored in your
+            browser only. Never sent to any server.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="password"
+              value={draft.openrouterApiKey ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, openrouterApiKey: e.target.value })
+              }
+              placeholder="sk-or-... your OpenRouter API key"
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 font-mono text-xs"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setDraft({ ...draft, openrouterApiKey: "" });
+                clearApiKey("openrouter");
+              }}
+              className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
+              disabled={!draft.openrouterApiKey}
+            >
+              Clear
+            </button>
+          </div>
+          {draft.openrouterApiKey ? (
+            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
+              Key saved locally ✓
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50 dark:bg-obsidian-850 border-t border-slate-200 dark:border-slate-800">

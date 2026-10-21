@@ -153,4 +153,6 @@ export interface PitchSettings {
   similarCompanyProof: string;
   deliveryDays: number;
   demoOffer: string;
+  geminiApiKey?: string;
+  openrouterApiKey?: string;
 }

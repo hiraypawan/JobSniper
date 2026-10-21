@@ -21,6 +21,12 @@ import {
 import { copyTextSafe } from "@/lib/clipboard";
 import { buildOutreachPitches } from "@/lib/pitchTemplates";
 import { computeSniperScore } from "@/lib/scoring";
+import {
+  generateAIPitches,
+  getApiKey,
+  AIProvider,
+  AIPitchResult,
+} from "@/lib/aiPitches";
 import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
 
 interface Props {
@@ -54,11 +60,41 @@ export function CompanyDrawer({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [aiPitches, setAiPitches] = useState<AIPitchResult | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [useAI, setUseAI] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return !!(
+        localStorage.getItem("startupsniper_gemini_api_key") ||
+        localStorage.getItem("startupsniper_openrouter_api_key")
+      );
+    } catch {
+      return false;
+    }
+  });
+  const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
 
   const generated = useMemo(() => {
     if (!company) return null;
+    if (useAI && aiPitches) {
+      return {
+        inferred: {
+          toolIdea: pitchSettings.customToolIdea || "AI-generated custom micro-tool",
+          similarCompany:
+            pitchSettings.similarCompanyProof || "a recent seed-stage startup",
+          bottleneckReason: "Founder-to-founder outreach via AI-crafted pitch",
+          topRole: company.jobs?.[0]?.title || null,
+        },
+        classicSpecDm: aiPitches.classicSpecDm,
+        roleHookDm: aiPitches.roleHookDm,
+        linkedinNote: aiPitches.linkedinNote,
+        emailSubject: aiPitches.emailSubject,
+        emailBody: aiPitches.emailBody,
+      };
+    }
     return buildOutreachPitches(company, pitchSettings);
-  }, [company, pitchSettings]);
+  }, [company, pitchSettings, useAI, aiPitches]);
 
   const scoreDetail = useMemo(() => {
     if (!company) return null;
@@ -118,6 +154,23 @@ export function CompanyDrawer({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
+
+  // Generate AI pitches via Gemini/OpenRouter (BYOK) when AI mode is enabled
+  useEffect(() => {
+    if (!company?.id || !useAI) return;
+    const apiKey = getApiKey(aiProvider);
+    if (!apiKey) {
+      setUseAI(false);
+      return;
+    }
+    setAiLoading(true);
+    generateAIPitches(company, pitchSettings, aiProvider)
+      .then((result) => {
+        setAiPitches(result);
+      })
+      .catch(() => undefined)
+      .finally(() => setAiLoading(false));
+  }, [company, useAI, aiProvider, pitchSettings]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -186,6 +239,23 @@ export function CompanyDrawer({
                 <Flame className="w-3.5 h-3.5" />
                 Sniper {company.sniper_score}/100
               </span>
+              <button
+                type="button"
+                onClick={() => setUseAI((prev) => !prev)}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono border ${
+                  useAI
+                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/50"
+                    : "bg-slate-100 dark:bg-obsidian-800 text-slate-500 dark:text-slate-400 border-slate-200/50"
+                }`}
+                title={useAI ? "Switch to template pitches" : "Use AI pitches"}
+              >
+                {useAI ? `✨ ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"}` : "Template"}
+              </button>
+              {aiLoading && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 animate-pulse">
+                  <RefreshCw className="w-3 h-3 animate-spin" /> AI
+                </span>
+              )}
             </div>
 
             <div className="mt-1 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
