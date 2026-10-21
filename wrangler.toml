@@ -1,5 +1,6 @@
 name = "startupsniper"
 main = "workers/index.ts"
+account_id = "a4e4e2bec6f7d6bf6a4dc03d732bbdc9"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
@@ -18,7 +19,7 @@ crons = ["30 0 * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "startupsniper-db"
-database_id = "00000000-0000-0000-0000-000000000000" # Replace with ID from `npx wrangler d1 create startupsniper-db`
+database_id = "e908fd30-d905-4c3b-83fa-d8dca5cf234b"
 migrations_dir = "migrations"
 
 # Optional KV namespace (primary response cache lives in D1 `http_cache` for 100,000 free writes/day)
