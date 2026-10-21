@@ -35,6 +35,7 @@ interface Props {
   pitchSettings: PitchSettings;
   onClose: () => void;
   onCompanyUpdated: (updated: Company) => void;
+  onOpenAIJobHunt?: () => void;
 }
 
 type PitchTab = "classic" | "role" | "linkedin" | "email";
@@ -53,6 +54,7 @@ export function CompanyDrawer({
   pitchSettings,
   onClose,
   onCompanyUpdated,
+  onOpenAIJobHunt,
 }: Props) {
   const [liveChecking, setLiveChecking] = useState(false);
   const [liveBadge, setLiveBadge] = useState<string | null>(null);
@@ -258,6 +260,16 @@ export function CompanyDrawer({
                   <RefreshCw className="w-2.5 h-2.5 animate-spin" />
                 )}
               </button>
+              {onOpenAIJobHunt && (
+                <button
+                  type="button"
+                  onClick={onOpenAIJobHunt}
+                  className="ml-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-white dark:bg-obsidian-900 border-white/20 dark:border-obsidian-800 text-slate-500 hover:text-slate-300 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+                  title="AI Job Hunt Assistant"
+                >
+                  <Sparkles className="w-2.5 h-2.5" /> Job Hunt
+                </button>
+              )}
             </div>
 
             <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 flex-wrap">

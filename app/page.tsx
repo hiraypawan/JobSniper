@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Crosshair, RefreshCw } from "lucide-react";
 import { CompanyCard } from "@/components/CompanyCard";
 import { CompanyDrawer } from "@/components/CompanyDrawer";
+import { AIJobHuntDrawer } from "@/components/AIJobHuntDrawer";
 import { FilterBar, FilterState } from "@/components/FilterBar";
 import { HeaderBar } from "@/components/HeaderBar";
 import { KpiStrip } from "@/components/KpiStrip";
@@ -69,6 +70,9 @@ export default function DashboardPage() {
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [aiJobHuntCompany, setAiJobHuntCompany] = useState<Company | null>(
+    null
+  );
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [pitchModalOpen, setPitchModalOpen] = useState(false);
   const [pitchSettings, setPitchSettings] = useState<PitchSettings>(
@@ -516,29 +520,59 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm p-4 sm:p-6"
-        onClick={() => setSelectedCompany(null)}
-      >
+      {/* Company Drawer Overlay */}
+      {selectedCompany && (
         <motion.div
-          initial={{ x: "100%" }}
-          animate={{ x: 0 }}
-          exit={{ x: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-2xl h-full bg-white dark:bg-obsidian-950 border-l border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-6"
+          onClick={() => setSelectedCompany(null)}
         >
-          <CompanyDrawer
-            company={selectedCompany}
-            pitchSettings={pitchSettings}
-            onClose={() => setSelectedCompany(null)}
-            onCompanyUpdated={handleCompanyUpdated}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-[480px] h-auto sm:h-full bg-white dark:bg-obsidian-950 border-t sm:border-t-0 sm:border-l border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col rounded-t-3xl sm:rounded-none sm:rounded-l-3xl"
+          >
+            <CompanyDrawer
+              company={selectedCompany}
+              pitchSettings={pitchSettings}
+              onClose={() => setSelectedCompany(null)}
+              onCompanyUpdated={handleCompanyUpdated}
+              onOpenAIJobHunt={() => setAiJobHuntCompany(selectedCompany)}
+            />
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
+
+      {/* AI Job Hunt Drawer Overlay */}
+      {aiJobHuntCompany && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-60 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-md sm:p-6"
+          onClick={() => setAiJobHuntCompany(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full sm:max-w-[600px] h-auto sm:h-[85vh] bg-white dark:bg-obsidian-950 border border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col rounded-3xl"
+          >
+            <AIJobHuntDrawer
+              company={aiJobHuntCompany}
+              pitchSettings={pitchSettings}
+              onClose={() => setAiJobHuntCompany(null)}
+            />
+          </motion.div>
+        </motion.div>
+      )}
 
       <SourceHealthPopover
         isOpen={sourcesOpen}
