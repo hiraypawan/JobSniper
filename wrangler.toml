@@ -1,0 +1,27 @@
+name = "startupsniper"
+main = "workers/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# Serves static Next.js build (`out/`) AND `/api/*` Live Worker endpoints from a single deploy.
+# Note: You can also deploy straight to Cloudflare Pages (`functions/api/[[route]].ts` handles `/api/*` automatically with ZERO Cron required).
+[assets]
+directory = "./out"
+binding = "ASSETS"
+run_worker_first = true
+
+# OPTIONAL backup pre-warm schedule (30 0 * * * UTC = 6:00 AM IST).
+# Not required: the app syncs live on demand (`POST /api/sync` + SWR background refresh) unlimited times!
+[triggers]
+crons = ["30 0 * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "startupsniper-db"
+database_id = "00000000-0000-0000-0000-000000000000" # Replace with ID from `npx wrangler d1 create startupsniper-db`
+migrations_dir = "migrations"
+
+# Optional KV namespace (primary response cache lives in D1 `http_cache` for 100,000 free writes/day)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "00000000000000000000000000000000" # Optional: replace or omit if using D1 cache only
