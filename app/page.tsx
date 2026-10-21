@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Crosshair, RefreshCw } from "lucide-react";
 import { CompanyCard } from "@/components/CompanyCard";
 import { CompanyDrawer } from "@/components/CompanyDrawer";
@@ -22,7 +23,7 @@ import {
 } from "@/lib/types";
 
 const DEFAULT_FILTERS: FilterState = {
-  funded12mo: true, // Spec requirement: Funded last 12mo ON by default
+  funded12mo: true,
   fresh14d: false,
   remote: false,
   hiring: false,
@@ -37,6 +38,22 @@ const DEFAULT_FILTERS: FilterState = {
 
 const STORAGE_PITCH_KEY = "startupsniper_pitch_settings_v1";
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1,
+    },
+  },
+};
+
 export default function DashboardPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -50,8 +67,6 @@ export default function DashboardPage() {
 
   const [syncing, setSyncing] = useState(false);
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [activeLens, setActiveLens] = useState("funded12mo");
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
@@ -61,7 +76,6 @@ export default function DashboardPage() {
   );
   const [darkMode, setDarkMode] = useState(true);
 
-  // Hydrate theme + saved global offer settings
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_PITCH_KEY);
@@ -84,7 +98,6 @@ export default function DashboardPage() {
     });
   };
 
-  // Debounce search query smoothly
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(filters.search);
@@ -96,7 +109,6 @@ export default function DashboardPage() {
     async (targetPage: number, append: boolean) => {
       if (append) setLoadingMore(true);
       else setLoading(true);
-      setError(null);
 
       try {
         const params = new URLSearchParams({
@@ -155,8 +167,6 @@ export default function DashboardPage() {
           }, 2200);
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        setError(msg);
         console.error("Failed loading startups:", err);
       } finally {
         setLoading(false);
@@ -182,7 +192,6 @@ export default function DashboardPage() {
     fetchCompaniesPage(1, false);
   }, [fetchCompaniesPage]);
 
-  // Hands-free daily freshness: auto-revalidate whenever tab regains focus on a new day / session
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible") {
@@ -193,13 +202,12 @@ export default function DashboardPage() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [fetchCompaniesPage]);
 
-  // Unlimited On-Demand Live Worker Sync + Bounded Multi-Batch ATS Enrichment
   const handleSyncLive = async (force: boolean) => {
     if (syncing) return;
     setSyncing(true);
     setSyncStatusText(
       force
-        ? "Force-fetching all 6 live startup feeds directly from upstream..."
+        ? "Force-fetching all live feeds directly from upstream..."
         : "Syncing live startup feeds in parallel..."
     );
 
@@ -211,13 +219,12 @@ export default function DashboardPage() {
       if (syncRes.ok) {
         const syncJson = await syncRes.json();
         setSyncStatusText(
-          `Synced ${syncJson.upsertedCount?.toLocaleString() || ""} unique startups in ${syncJson.durationMs}ms · Enriching live ATS job boards...`
+          `Synced ${String(syncJson.upsertedCount ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ",")} unique startups in ${syncJson.durationMs}ms · Enriching live ATS boards...`
         );
       }
 
       await fetchCompaniesPage(1, false);
 
-      // Run 2 bounded Worker enrichment batches (respecting Cloudflare's 50-subrequest limit per call!)
       for (let step = 1; step <= 2; step++) {
         const enr = await fetch("/api/sync?mode=enrich&batchSize=12", {
           method: "POST",
@@ -232,7 +239,7 @@ export default function DashboardPage() {
       }
 
       await fetchCompaniesPage(1, false);
-      setSyncStatusText("All 6 live sources & ATS boards up to date!");
+      setSyncStatusText("All live sources & ATS boards up to date!");
       setTimeout(() => setSyncStatusText(null), 3000);
     } finally {
       setSyncing(false);
@@ -266,24 +273,22 @@ export default function DashboardPage() {
     }
   };
 
+  const [activeLens, setActiveLens] = useState("funded12mo");
+
   const handleUpdateCompanyStatus = async (
     companyId: string,
     status: OutreachStatus
   ) => {
-    // Instant optimistic UI update
     setCompanies((prev) =>
       prev.map((c) =>
         c.id === companyId ? { ...c, outreach_status: status } : c
       )
     );
-    const res = await fetch(
-      `/api/companies/${encodeURIComponent(companyId)}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ outreach_status: status }),
-      }
-    );
+    const res = await fetch(`/api/companies/${encodeURIComponent(companyId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ outreach_status: status }),
+    });
     if (res.ok) {
       const statsRes = await fetch("/api/stats");
       if (statsRes.ok) setStats(await statsRes.json());
@@ -363,7 +368,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-obsidian-950 text-slate-100 selection:bg-emerald-500/25">
       <HeaderBar
         stats={stats}
         syncing={syncing}
@@ -376,7 +381,7 @@ export default function DashboardPage() {
         onExportCsv={handleExportCsv}
       />
 
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-5 space-y-4">
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
         <KpiStrip
           stats={stats}
           activeQuickLens={activeLens}
@@ -394,120 +399,146 @@ export default function DashboardPage() {
           }}
         />
 
-        {error && (
-          <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-6 text-center space-y-3 mb-4">
-            <h3 className="text-red-600 font-semibold">
-              Failed to load startups
-            </h3>
-            <p className="text-sm text-red-400">{error}</p>
-            <button
-              onClick={() => {
-                setError(null);
-                fetchCompaniesPage(1, false);
-              }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition"
+        {/* Startup Cards Grid */}
+        <AnimatePresence>
+          {loading ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 py-4"
             >
-              Retry
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <motion.div
+                  key={idx}
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="h-64 rounded-3xl border border-white/10 bg-white/5 p-6 animate-pulse"
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-800" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 w-48 bg-slate-800 rounded" />
+                      <div className="h-3 w-32 bg-slate-800 rounded" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-full bg-slate-800 rounded" />
+                    <div className="h-4 w-3/4 bg-slate-800 rounded" />
+                  </div>
+                  <div className="h-8 w-24 rounded-xl bg-slate-800 mt-4" />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : companies.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center space-y-4"
+            >
+              <Crosshair className="w-10 h-10 text-emerald-500 mx-auto" />
+              <h3 className="text-lg font-semibold text-slate-100">
+                No startups matched these filters
+              </h3>
+              <p className="text-sm text-slate-500 max-w-md mx-auto">
+                Try clearing your search term, toggling off strict filters, or
+                run a fresh Live Worker sync.
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setFilters(DEFAULT_FILTERS)}
+                  className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                >
+                  Reset Filters
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSyncLive(true)}
+                  className="ml-2 px-5 py-2.5 rounded-2xl text-xs font-medium border border-emerald-500/30 bg-white/5 text-emerald-400 hover:bg-emerald-500/10 transition"
+                >
+                  Force Live Sync
+                </button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              variants={containerVariants}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {companies.map((company) => (
+                <motion.div
+                  key={company.id}
+                  layout
+                  variants={cardVariants}
+                  initial="hidden"
+                  animate="visible"
+                  whileHover={{ y: -4 }}
+                  className="cursor-pointer group"
+                >
+                  <CompanyCard
+                    company={company}
+                    pitchSettings={pitchSettings}
+                    onSelect={setSelectedCompany}
+                    onUpdateStatus={handleUpdateCompanyStatus}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {hasMore && (
+          <div className="pt-4 flex justify-center">
+            <button
+              type="button"
+              disabled={loadingMore}
+              onClick={() => fetchCompaniesPage(page + 1, true)}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 shadow-xs transition-all"
+            >
+              {loadingMore ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading more startups...
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-4 h-4 text-emerald-500" />
+                  Load More ({companies.length} of {total.toLocaleString()})
+                </>
+              )}
             </button>
           </div>
         )}
-
-        {/* Startup Cards Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-            {Array.from({ length: 9 }).map((_, idx) => (
-              <div
-                key={idx}
-                className="h-52 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-obsidian-900 p-4 animate-pulse flex flex-col justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-slate-200 dark:bg-obsidian-800" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-3.5 w-36 bg-slate-200 dark:bg-obsidian-800 rounded" />
-                    <div className="h-2.5 w-24 bg-slate-200 dark:bg-obsidian-800 rounded" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-3 w-full bg-slate-200 dark:bg-obsidian-800 rounded" />
-                  <div className="h-3 w-4/5 bg-slate-200 dark:bg-obsidian-800 rounded" />
-                </div>
-                <div className="h-8 w-28 bg-slate-200 dark:bg-obsidian-800 rounded-xl" />
-              </div>
-            ))}
-          </div>
-        ) : companies.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-obsidian-900 p-12 text-center space-y-3">
-            <Crosshair className="w-8 h-8 text-emerald-500 mx-auto" />
-            <h3 className="text-base font-semibold">
-              No startups matched these exact filters
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              Try clearing your search term, toggling off strict filters, or run
-              a fresh Live Worker sync.
-            </p>
-            <div className="flex items-center justify-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setFilters(DEFAULT_FILTERS)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950"
-              >
-                Reset Filters
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSyncLive(true)}
-                className="px-4 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700"
-              >
-                Force Live Sync
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
-              {companies.map((company) => (
-                <CompanyCard
-                  key={company.id}
-                  company={company}
-                  pitchSettings={pitchSettings}
-                  onSelect={setSelectedCompany}
-                  onUpdateStatus={handleUpdateCompanyStatus}
-                />
-              ))}
-            </div>
-
-            {hasMore && (
-              <div className="pt-4 flex justify-center">
-                <button
-                  type="button"
-                  disabled={loadingMore}
-                  onClick={() => fetchCompaniesPage(page + 1, true)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-white dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/50 shadow-xs transition"
-                >
-                  {loadingMore ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      Loading more startups...
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-4 h-4 text-emerald-500" />
-                      Load More ({companies.length} of {total.toLocaleString()})
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
-          </>
-        )}
       </main>
 
-      <CompanyDrawer
-        company={selectedCompany}
-        pitchSettings={pitchSettings}
-        onClose={() => setSelectedCompany(null)}
-        onCompanyUpdated={handleCompanyUpdated}
-      />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm p-4 sm:p-6"
+        onClick={() => setSelectedCompany(null)}
+      >
+        <motion.div
+          initial={{ x: "100%" }}
+          animate={{ x: 0 }}
+          exit={{ x: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-2xl h-full bg-white dark:bg-obsidian-950 border-l border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col"
+        >
+          <CompanyDrawer
+            company={selectedCompany}
+            pitchSettings={pitchSettings}
+            onClose={() => setSelectedCompany(null)}
+            onCompanyUpdated={handleCompanyUpdated}
+          />
+        </motion.div>
+      </motion.div>
 
       <SourceHealthPopover
         isOpen={sourcesOpen}

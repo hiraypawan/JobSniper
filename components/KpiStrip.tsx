@@ -1,14 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  Briefcase,
-  Flame,
-  Globe2,
-  Layers,
-  Send,
-  Sparkles,
-} from "lucide-react";
+import { Briefcase, Flame, Globe2, Layers, Send, Sparkles } from "lucide-react";
 import { DashboardStats } from "@/lib/types";
 
 interface Props {
@@ -30,7 +23,9 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
       value: stats ? stats.totalCompanies.toLocaleString() : "—",
       sub: "Deduplicated by domain",
       icon: Layers,
-      accent: "text-slate-600 dark:text-slate-300",
+      accent: "text-slate-400",
+      bg: "bg-white/5",
+      border: "border-white/10",
     },
     {
       id: "funded12mo",
@@ -39,16 +34,18 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
       sub: "W25–F26 + Seed rounds",
       icon: Sparkles,
       accent: "text-amber-500",
+      bg: "bg-amber-500/10",
+      border: "border-amber-500/20",
     },
     {
       id: "hiring",
       label: "Hiring Right Now",
       value: stats ? stats.hiringNow.toLocaleString() : "—",
-      sub: stats
-        ? `${stats.totalOpenRoles.toLocaleString()} open roles`
-        : "ATS + WAAS verified",
+      sub: `${stats?.totalOpenRoles?.toLocaleString() ?? "—"} open roles`,
       icon: Briefcase,
       accent: "text-emerald-500",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
     },
     {
       id: "remote",
@@ -57,14 +54,18 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
       sub: "Async build friendly",
       icon: Globe2,
       accent: "text-sky-500",
+      bg: "bg-sky-500/10",
+      border: "border-sky-500/20",
     },
     {
       id: "hot",
-      label: "Hot 5d Build Fit",
+      label: "Hot Build Fit",
       value: stats ? stats.hotLeadsCount.toLocaleString() : "—",
-      sub: "Sniper Score 80+",
+      sub: "Score 80+",
       icon: Flame,
       accent: "text-orange-500",
+      bg: "bg-orange-500/10",
+      border: "border-orange-500/20",
     },
     {
       id: "pipeline",
@@ -74,15 +75,17 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
         : "—",
       sub:
         (stats?.followUpDueCount || 0) > 0
-          ? `${stats!.followUpDueCount} follow-up due!`
-          : "Click Copy Pitch to track",
+          ? `${stats?.followUpDueCount} follow-up due`
+          : "Copy pitch to track",
       icon: Send,
       accent: "text-violet-500",
+      bg: "bg-violet-500/10",
+      border: "border-violet-500/20",
     },
   ];
 
   return (
-    <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+    <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
       {cards.map((c) => {
         const Icon = c.icon;
         const active = activeQuickLens === c.id;
@@ -91,23 +94,27 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
             key={c.id}
             type="button"
             onClick={() => onSelectLens(c.id)}
-            className={`text-left p-3.5 rounded-2xl border transition-all ${
+            className={`text-left p-4 rounded-3xl border transition-all duration-300 ${
               active
-                ? "border-emerald-500 bg-emerald-500/8 dark:bg-emerald-500/10 shadow-xs"
-                : "border-slate-200/80 dark:border-slate-800/90 bg-white dark:bg-obsidian-900 hover:border-slate-300 dark:hover:border-slate-700"
+                ? `border-emerald-500 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.15)]`
+                : `${c.border} ${c.bg} hover:border-white/20 dark:hover:border-obsidian-700 hover:bg-white/10 dark:hover:bg-obsidian-900`
             }`}
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                {c.label}
-              </span>
-              <Icon className={`w-3.5 h-3.5 ${c.accent}`} />
+              <div>
+                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                  {c.label}
+                </span>
+                <Icon className={`w-4 h-4 ${c.accent}`} />
+              </div>
             </div>
-            <div className="mt-1.5 font-mono text-lg font-bold tracking-tight text-slate-900 dark:text-white truncate">
-              {c.value}
-            </div>
-            <div className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {c.sub}
+            <div className="mt-2">
+              <div className="text-lg font-mono font-bold text-slate-100 truncate">
+                {c.value}
+              </div>
+              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                {c.sub}
+              </div>
             </div>
           </button>
         );

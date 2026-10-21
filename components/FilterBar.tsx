@@ -49,11 +49,11 @@ export function FilterBar({
   const pipelineTabs = [
     { id: "all", label: "All Leads", count: stats?.totalCompanies },
     { id: "new", label: "Inbox", count: stats?.pipelineCounts.new },
-    { id: "saved", label: "★ Saved", count: stats?.pipelineCounts.saved },
+    { id: "saved", label: "Saved", count: stats?.pipelineCounts.saved },
     { id: "pitched", label: "Pitched", count: stats?.pipelineCounts.pitched },
     {
       id: "followup_due",
-      label: "Follow-up Due",
+      label: "Follow-up",
       count: stats?.followUpDueCount,
       alert: (stats?.followUpDueCount || 0) > 0,
     },
@@ -61,10 +61,10 @@ export function FilterBar({
   ];
 
   return (
-    <section className="rounded-2xl border border-slate-200/80 dark:border-slate-800/90 bg-white dark:bg-obsidian-900 p-3.5 space-y-3 shadow-xs">
-      {/* Row 1: Pipeline CRM Tabs + Instant Search */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+    <section className="rounded-3xl border border-white/10 dark:border-obsidian-800/60 bg-white/5 dark:bg-obsidian-900/80 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
+      {/* Row 1: Pipeline + Search */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
           {pipelineTabs.map((tab) => {
             const active = filters.pipeline === tab.id;
             return (
@@ -72,23 +72,15 @@ export function FilterBar({
                 key={tab.id}
                 type="button"
                 onClick={() => onChange({ pipeline: tab.id })}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition ${
+                className={`whitespace-nowrap inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                   active
-                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-semibold"
-                    : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-obsidian-800"
+                    ? "bg-white/10 dark:bg-obsidian-800 text-white border-transparent font-semibold"
+                    : "text-slate-400 hover:bg-white/10 dark:hover:bg-obsidian-800 hover:text-slate-200 border-transparent"
                 }`}
               >
-                <span>{tab.label}</span>
-                {typeof tab.count === "number" && (
-                  <span
-                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded-md ${
-                      tab.alert
-                        ? "bg-amber-500 text-slate-950 font-bold"
-                        : active
-                          ? "bg-white/20 dark:bg-slate-900/15"
-                          : "bg-slate-200/70 dark:bg-obsidian-800 text-slate-500 dark:text-slate-400"
-                    }`}
-                  >
+                {tab.label}
+                {typeof tab.count === "number" && tab.alert && (
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500 text-slate-950">
                     {tab.count}
                   </span>
                 )}
@@ -97,22 +89,21 @@ export function FilterBar({
           })}
         </div>
 
-        {/* Search Input */}
         <div className="relative w-full lg:w-96">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             ref={searchRef}
             type="text"
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
-            placeholder="Search startup, AI agent, founder, role... (⌘K)"
-            className="w-full pl-9 pr-8 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-obsidian-850 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            placeholder="Search startup, founder, role... (⌘K)"
+            className="w-full pl-9 pr-8 py-3 rounded-2xl text-sm border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 placeholder-slate-500/60 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40 transition-all"
           />
           {filters.search && (
             <button
               type="button"
               onClick={() => onChange({ search: "" })}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
               aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
@@ -122,7 +113,7 @@ export function FilterBar({
       </div>
 
       {/* Row 2: Toggles + Dropdowns */}
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-white/10 dark:border-obsidian-800/40">
         <div className="flex flex-wrap items-center gap-2">
           <ToggleChip
             active={filters.funded12mo}
@@ -142,91 +133,90 @@ export function FilterBar({
           <ToggleChip
             active={filters.remote}
             onClick={() => onChange({ remote: !filters.remote })}
-            label="Remote Only"
+            label="Remote"
           />
           <ToggleChip
             active={filters.hiring}
             onClick={() => onChange({ hiring: !filters.hiring })}
-            label="Hiring Only"
+            label="Hiring"
           />
           <ToggleChip
             active={filters.smallTeam}
             onClick={() => onChange({ smallTeam: !filters.smallTeam })}
-            label="Small Team ≤ 15"
+            label="Small Team"
           />
+        </div>
 
-          <select
-            aria-label="Filter by source"
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <SourceSelect
+            label="Source"
             value={filters.source}
             onChange={(e) => onChange({ source: e.target.value })}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            <option value="all">Source: All</option>
-            <option value="yc">Y Combinator</option>
-            <option value="workatastartup">Work at a Startup</option>
-            <option value="wellfound">Wellfound &amp; Seed</option>
-            <option value="producthunt">Product Hunt</option>
-            <option value="indie">Indie / Show HN</option>
-            <option value="hn_hiring">HN Who is Hiring</option>
-          </select>
-
-          <select
-            aria-label="Filter by batch"
+            options={[
+              { value: "all", label: "All" },
+              { value: "yc", label: "Y Combinator" },
+              { value: "workatastartup", label: "WAAS" },
+              { value: "wellfound", label: "Wellfound" },
+              { value: "producthunt", label: "Product Hunt" },
+              { value: "indie", label: "Indie / HN" },
+              { value: "hn_hiring", label: "HN Hiring" },
+            ]}
+          />
+          <SourceSelect
+            label="Batch"
             value={filters.batch}
             onChange={(e) => onChange({ batch: e.target.value })}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            <option value="all">Batch: All</option>
-            <option value="F26">YC F26 (Fall 2026)</option>
-            <option value="S26">YC S26 (Summer 2026)</option>
-            <option value="X26">YC X26 (Spring 2026)</option>
-            <option value="W26">YC W26 (Winter 2026)</option>
-            <option value="F25">YC F25 (Fall 2025)</option>
-            <option value="S25">YC S25 (Summer 2025)</option>
-            <option value="X25">YC X25 (Spring 2025)</option>
-            <option value="W25">YC W25 (Winter 2025)</option>
-          </select>
-
-          <select
-            aria-label="Filter by ATS provider"
+            options={[
+              { value: "all", label: "All" },
+              { value: "F26", label: "F26" },
+              { value: "S26", label: "S26" },
+              { value: "X26", label: "X26" },
+              { value: "W26", label: "W26" },
+              { value: "F25", label: "F25" },
+              { value: "S25", label: "S25" },
+              { value: "X25", label: "X25" },
+              { value: "W25", label: "W25" },
+            ]}
+          />
+          <SourceSelect
+            label="ATS"
             value={filters.ats}
             onChange={(e) => onChange({ ats: e.target.value })}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            <option value="all">ATS: Any</option>
-            <option value="ashby">Ashby</option>
-            <option value="greenhouse">Greenhouse</option>
-            <option value="lever">Lever</option>
-            <option value="workable">Workable</option>
-            <option value="yc">YC WAAS</option>
-          </select>
+            options={[
+              { value: "all", label: "Any" },
+              { value: "ashby", label: "Ashby" },
+              { value: "greenhouse", label: "Greenhouse" },
+              { value: "lever", label: "Lever" },
+              { value: "workable", label: "Workable" },
+              { value: "yc", label: "YC WAAS" },
+            ]}
+          />
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400 hidden sm:inline">
+          <span className="hidden sm:inline text-[10px] font-mono text-slate-500">
             {totalResults.toLocaleString()} matches
           </span>
 
-          <select
-            aria-label="Sort companies"
+          <SourceSelect
+            label="Sort"
             value={filters.sort}
             onChange={(e) => onChange({ sort: e.target.value })}
-            className="px-2.5 py-1.5 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-          >
-            <option value="score">Sort: Best Sniper Fit</option>
-            <option value="newest">Sort: Newest Funded First</option>
-            <option value="roles">Sort: Most Open Roles</option>
-            <option value="smallest_team">Sort: Smallest Team First</option>
-          </select>
+            options={[
+              { value: "score", label: "Best Score" },
+              { value: "newest", label: "Newest" },
+              { value: "roles", label: "Most Roles" },
+              { value: "smallest_team", label: "Smallest Team" },
+            ]}
+          />
 
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-obsidian-800 transition"
-            title="Reset all filters to defaults"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs text-slate-400 hover:text-white hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            title="Reset filters"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
+            <RotateCcw className="w-3.5 h-3.5" /> Reset
           </button>
         </div>
       </div>
@@ -247,18 +237,45 @@ function ToggleChip({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
+      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${
         active
-          ? "bg-emerald-500/15 border-emerald-500/50 text-emerald-700 dark:text-emerald-300 font-semibold"
-          : "border-slate-200 dark:border-slate-700/80 bg-slate-50 dark:bg-obsidian-850 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600"
+          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 font-semibold"
+          : "border-transparent text-slate-500 hover:bg-white/10 dark:hover:bg-obsidian-800 hover:text-slate-300"
       }`}
     >
       <span
         className={`w-2 h-2 rounded-full ${
-          active ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
+          active ? "bg-emerald-500" : "bg-slate-700"
         }`}
       />
       {label}
     </button>
+  );
+}
+
+function SourceSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={onChange}
+      className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40 transition-all appearance-none"
+    >
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </select>
   );
 }

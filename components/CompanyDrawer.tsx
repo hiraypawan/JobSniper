@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Briefcase,
   Building2,
@@ -40,11 +41,11 @@ type PitchTab = "classic" | "role" | "linkedin" | "email";
 
 const STATUS_OPTIONS: { id: OutreachStatus; label: string }[] = [
   { id: "new", label: "Inbox" },
-  { id: "saved", label: "★ Saved" },
-  { id: "pitched", label: "📤 Pitched" },
-  { id: "demo_sent", label: "🎥 Demo Sent" },
-  { id: "replied", label: "💬 Replied" },
-  { id: "archived", label: "Archive" },
+  { id: "saved", label: "Saved" },
+  { id: "pitched", label: "Pitched" },
+  { id: "demo_sent", label: "Demo Sent" },
+  { id: "replied", label: "Replied" },
+  { id: "archived", label: "Archived" },
 ];
 
 export function CompanyDrawer({
@@ -62,17 +63,7 @@ export function CompanyDrawer({
   const [savingNotes, setSavingNotes] = useState(false);
   const [aiPitches, setAiPitches] = useState<AIPitchResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [useAI, setUseAI] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return !!(
-        localStorage.getItem("startupsniper_gemini_api_key") ||
-        localStorage.getItem("startupsniper_openrouter_api_key")
-      );
-    } catch {
-      return false;
-    }
-  });
+  const [useAI, setUseAI] = useState(false);
   const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
 
   const generated = useMemo(() => {
@@ -80,10 +71,12 @@ export function CompanyDrawer({
     if (useAI && aiPitches) {
       return {
         inferred: {
-          toolIdea: pitchSettings.customToolIdea || "AI-generated custom micro-tool",
+          toolIdea:
+            pitchSettings.customToolIdea ||
+            "AI-generated custom micro-tool",
           similarCompany:
             pitchSettings.similarCompanyProof || "a recent seed-stage startup",
-          bottleneckReason: "Founder-to-founder outreach via AI-crafted pitch",
+          bottleneckReason: "Founder-to-founder AI-crafted outreach",
           topRole: company.jobs?.[0]?.title || null,
         },
         classicSpecDm: aiPitches.classicSpecDm,
@@ -120,11 +113,12 @@ export function CompanyDrawer({
     setNotes(company.outreach_notes || "");
     if (activeTab === "classic") setCustomPitchText(generated.classicSpecDm);
     else if (activeTab === "role") setCustomPitchText(generated.roleHookDm);
-    else if (activeTab === "linkedin") setCustomPitchText(generated.linkedinNote);
+    else if (activeTab === "linkedin")
+      setCustomPitchText(generated.linkedinNote);
     else setCustomPitchText(generated.emailBody);
   }, [company, generated, activeTab]);
 
-  // Trigger real-time Live Worker ATS & Homepage check whenever drawer opens!
+  // Live enrich check on open
   useEffect(() => {
     if (!company?.id) return;
     let cancelled = false;
@@ -152,10 +146,9 @@ export function CompanyDrawer({
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company?.id]);
 
-  // Generate AI pitches via Gemini/OpenRouter (BYOK) when AI mode is enabled
+  // AI pitch generation
   useEffect(() => {
     if (!company?.id || !useAI) return;
     const apiKey = getApiKey(aiProvider);
@@ -214,67 +207,75 @@ export function CompanyDrawer({
     }
   };
 
+  const pitchTabs: { id: PitchTab; label: string }[] = [
+    { id: "classic", label: "Spec Pitch DM" },
+    { id: "role", label: "Open-Role Hook" },
+    { id: "linkedin", label: "LinkedIn" },
+    { id: "email", label: "Cold Email" },
+  ];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/55 backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-end sm:flex-col bg-black/50 backdrop-blur-sm"
       onClick={onClose}
     >
-      <aside
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
+        transition={{ type: "spring", damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl h-full bg-white dark:bg-obsidian-950 border-l border-slate-200 dark:border-slate-800 shadow-2xl overflow-y-auto flex flex-col"
+        className="w-full sm:w-[480px] h-full sm:h-auto bg-white dark:bg-obsidian-950 border-l border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col"
       >
-        {/* Sticky Drawer Header */}
-        <div className="sticky top-0 z-10 px-6 py-4 bg-white/95 dark:bg-obsidian-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4">
+        {/* Header */}
+        <div className="sticky top-0 z-10 px-6 py-4 bg-white/95 dark:bg-obsidian-950/95 backdrop-blur-md border-b border-white/20 dark:border-obsidian-800 flex items-start justify-between gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {company.name}
               </h2>
               {company.batch && (
-                <span className="px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-orange-500 border border-orange-500/30">
                   YC {company.batch}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                <Flame className="w-3.5 h-3.5" />
-                Sniper {company.sniper_score}/100
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                <Flame className="w-3 h-3" />
+                Score {company.sniper_score}/100
               </span>
               <button
                 type="button"
                 onClick={() => setUseAI((prev) => !prev)}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono border ${
+                className={`ml-2 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border transition-all ${
                   useAI
-                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/50"
-                    : "bg-slate-100 dark:bg-obsidian-800 text-slate-500 dark:text-slate-400 border-slate-200/50"
+                    ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
+                    : "bg-white dark:bg-obsidian-900 border-white/20 dark:border-obsidian-800 text-slate-500"
                 }`}
-                title={useAI ? "Switch to template pitches" : "Use AI pitches"}
+                title={useAI ? "Use template pitches" : "Use AI pitches"}
               >
                 {useAI ? `✨ ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"}` : "Template"}
+                {aiLoading && (
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                )}
               </button>
-              {aiLoading && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 animate-pulse">
-                  <RefreshCw className="w-3 h-3 animate-spin" /> AI
-                </span>
-              )}
             </div>
 
-            <div className="mt-1 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+            <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 flex-wrap">
               {liveChecking ? (
-                <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-mono">
+                <span className="inline-flex items-center gap-1.5 text-emerald-500 font-mono">
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  Checking live homepage &amp; ATS board...
+                  Checking live signals...
                 </span>
               ) : (
                 liveBadge && (
-                  <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-mono">
+                  <span className="inline-flex items-center gap-1 text-emerald-500 font-mono">
                     ✓ {liveBadge}
                   </span>
                 )
               )}
               {company.location && (
                 <span className="inline-flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {company.location}
+                  <MapPin className="w-3 h-3" /> {company.location}
                 </span>
               )}
               {company.team_size && (
@@ -289,21 +290,21 @@ export function CompanyDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-obsidian-800"
-            aria-label="Close detail drawer"
+            className="p-2 rounded-xl border border-white/10 dark:border-obsidian-800 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            aria-label="Close drawer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4 text-slate-500" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Quick External Links Row */}
+        <div className="p-6 sm:p-8 space-y-6">
+          {/* Quick Links */}
           <div className="flex flex-wrap items-center gap-2">
             <a
               href={company.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-950 hover:opacity-90 transition"
+              className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-semibold bg-white dark:bg-obsidian-900 text-slate-900 dark:text-white hover:opacity-90 transition-all"
             >
               <Globe className="w-3.5 h-3.5" />
               {company.domain}
@@ -315,12 +316,12 @@ export function CompanyDrawer({
                 href={company.hiring_page_url || `${company.yc_url}/jobs`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/35 hover:bg-emerald-500/25 transition"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-semibold bg-emerald-500/15 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/25 transition-all"
               >
                 <Briefcase className="w-3.5 h-3.5" />
-                Careers / Jobs ({company.open_roles_count})
+                Careers ({company.open_roles_count})
                 {company.hiring_provider && (
-                  <span className="uppercase font-mono text-[10px]">
+                  <span className="uppercase font-mono text-[9px]">
                     · {company.hiring_provider}
                   </span>
                 )}
@@ -333,85 +334,46 @@ export function CompanyDrawer({
                 href={company.yc_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-orange-500/30 bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 transition-all"
               >
-                <Building2 className="w-3.5 h-3.5" />
-                YC Profile
-              </a>
-            )}
-
-            {company.founder_twitter && (
-              <a
-                href={company.founder_twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-obsidian-800"
-              >
-                <span>𝕏 {company.founder_name || "Founder"}</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-
-            {company.founder_linkedin && (
-              <a
-                href={company.founder_linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10"
-              >
-                <Linkedin className="w-3.5 h-3.5" />
-                LinkedIn
+                <Building2 className="w-3.5 h-3.5" /> YC Profile
               </a>
             )}
 
             {company.founder_email && (
               <a
-                href={`mailto:${company.founder_email}?subject=${encodeURIComponent(
-                  generated.emailSubject
-                )}&body=${encodeURIComponent(generated.emailBody)}`}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-violet-500/35 text-violet-600 dark:text-violet-300 hover:bg-violet-500/10"
+                href={`mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`}
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/30 text-violet-400 hover:bg-violet-500/10 transition-all"
               >
-                <Mail className="w-3.5 h-3.5" />
-                {company.founder_email}
+                <Mail className="w-3 h-3" /> {company.founder_email}
               </a>
             )}
           </div>
 
-          {/* 5-DAY BUILD OUTREACH STUDIO */}
-          <section className="rounded-2xl border border-emerald-500/35 bg-emerald-500/[0.04] dark:bg-obsidian-900 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Pitch Studio */}
+          <section className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/5 p-5 sm:p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-emerald-500" />
-                <h3 className="text-sm font-bold">
-                  5-Day Build Outreach Helper
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  5-Day Build Outreach
                 </h3>
               </div>
-              <span className="text-[11px] font-mono text-emerald-700 dark:text-emerald-300">
-                Angle: {generated.inferred.bottleneckReason}
+              <span className="text-[10px] font-mono text-emerald-500">
+                {generated.inferred.bottleneckReason}
               </span>
             </div>
 
-            {/* Pitch Format Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(
-                [
-                  { id: "classic", label: "Spec Pitch DM" },
-                  { id: "role", label: "Open-Role Hook" },
-                  {
-                    id: "linkedin",
-                    label: `LinkedIn (${generated.linkedinNote.length}/300)`,
-                  },
-                  { id: "email", label: "Cold Email" },
-                ] as { id: PitchTab; label: string }[]
-              ).map((t) => (
+            <div className="flex flex-wrap gap-1.5">
+              {pitchTabs.map((t) => (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setActiveTab(t.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition ${
+                  className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
                     activeTab === t.id
-                      ? "bg-emerald-500 text-slate-950 font-semibold"
-                      : "bg-white dark:bg-obsidian-850 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                      ? "bg-emerald-500 text-slate-950 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.25)]"
+                      : "bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-slate-500 hover:text-slate-300"
                   }`}
                 >
                   {t.label}
@@ -420,9 +382,9 @@ export function CompanyDrawer({
             </div>
 
             {activeTab === "email" && (
-              <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white dark:bg-obsidian-850 border border-slate-200 dark:border-slate-800 text-xs">
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-xs">
                 <span className="truncate">
-                  <strong className="text-slate-500">Subject:</strong>{" "}
+                  <span className="text-slate-500">Subject:</span>{" "}
                   {generated.emailSubject}
                 </span>
                 <button
@@ -432,9 +394,9 @@ export function CompanyDrawer({
                     setCopiedKey("subject");
                     setTimeout(() => setCopiedKey(null), 1500);
                   }}
-                  className="text-emerald-600 dark:text-emerald-400 font-semibold shrink-0"
+                  className="text-emerald-500 font-semibold shrink-0 hover:text-emerald-400 transition"
                 >
-                  {copiedKey === "subject" ? "✓ Subject Copied" : "Copy Subject"}
+                  {copiedKey === "subject" ? "✓ Copied" : "Copy"}
                 </button>
               </div>
             )}
@@ -443,22 +405,22 @@ export function CompanyDrawer({
               rows={activeTab === "email" ? 8 : 4}
               value={customPitchText}
               onChange={(e) => setCustomPitchText(e.target.value)}
-              className="w-full p-3 rounded-xl text-xs leading-relaxed bg-white dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              className="w-full p-3.5 rounded-2xl text-xs leading-relaxed bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+              <span className="text-[10px] font-mono text-slate-500">
                 {customPitchText.length} chars
-                {activeTab === "linkedin" && customPitchText.length <= 300
-                  ? " · Fits LinkedIn connection note limit ✓"
-                  : ""}
+                {activeTab === "linkedin" && customPitchText.length <= 300 && (
+                  <span className="ml-2 text-emerald-500">Fits LinkedIn limit ✓</span>
+                )}
               </span>
 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleCopyAndMark(false)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white dark:bg-obsidian-850 hover:bg-slate-50 dark:hover:bg-obsidian-800"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
                 >
                   {copiedKey === "copied" ? (
                     <>
@@ -467,8 +429,7 @@ export function CompanyDrawer({
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3.5 h-3.5" />
-                      Copy Only
+                      <Copy className="w-3.5 h-3.5" /> Copy Only
                     </>
                   )}
                 </button>
@@ -476,27 +437,25 @@ export function CompanyDrawer({
                 <button
                   type="button"
                   onClick={() => handleCopyAndMark(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  {copiedKey === "marked"
-                    ? "Copied & Marked Pitched!"
-                    : "Copy & Mark Pitched"}
+                  <Send className="w-3 h-3" />
+                  {copiedKey === "marked" ? "Copied & Marked" : "Copy & Mark Pitched"}
                 </button>
               </div>
             </div>
           </section>
 
-          {/* OPEN ROLES LIST WITH DIRECT APPLY LINKS */}
-          <section className="space-y-2.5">
+          {/* Open Roles */}
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold flex items-center gap-2">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-emerald-500" />
                 Open Roles ({company.jobs?.length || company.open_roles_count})
               </h3>
               {company.hiring_provider && (
-                <span className="text-[11px] font-mono uppercase px-2 py-0.5 rounded-md bg-slate-100 dark:bg-obsidian-850 text-slate-600 dark:text-slate-300">
-                  Provider: {company.hiring_provider}
+                <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-md bg-slate-700/20 text-slate-500 border border-slate-700/40">
+                  {company.hiring_provider}
                 </span>
               )}
             </div>
@@ -504,19 +463,14 @@ export function CompanyDrawer({
             {company.jobs && company.jobs.length > 0 ? (
               <div className="space-y-2">
                 {company.jobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-obsidian-900 flex items-center justify-between gap-3"
-                  >
+                  <div key={job.id} className="p-3 rounded-2xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                         {job.title}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
                         {job.remote && (
-                          <span className="text-sky-600 dark:text-sky-400 font-medium">
-                            Remote
-                          </span>
+                          <span className="text-sky-400 font-medium">Remote</span>
                         )}
                         {job.location && <span>{job.location}</span>}
                         {job.department && <span>· {job.department}</span>}
@@ -526,54 +480,52 @@ export function CompanyDrawer({
                       href={job.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white dark:bg-emerald-500/15 dark:text-emerald-300 dark:border dark:border-emerald-500/30 hover:opacity-90"
+                      className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-obsidian-900 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300 transition-all"
                     >
-                      Apply / Spec
+                      Apply
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
-                No structured ATS role feed listed yet — founder direct cold pitch
-                still works well for fresh launches.
+              <div className="p-4 rounded-2xl border border-dashed border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-xs text-slate-500 text-center">
+                No structured ATS roles listed yet — founder direct pitch still works.
               </div>
             )}
           </section>
 
-          {/* FULL COMPANY DESCRIPTION + TAGS + SCORE BREAKDOWN */}
+          {/* Overview */}
           <section className="space-y-3">
-            <h3 className="text-sm font-bold">Startup Overview</h3>
-            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Overview</h3>
+            <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-line">
               {company.description}
             </p>
 
-            <div className="flex flex-wrap gap-1.5">
-              {[...(company.tags || []), ...(company.tech_stack || [])].map(
-                (tag) => (
-                  <span
-                    key={tag}
-                    className="px-2.5 py-1 rounded-lg text-[11px] bg-slate-100 dark:bg-obsidian-850 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800"
-                  >
-                    {tag}
-                  </span>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {
+                [...(company.tags || []), ...(company.tech_stack || [])].map(
+                  (tag) => (
+                    <span
+                      key={tag}
+                      className="px-2.5 py-1 rounded-xl text-[10px] bg-white/5 dark:bg-obsidian-900 text-slate-500 border border-white/10 dark:border-obsidian-800"
+                    >
+                      {tag}
+                    </span>
+                  )
                 )
-              )}
+              }
             </div>
 
             {scoreDetail && (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-obsidian-900 border border-slate-200 dark:border-slate-800 space-y-1.5">
-                <div className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                  Why Sniper Fit Score = {company.sniper_score}/100
+              <div className="mt-3 p-3.5 rounded-2xl bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 space-y-1.5">
+                <div className="text-xs font-semibold text-slate-900 dark:text-white">
+                  Why Score {company.sniper_score}/100
                 </div>
                 {scoreDetail.breakdown.map((b) => (
-                  <div
-                    key={b.label}
-                    className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400"
-                  >
+                  <div key={b.label} className="flex items-center justify-between text-[10px] text-slate-500">
                     <span>• {b.label}</span>
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="font-mono text-emerald-500 dark:text-emerald-400 font-semibold">
                       +{b.points}
                     </span>
                   </div>
@@ -582,14 +534,12 @@ export function CompanyDrawer({
             )}
           </section>
 
-          {/* OUTREACH CRM PIPELINE & NOTES */}
-          <section className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-obsidian-900 space-y-3">
+          {/* CRM Pipeline */}
+          <section className="p-4 rounded-3xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold">Outreach CRM Pipeline</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">CRM Pipeline</h3>
               {savingNotes && (
-                <span className="text-[11px] font-mono text-emerald-500">
-                  Saving to D1...
-                </span>
+                <span className="text-[10px] font-mono text-emerald-500">Saving...</span>
               )}
             </div>
 
@@ -599,10 +549,10 @@ export function CompanyDrawer({
                   key={opt.id}
                   type="button"
                   onClick={() => patchOutreach({ outreach_status: opt.id })}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                     company.outreach_status === opt.id
-                      ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 font-semibold border-transparent"
-                      : "bg-white dark:bg-obsidian-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300"
+                      ? "bg-white dark:bg-white text-slate-950 dark:text-slate-950 font-semibold border-transparent"
+                      : "bg-white dark:bg-obsidian-950 border-white/10 dark:border-obsidian-800 text-slate-500 dark:text-slate-400"
                   }`}
                 >
                   {opt.label}
@@ -610,25 +560,25 @@ export function CompanyDrawer({
               ))}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 mt-2">
               <textarea
                 rows={2}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add Loom link sent, founder reply notes, or follow-up reminder..."
-                className="w-full p-2.5 rounded-xl text-xs bg-white dark:bg-obsidian-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                placeholder="Add Loom link, founder notes, follow-up reminder..."
+                className="w-full p-2.5 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
               />
               <button
                 type="button"
                 onClick={() => patchOutreach({ outreach_notes: notes })}
-                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-white dark:bg-slate-200 dark:text-slate-950"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-all"
               >
                 Save Notes
               </button>
             </div>
           </section>
         </div>
-      </aside>
+      </motion.div>
     </div>
   );
 }

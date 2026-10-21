@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { RotateCcw, Sparkles, X } from "lucide-react";
+import { setApiKey, clearApiKey } from "@/lib/aiPitches";
 import { DEFAULT_PITCH_SETTINGS } from "@/lib/pitchTemplates";
 import { PitchSettings } from "@/lib/types";
-import { setApiKey, clearApiKey } from "@/lib/aiPitches";
 
 interface Props {
   isOpen: boolean;
@@ -36,39 +36,37 @@ export function PitchSettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-xs p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6"
+    >
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-obsidian-900 shadow-2xl overflow-hidden"
+        className="w-full max-w-lg rounded-3xl border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-950 shadow-2xl overflow-hidden"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 dark:border-obsidian-800">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-emerald-500" />
-            <h2 className="text-sm font-semibold">
-              Customize Your Global 5-Day Build Offer
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+              Customize 5-Day Build Offer
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-5 space-y-4 text-xs">
-          <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
-            Leave fields blank to let StartupSniper{" "}
-            <strong className="text-slate-800 dark:text-slate-200">
-              auto-tailor the micro-tool idea
-            </strong>{" "}
-            based on each startup&apos;s open engineering/growth roles &amp; industry,
-            or set your signature offer once below.
+        <div className="p-5 sm:p-6 space-y-5">
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Leave fields blank to auto-tailor each pitch based on the startup&apos;s
+            industry & open roles, or set your signature offer below.
           </p>
 
           <div>
-            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
+            <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
               Your Name / Sign-off (for emails)
             </label>
             <input
@@ -78,28 +76,31 @@ export function PitchSettingsModal({
                 setDraft({ ...draft, senderName: e.target.value })
               }
               placeholder="e.g. Pawan"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
-              Custom [tool idea] Override (blank = smart role-aware auto-detect)
+            <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
+              Custom Tool Idea Override
             </label>
+            <p className="text-[10px] text-slate-500 mb-2">
+              Blank = smart auto-detect based on each startup&apos;s industry
+            </p>
             <input
               type="text"
               value={draft.customToolIdea}
               onChange={(e) =>
                 setDraft({ ...draft, customToolIdea: e.target.value })
               }
-              placeholder="e.g. AI onboarding agent / interactive ROI calculator"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              placeholder="e.g. AI onboarding agent / ROI calculator"
+              className="input-field"
             />
           </div>
 
           <div>
-            <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
-              [similar company] Proof Anchor
+            <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
+              Proof Anchor (Similar Company)
             </label>
             <input
               type="text"
@@ -107,15 +108,15 @@ export function PitchSettingsModal({
               onChange={(e) =>
                 setDraft({ ...draft, similarCompanyProof: e.target.value })
               }
-              placeholder="e.g. a W26 B2B seed startup"
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              placeholder="e.g. a YC W26 seed startup"
+              className="input-field"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
-                Delivery Turnaround (Days)
+              <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
+                Delivery (Days)
               </label>
               <input
                 type="number"
@@ -128,11 +129,11 @@ export function PitchSettingsModal({
                     deliveryDays: Number(e.target.value) || 5,
                   })
                 }
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                className="input-field font-mono"
               />
             </div>
             <div>
-              <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300">
+              <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
                 Low-Friction CTA Hook
               </label>
               <input
@@ -142,112 +143,113 @@ export function PitchSettingsModal({
                   setDraft({ ...draft, demoOffer: e.target.value })
                 }
                 placeholder="45 sec Loom demo"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                className="input-field"
               />
+            </div>
+          </div>
+
+          {/* AI Keys (BYOK) */}
+          <div className="pt-4 border-t border-white/10 dark:border-obsidian-800">
+            <p className="text-xs font-medium text-slate-900 dark:text-white mb-3">
+              AI Provider Keys (Bring Your Own Key)
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <span>🔑</span>
+                  Gemini API Key
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={draft.geminiApiKey ?? ""}
+                    onChange={(e) =>
+                      setDraft({ ...draft, geminiApiKey: e.target.value })
+                    }
+                    placeholder="sk-... Gemini key"
+                    className="flex-1 input-field font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft({ ...draft, geminiApiKey: "" });
+                      clearApiKey("gemini");
+                    }}
+                    disabled={!draft.geminiApiKey}
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {draft.geminiApiKey && (
+                  <p className="text-[10px] text-emerald-500 mt-1">
+                    Saved locally ✓
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <span>🔑</span>
+                  OpenRouter API Key
+                </label>
+                <p className="text-[10px] text-slate-500 mb-2">
+                  Access Gemini, Claude, GPT, Llama models
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    value={draft.openrouterApiKey ?? ""}
+                    onChange={(e) =>
+                      setDraft({ ...draft, openrouterApiKey: e.target.value })
+                    }
+                    placeholder="sk-or-... OpenRouter key"
+                    className="flex-1 input-field font-mono text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraft({ ...draft, openrouterApiKey: "" });
+                      clearApiKey("openrouter");
+                    }}
+                    disabled={!draft.openrouterApiKey}
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {draft.openrouterApiKey && (
+                  <p className="text-[10px] text-emerald-500 mt-1">
+                    Saved locally ✓
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Gemini API Key (BYOK) */}
-        <div>
-          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            <span>🔑</span>
-            Gemini API Key (Bring Your Own Key)
-          </label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-            Stored in your browser only. Never sent to any server. Used solely
-            for generating AI pitches.
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="password"
-              value={draft.geminiApiKey ?? ""}
-              onChange={(e) =>
-                setDraft({ ...draft, geminiApiKey: e.target.value })
-              }
-              placeholder="sk-... your Gemini API key"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 font-mono text-xs"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setDraft({ ...draft, geminiApiKey: "" });
-                clearApiKey("gemini");
-              }}
-              className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
-              disabled={!draft.geminiApiKey}
-            >
-              Clear
-            </button>
-          </div>
-          {draft.geminiApiKey ? (
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
-              Key saved locally ✓
-            </p>
-          ) : null}
-        </div>
-
-        {/* OpenRouter API Key (BYOK) */}
-        <div>
-          <label className="block font-medium mb-1 text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            <span>🔑</span>
-            OpenRouter API Key (Bring Your Own Key)
-          </label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
-            Access 100+ models (Gemini, Claude, GPT, Llama). Stored in your
-            browser only. Never sent to any server.
-          </p>
-          <div className="flex items-center gap-2">
-            <input
-              type="password"
-              value={draft.openrouterApiKey ?? ""}
-              onChange={(e) =>
-                setDraft({ ...draft, openrouterApiKey: e.target.value })
-              }
-              placeholder="sk-or-... your OpenRouter API key"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 font-mono text-xs"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                setDraft({ ...draft, openrouterApiKey: "" });
-                clearApiKey("openrouter");
-              }}
-              className="px-2.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-obsidian-850 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition"
-              disabled={!draft.openrouterApiKey}
-            >
-              Clear
-            </button>
-          </div>
-          {draft.openrouterApiKey ? (
-            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-1">
-              Key saved locally ✓
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex items-center justify-between px-5 py-3.5 bg-slate-50 dark:bg-obsidian-850 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between px-5 py-4 bg-slate-50/50 dark:bg-obsidian-950/80 border-t border-white/10 dark:border-obsidian-800">
           <button
             type="button"
             onClick={() => setDraft(DEFAULT_PITCH_SETTINGS)}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset to Auto-Smart
+            <RotateCcw className="w-3.5 h-3.5" /> Reset
           </button>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-2 rounded-xl text-xs font-medium border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-obsidian-800"
+              className="px-4 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition"
+              className="btn-primary"
             >
-              Save Offer Defaults
+              Save
             </button>
           </div>
         </div>
