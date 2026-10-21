@@ -50,6 +50,7 @@ export default function DashboardPage() {
 
   const [syncing, setSyncing] = useState(false);
   const [syncStatusText, setSyncStatusText] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [activeLens, setActiveLens] = useState("funded12mo");
 
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
@@ -95,6 +96,7 @@ export default function DashboardPage() {
     async (targetPage: number, append: boolean) => {
       if (append) setLoadingMore(true);
       else setLoading(true);
+      setError(null);
 
       try {
         const params = new URLSearchParams({
@@ -113,7 +115,9 @@ export default function DashboardPage() {
           limit: "48",
         });
 
-        const res = await fetch(`/api/companies?${params.toString()}`);
+        const res = await fetch(`/api/companies?${params.toString()}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as CompaniesApiResponse;
 
@@ -132,7 +136,8 @@ export default function DashboardPage() {
           setTimeout(async () => {
             try {
               const refreshed = await fetch(
-                `/api/companies?${params.toString()}`
+                `/api/companies?${params.toString()}`,
+                { cache: "no-store" }
               );
               if (refreshed.ok) {
                 const freshData =
@@ -150,6 +155,8 @@ export default function DashboardPage() {
           }, 2200);
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        setError(msg);
         console.error("Failed loading startups:", err);
       } finally {
         setLoading(false);
@@ -386,6 +393,24 @@ export default function DashboardPage() {
             setFilters(DEFAULT_FILTERS);
           }}
         />
+
+        {error && (
+          <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-6 text-center space-y-3 mb-4">
+            <h3 className="text-red-600 font-semibold">
+              Failed to load startups
+            </h3>
+            <p className="text-sm text-red-400">{error}</p>
+            <button
+              onClick={() => {
+                setError(null);
+                fetchCompaniesPage(1, false);
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition"
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Startup Cards Grid */}
         {loading ? (
