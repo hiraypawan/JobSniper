@@ -1,5 +1,6 @@
 import { Company } from "./types";
 import { ContactInfo } from "./outreach";
+import { HUMAN_VOICE_RULES, humanizeDeep } from "./humanize";
 import {
   AIError,
   AIProvider,
@@ -30,15 +31,20 @@ export interface AIInterviewPrep {
 }
 
 /**
- * AI Contact Finder - uses LLM to infer founder/HR emails and contacts
- * based on company data, domain, and public signals.
+ * Guess who to write to at a company.
+ *
+ * The model gets the domain, the named founder and any public profiles we
+ * already have, and returns contacts with an email pattern guess and a
+ * confidence number. Treat the addresses as guesses until a send bounces back.
  */
 export async function findAIContacts(
   company: Company,
   provider: AIProvider,
   apiKey: string
 ): Promise<AIContactResult> {
-  const prompt = `You are an expert recruiter and sourcer. Given this startup, infer the most likely founder, CTO, and HR/recruiter contacts. Use the domain, founder name, and any social links provided to construct likely email patterns.
+  const prompt = `You are sourcing contacts at an early stage startup. Work out the most likely founder, CTO and HR contacts from the domain, the named founder and the public links below. Build email guesses from the usual patterns.
+
+${HUMAN_VOICE_RULES}
 
 Company: ${company.name}
 Domain: ${company.domain}
@@ -51,27 +57,30 @@ Open Roles: ${company.open_roles_count || 0}
 Description: ${company.description}
 
 Return ONLY raw JSON (no markdown) with:
-- "contacts": array of {name, role ("founder"|"hr"|"cto"|"recruiter"|"engineering_manager"), email (likely pattern like founder@domain.com or first.last@domain.com), linkedin, twitter, confidence (0-100), source}
-- "reasoning": brief explanation of how you derived these
+- "contacts": array of {name, role ("founder"|"hr"|"cto"|"recruiter"|"engineering_manager"), email (a pattern guess such as founder@domain.com or first.last@domain.com), linkedin, twitter, confidence (0-100), source}
+- "reasoning": two sentences on how you got there
 
-Focus on the founder first (highest response rate for early startups), then HR/recruiter, then CTO/Engineering Manager.`;
+Order them founder first, then HR or recruiter, then CTO or engineering manager.`;
 
   try {
     const response = await fetchAIText(provider, prompt, apiKey);
     const parsed = extractJson(response) as AIContactResult;
     recordAIGeneration(provider, true);
-    return parsed;
+    return humanizeDeep<AIContactResult>(parsed);
   } catch (err) {
     recordAIGeneration(provider, false);
     if (err instanceof AIError) throw err;
-    throw new AIError(`Contact search failed: ${err instanceof Error ? err.message : String(err)}`, {
-      provider,
-    });
+    throw new AIError(
+      `Could not fetch contacts: ${err instanceof Error ? err.message : String(err)}`,
+      { provider }
+    );
   }
 }
 
 /**
- * AI Resume & Cover Letter Tailor - customizes application per company
+ * Rewrite a resume summary and a cover letter for one company.
+ * The user's resume text is passed through untouched apart from what the
+ * model returns, so keep the prompt strict about inventing experience.
  */
 export async function tailorResumeAndCoverLetter(
   company: Company,
@@ -79,7 +88,9 @@ export async function tailorResumeAndCoverLetter(
   provider: AIProvider,
   apiKey: string
 ): Promise<AITailoredResume> {
-  const prompt = `You are an expert resume writer and career coach. Tailor this user's resume and write a cover letter for this specific startup.
+  const prompt = `You are rewriting one person's resume for one startup. Do not invent jobs, employers or numbers that are not in the text below. Keep their facts, change the framing.
+
+${HUMAN_VOICE_RULES}
 
 USER RESUME:
 ${userResume}
@@ -96,27 +107,28 @@ Return ONLY raw JSON (no markdown) with:
 - "summary": 2-3 sentence tailored professional summary
 - "skills": array of 6-8 most relevant skills for this company
 - "experience_bullets": array of 4-6 rewritten experience bullets emphasizing what this startup cares about
-- "cover_letter": concise founder-to-founder cover letter (under 200 words), human tone, no hype
-- "subject_line": email subject line for application (under 60 chars)
+- "cover_letter": short cover letter (under 200 words) that reads like a person wrote it
+- "subject_line": application subject line (under 60 chars)
 
-Sound like a real person, not corporate speak. Be specific to this company.`;
+Use the company's own words from the description where it helps.`;
 
   try {
     const response = await fetchAIText(provider, prompt, apiKey);
     const parsed = extractJson(response) as AITailoredResume;
     recordAIGeneration(provider, true);
-    return parsed;
+    return humanizeDeep<AITailoredResume>(parsed);
   } catch (err) {
     recordAIGeneration(provider, false);
     if (err instanceof AIError) throw err;
-    throw new AIError(`Resume generation failed: ${err instanceof Error ? err.message : String(err)}`, {
-      provider,
-    });
+    throw new AIError(
+      `Could not build the resume: ${err instanceof Error ? err.message : String(err)}`,
+      { provider }
+    );
   }
 }
 
 /**
- * AI Interview Prep - company and role specific questions
+ * Interview questions for one company and one role title.
  */
 export async function generateInterviewPrep(
   company: Company,
@@ -124,7 +136,9 @@ export async function generateInterviewPrep(
   provider: AIProvider,
   apiKey: string
 ): Promise<AIInterviewPrep> {
-  const prompt = `You are an expert interview coach. Generate interview preparation for this startup role.
+  const prompt = `You are helping a candidate prepare for one interview at one startup. Base the questions on the company description, the stage and the stack below. Skip generic advice.
+
+${HUMAN_VOICE_RULES}
 
 COMPANY: ${company.name}
 ${company.description}
@@ -138,20 +152,19 @@ Return ONLY raw JSON (no markdown) with:
 - "role_questions": 5 technical/role-specific questions
 - "behavioral_questions": 4 behavioral questions
 - "questions_to_ask": 5 smart questions the candidate should ask the founder/team
-- "key_talking_points": 5 key points to emphasize in the interview
-
-Be specific to this company's stage, stack, and mission.`;
+- "key_talking_points": 5 points worth raising about this company's stage and stack`;
 
   try {
     const response = await fetchAIText(provider, prompt, apiKey);
     const parsed = extractJson(response) as AIInterviewPrep;
     recordAIGeneration(provider, true);
-    return parsed;
+    return humanizeDeep<AIInterviewPrep>(parsed);
   } catch (err) {
     recordAIGeneration(provider, false);
     if (err instanceof AIError) throw err;
-    throw new AIError(`Interview prep failed: ${err instanceof Error ? err.message : String(err)}`, {
-      provider,
-    });
+    throw new AIError(
+      `Could not build interview prep: ${err instanceof Error ? err.message : String(err)}`,
+      { provider }
+    );
   }
 }

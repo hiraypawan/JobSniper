@@ -680,7 +680,7 @@ export async function fetchWellfoundFunded(
     durationMs: Date.now() - started,
     mode: liveSucceeded ? "live" : "live+fallback",
     note: liveSucceeded
-      ? `Synced ${companies.length} seed/early funded startups (<50 team) via Funding RSS + ATS boards`
-      : `Loaded ${companies.length} verified seed/Series-A startups (<50 team) with Greenhouse/Lever/Ashby/Workable boards (Wellfound anti-bot fallback active)`,
+      ? `Parsed ${companies.length} early rounds from the funding feeds`
+      : `Wellfound blocked the request, so this used ${companies.length} seed and Series A companies with working job boards`,
   };
 }

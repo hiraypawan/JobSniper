@@ -245,7 +245,7 @@ export function AIJobHuntDrawer({
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Find contacts, tailor applications, and prep for interviews using AI.
+              Find contacts, tighten your resume, get ready for the interview.
             </p>
           </div>
           <button
@@ -288,11 +288,11 @@ export function AIJobHuntDrawer({
         {!hasApiKey && (
           <div className="mx-6 mt-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-3 shrink-0">
             <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
-              AI API Key Required
+              No API key yet
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Add your Gemini or OpenRouter key in &quot;My 5d Offer&quot; settings to use
-              AI contact finder, resume tailor, and interview prep.
+              Add a Gemini or OpenRouter key in &quot;My 5d Offer&quot; and the three
+              tabs below start working.
             </p>
             <button
               type="button"
@@ -307,7 +307,7 @@ export function AIJobHuntDrawer({
           </div>
         )}
 
-        {/* Tabs — scrollable on mobile */}
+        {/* Tabs, scrolled sideways on a phone */}
         <div className="flex gap-1 border-b border-white/10 dark:border-obsidian-800 px-3 sm:px-6 overflow-x-auto no-scrollbar shrink-0 [-webkit-overflow-scrolling:touch] overscroll-x-contain">
           {(Object.keys(TAB_LABELS) as JobTab[]).map((tab) => {
             const LabelIcon = TAB_LABELS[tab].icon;
@@ -331,7 +331,7 @@ export function AIJobHuntDrawer({
           })}
         </div>
 
-        {/* Tab Content — scrollable */}
+        {/* Tab body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 overscroll-contain [-webkit-overflow-scrolling:touch]">
           {error && (
             <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-600 dark:text-red-400">
@@ -348,7 +348,7 @@ export function AIJobHuntDrawer({
                     Founder & HR Contacts
                   </h3>
                   <p className="text-xs text-slate-500">
-                    AI-inferred emails and social profiles for direct outreach
+                    Guessed from the domain. Check them before you send.
                   </p>
                 </div>
                 <button
@@ -451,8 +451,8 @@ export function AIJobHuntDrawer({
               {contacts.length === 0 && !loading.contacts && !error && (
                 <div className="text-center py-8">
                   <p className="text-xs text-slate-500">
-                    No contacts found yet. Click &quot;Find Contacts&quot; to use AI to
-                    infer founder and HR emails.
+                    Nothing here yet. Run Find Contacts and the model will guess
+                    founder and HR emails from the domain.
                   </p>
                 </div>
               )}
@@ -467,7 +467,7 @@ export function AIJobHuntDrawer({
                   AI Resume & Cover Letter
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Tailor your resume and write a cover letter for this company
+                  A summary, a few bullets and a cover letter for this company
                 </p>
               </div>
 
@@ -577,7 +577,7 @@ export function AIJobHuntDrawer({
                   AI Interview Prep
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Company-specific questions and talking points
+                  Questions this team is likely to ask, plus a few to ask them
                 </p>
               </div>
 
@@ -692,7 +692,7 @@ export function AIJobHuntDrawer({
                   Multi-Platform Outreach
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Reach founders on less competitive platforms
+                  Places founders still read their own messages
                 </p>
               </div>
 
@@ -735,13 +735,14 @@ export function AIJobHuntDrawer({
 
               <div className="rounded-xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 p-4">
                 <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
-                  Pro Tip
+                  Where to write
                 </h4>
                 <p className="text-xs text-slate-500">
-                  Less competition on Wellfound, Otta, and Built In — founders
-                  there respond faster than on LinkedIn. Combine with AI-tailored
-                              emails for 3x response rates.
-              </p>
+                  Wellfound, Otta and Built In get a fraction of the traffic
+                  LinkedIn does, so a founder is more likely to see what you
+                  send. Mention their product in the first line and skip the
+                  pitch deck.
+                </p>
               </div>
             </section>
           )}

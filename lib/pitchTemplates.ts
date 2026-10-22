@@ -120,42 +120,40 @@ export function buildOutreachPitches(
   const days = settings.deliveryDays || 5;
   const demo = settings.demoOffer.trim() || "45 sec demo";
   const signoff = settings.senderName.trim()
-    ? `\n\n— ${settings.senderName.trim()}`
+    ? `\n\n${settings.senderName.trim()}`
     : "";
 
   // 1. Exact spec pitch formula prefilled cleanly
-  const classicSpecDm = `Hey ${founderFirst}, saw ${company.name} ${cohortPhrase}. I built a tiny ${toolIdea} for ${similarCompany}. Can ship a custom version for you in ${days} days. If you don't use it, pay nothing. Want a ${demo}?`;
+  const classicSpecDm = `Hey ${founderFirst}, saw ${company.name} ${cohortPhrase}. I built a small ${toolIdea} for ${similarCompany}. I can ship a version for you in ${days} days, and you only pay if your team uses it. Want a ${demo}?`;
 
   // 2. Open-role bottleneck hook DM
   const roleClause = inferred.topRole
     ? `noticed you're hiring a ${inferred.topRole} while scaling ${company.name}`
     : `saw ${company.name} ${cohortPhrase} and loved "${company.one_liner || company.name}"`;
 
-  const roleHookDm = `Hey ${founderFirst} — ${roleClause}. While you fill headcount, I can take one self-contained ${toolIdea} off your roadmap and ship it production-ready in ${days} days (built one recently for ${similarCompany}). Zero risk: if your team doesn't ship it, you pay $0. Open to a quick ${demo}?`;
+  const roleHookDm = `Hey ${founderFirst}, ${roleClause}. While that seat is open, I can take one small ${toolIdea} off your roadmap and have it running in ${days} days. I built one for ${similarCompany} last month. If your team does not end up using it, you pay nothing. Open to a quick ${demo}?`;
 
   // 3. Strict <300 char LinkedIn Connection Note
-  let linkedinNote = `Hey ${founderFirst}, saw ${company.name} ${cohortPhrase}. Built a ${toolIdea} for ${similarCompany} — can ship a custom version for ${company.name} in ${days}d. If you don't use it, pay $0. Open to a ${demo}?`;
+  let linkedinNote = `Hey ${founderFirst}, saw ${company.name} ${cohortPhrase}. I built a ${toolIdea} for ${similarCompany} and can ship a custom one for ${company.name} in ${days} days. You only pay if it gets used. Open to a ${demo}?`;
   if (linkedinNote.length > 295) {
-    linkedinNote = `Hey ${founderFirst}, saw ${company.name} ${cohortPhrase}. I ship custom 5-day micro-tools for seed teams — pay $0 if you don't use it. Want a quick 45s demo built around ${company.name}?`.slice(
-      0,
-      295
-    );
+    const short = `Hey ${founderFirst}, saw ${company.name} ${cohortPhrase}. I ship small tools like this in ${days} days and you only pay if your team uses it. Want a 45 sec demo built on ${company.name}?`;
+    linkedinNote = short.length > 295 ? short.slice(0, 292).trimEnd() + "..." : short;
   }
 
   // 4. Cold Email Subject + Body
-  const emailSubject = `${days}-day build idea for ${company.name}${company.batch ? ` (${company.batch})` : ""} — $0 if unused`;
+  const emailSubject = `A ${days}-day build for ${company.name}${company.batch ? ` (${company.batch})` : ""}, paid only if used`;
   const emailBody = `Hey ${founderFirst},
 
-Saw ${company.name} ${cohortPhrase}${inferred.topRole ? ` + your open ${inferred.topRole} role` : ""}.
+Saw ${company.name} ${cohortPhrase}${inferred.topRole ? `, plus the ${inferred.topRole} role you have open` : ""}.
 
-I recently built a ${toolIdea} for ${similarCompany}, and put together a concrete idea tailored to ${company.name} (${company.domain}).
+I built a ${toolIdea} for ${similarCompany} a few weeks ago, and I have an idea for what the same thing could look like on ${company.domain}.
 
-My offer is simple:
-• I design, build, and hand over clean Next.js/TS code in ${days} days
-• Zero meetings needed — async updates daily
-• If your team doesn't actually use it in production, you pay $0
+How it works:
+- I design and build it, then hand over the Next.js/TypeScript repo in ${days} days
+- No calls. I send a short update each day
+- If your team never puts it in production, you pay nothing
 
-Want me to send over a ${demo} showing how it'd work on ${company.domain}?${signoff}`;
+Want a ${demo} showing it on your own site?${signoff}`;
 
   return {
     inferred,

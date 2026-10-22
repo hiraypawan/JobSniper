@@ -216,7 +216,7 @@ export async function fetchYcCompanies(
       companies,
       durationMs: Date.now() - started,
       mode: anyLive ? "live" : "cached",
-      note: `Synced ${companies.length} startups across ${succeededBatches} recent YC cohorts (W25–F26)`,
+      note: `Loaded ${companies.length} companies from ${succeededBatches} YC cohorts`,
     };
   } catch (err) {
     return {

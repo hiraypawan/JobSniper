@@ -58,13 +58,13 @@ function parseProductHuntAtom(xml: string): NormalizedCompanyInput[] {
     }
 
     const decodedTitle = decodeHtmlEntities(titleRaw);
-    // Product Hunt feed titles commonly look like "ProductName — Tagline" or just "ProductName"
-    const [rawName, ...taglineParts] = decodedTitle.split(/\s+[—–-]\s+/);
+    // Feed titles usually read "ProductName: Tagline", sometimes just "ProductName".
+    const [rawName, ...taglineParts] = decodedTitle.split(/\s+[\u2013\u2014-]\s+/);
     const name = rawName?.trim();
     if (!name) continue;
 
     const cleanContent = decodeHtmlEntities(contentRaw).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    const tagline = taglineParts.join(" — ").trim() || cleanContent.slice(0, 140);
+    const tagline = taglineParts.join(": ").trim() || cleanContent.slice(0, 140);
 
     const website = cleanWebsiteUrl(altLink);
     if (!website) continue;
@@ -163,7 +163,7 @@ export async function fetchProductHuntLaunches(
         }
         const domain = normalizeDomain(home, repo.name);
         const companyId = makeCompanyId(domain);
-        const desc = (repo.description || `${repo.name} — newly launched software product`).trim();
+        const desc = (repo.description || `${repo.name}, a newly launched product`).trim();
 
         companies.push({
           id: companyId,
@@ -199,6 +199,6 @@ export async function fetchProductHuntLaunches(
     companies,
     durationMs: Date.now() - started,
     mode: directLive ? "live" : "live+fallback",
-    note: `Synced ${companies.length} fresh product launches (last 7–14 days)`,
+    note: `Synced ${companies.length} launches from the last week`,
   };
 }

@@ -96,7 +96,7 @@ export function FilterBar({
             type="text"
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
-            placeholder="Search startup, founder, role... (⌘K)"
+            placeholder="Search company, founder or role (Cmd K)"
             className="w-full pl-9 pr-8 py-3 rounded-2xl text-sm border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 placeholder-slate-500/60 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40 transition-all"
           />
           {filters.search && (

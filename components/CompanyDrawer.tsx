@@ -79,10 +79,10 @@ export function CompanyDrawer({
         inferred: {
           toolIdea:
             pitchSettings.customToolIdea ||
-            "AI-generated custom micro-tool",
+            "small custom tool",
           similarCompany:
             pitchSettings.similarCompanyProof || "a recent seed-stage startup",
-          bottleneckReason: "Founder-to-founder AI-crafted outreach",
+          bottleneckReason: "Written by the model from this company's data",
           topRole: company.jobs?.[0]?.title || null,
         },
         classicSpecDm: aiPitches.classicSpecDm,
@@ -165,8 +165,8 @@ export function CompanyDrawer({
         onCompanyUpdated(data.company);
         setLiveBadge(
           data.checkedLive
-            ? "Verified live right now"
-            : "Synced ATS & startup signals ready"
+            ? "Checked live just now"
+            : "Using the last synced check"
         );
       })
       .catch(() => undefined)
@@ -179,8 +179,8 @@ export function CompanyDrawer({
     };
   }, [company?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // AI pitch generation — never silently disables AI; surfaces errors inline
-  // and keeps the template pitch visible as a fallback (AC2, AC5, AC6).
+  // AI pitch generation. A failure never quietly turns AI off: the error shows
+  // in the drawer and the template pitch stays on screen.
   const runAiGeneration = useCallback(async () => {
     if (!company?.id) return;
     setAiLoading(true);
@@ -289,7 +289,7 @@ export function CompanyDrawer({
                     // error banner instead of silently disabling (AC2).
                     setUseAI(true);
                     setAiError({
-                      message: `No ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"} API key saved — add it in “My 5d Offer” settings, then toggle again.`,
+                      message: `No ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"} key saved yet. Add one in “My 5d Offer”, then switch AI back on.`,
                       provider: aiProvider,
                     });
                     return;
@@ -328,7 +328,7 @@ export function CompanyDrawer({
               {liveChecking ? (
                 <span className="inline-flex items-center gap-1.5 text-emerald-500 font-mono">
                   <RefreshCw className="w-3 h-3 animate-spin" />
-                  Checking live signals...
+                  Checking this company...
                 </span>
               ) : (
                 liveBadge && (
@@ -458,7 +458,7 @@ export function CompanyDrawer({
                     Retry
                   </button>
                   <span className="ml-auto text-[10px] text-slate-500">
-                    Template pitch shown instead.
+                    Showing the template pitch instead.
                   </span>
                 </div>
               </div>
@@ -590,7 +590,7 @@ export function CompanyDrawer({
               </div>
             ) : (
               <div className="p-4 rounded-2xl border border-dashed border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-xs text-slate-500 text-center">
-                No structured ATS roles listed yet — founder direct pitch still works.
+                No public job board found for this one. A direct pitch to the founder still works.
               </div>
             )}
           </section>

@@ -20,7 +20,7 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
     {
       id: "all",
       label: "Tracked Startups",
-      value: stats ? stats.totalCompanies.toLocaleString() : "—",
+      value: stats ? stats.totalCompanies.toLocaleString() : "0",
       sub: "Deduplicated by domain",
       icon: Layers,
       accent: "text-slate-400",
@@ -30,8 +30,8 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
     {
       id: "funded12mo",
       label: "Funded < 12 Months",
-      value: stats ? stats.fundedLast12Mo.toLocaleString() : "—",
-      sub: "W25–F26 + Seed rounds",
+      value: stats ? stats.fundedLast12Mo.toLocaleString() : "0",
+      sub: "W25 to F26 plus seed rounds",
       icon: Sparkles,
       accent: "text-amber-500",
       bg: "bg-amber-500/10",
@@ -40,8 +40,8 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
     {
       id: "hiring",
       label: "Hiring Right Now",
-      value: stats ? stats.hiringNow.toLocaleString() : "—",
-      sub: `${stats?.totalOpenRoles?.toLocaleString() ?? "—"} open roles`,
+      value: stats ? stats.hiringNow.toLocaleString() : "0",
+      sub: `${stats?.totalOpenRoles?.toLocaleString() ?? "0"} open roles`,
       icon: Briefcase,
       accent: "text-emerald-500",
       bg: "bg-emerald-500/10",
@@ -50,8 +50,8 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
     {
       id: "remote",
       label: "Remote Friendly",
-      value: stats ? stats.remoteCompanies.toLocaleString() : "—",
-      sub: "Async build friendly",
+      value: stats ? stats.remoteCompanies.toLocaleString() : "0",
+      sub: "Remote or async roles",
       icon: Globe2,
       accent: "text-sky-500",
       bg: "bg-sky-500/10",
@@ -60,8 +60,8 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
     {
       id: "hot",
       label: "Hot Build Fit",
-      value: stats ? stats.hotLeadsCount.toLocaleString() : "—",
-      sub: "Score 80+",
+      value: stats ? stats.hotLeadsCount.toLocaleString() : "0",
+      sub: "Score 80 and above",
       icon: Flame,
       accent: "text-orange-500",
       bg: "bg-orange-500/10",
@@ -72,11 +72,11 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
       label: "Outreach Pipeline",
       value: stats
         ? `${pitchedTotal} pitched · ${stats.pipelineCounts.saved || 0} saved`
-        : "—",
+        : "0 pitched",
       sub:
         (stats?.followUpDueCount || 0) > 0
-          ? `${stats?.followUpDueCount} follow-up due`
-          : "Copy pitch to track",
+          ? `${stats?.followUpDueCount} follow-ups due`
+          : "Copy a pitch to start tracking",
       icon: Send,
       accent: "text-violet-500",
       bg: "bg-violet-500/10",
