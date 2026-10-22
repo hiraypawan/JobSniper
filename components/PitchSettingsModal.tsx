@@ -122,7 +122,20 @@ export function PitchSettingsModal({
     if (!key) return;
     setTestStatus((prev) => ({ ...prev, [provider]: { status: "testing", message: "Testing key…" } }));
     const result = await testApiKey(provider, key);
-    setTestStatus((prev) => ({ ...prev, [provider]: { status: result.ok ? "ok" : "fail", message: result.message } }));
+    if (result.ok) {
+      // Testing a provider key is a strong signal that this is the provider the
+      // user intends to use for 5-Day pitches; keep the selector in sync.
+      setDraft((prev) => ({ ...prev, aiProvider: provider }));
+    }
+    setTestStatus((prev) => ({
+      ...prev,
+      [provider]: {
+        status: result.ok ? "ok" : "fail",
+        message: result.ok
+          ? `${result.message} ${provider === "openrouter" ? "OpenRouter" : "Gemini"} selected. Click Save to use it.`
+          : result.message,
+      },
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -193,6 +206,9 @@ export function PitchSettingsModal({
             <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
               AI provider
             </label>
+            <p className="text-[10px] text-slate-500 mb-2">
+              5-Day pitches use this provider. A successful key test selects it; click Save to apply the provider and key.
+            </p>
             <select
               value={draft.aiProvider || "gemini"}
               onChange={(e) =>
@@ -333,9 +349,10 @@ export function PitchSettingsModal({
                       autoComplete="off"
                       spellCheck={false}
                       value={draft.geminiApiKey ?? ""}
-                      onChange={(e) =>
-                        setDraft({ ...draft, geminiApiKey: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setDraft({ ...draft, geminiApiKey: e.target.value });
+                        setTestStatus((prev) => ({ ...prev, gemini: undefined }));
+                      }}
                       placeholder="AIza... Gemini key"
                       className="w-full pr-10 input-field font-mono text-xs"
                     />
@@ -425,9 +442,10 @@ export function PitchSettingsModal({
                       autoComplete="off"
                       spellCheck={false}
                       value={draft.openrouterApiKey ?? ""}
-                      onChange={(e) =>
-                        setDraft({ ...draft, openrouterApiKey: e.target.value })
-                      }
+                      onChange={(e) => {
+                        setDraft({ ...draft, openrouterApiKey: e.target.value });
+                        setTestStatus((prev) => ({ ...prev, openrouter: undefined }));
+                      }}
                       placeholder="sk-or-... OpenRouter key"
                       className="w-full pr-10 input-field font-mono text-xs"
                     />
