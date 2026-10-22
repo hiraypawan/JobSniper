@@ -99,10 +99,21 @@ export default function DashboardPage() {
         if (legacyOpenRouter) parsed.openrouterApiKey = legacyOpenRouter;
       }
 
-      setPitchSettings({
+      // Treat browser storage as untrusted input: older versions or manual edits
+      // can leave malformed values that would otherwise break the settings UI.
+      const normalized: PitchSettings = {
         ...DEFAULT_PITCH_SETTINGS,
-        ...parsed,
-      } as PitchSettings);
+        senderName: typeof parsed.senderName === "string" ? parsed.senderName : DEFAULT_PITCH_SETTINGS.senderName,
+        customToolIdea: typeof parsed.customToolIdea === "string" ? parsed.customToolIdea : DEFAULT_PITCH_SETTINGS.customToolIdea,
+        similarCompanyProof: typeof parsed.similarCompanyProof === "string" ? parsed.similarCompanyProof : DEFAULT_PITCH_SETTINGS.similarCompanyProof,
+        deliveryDays: Number.isFinite(parsed.deliveryDays) && Number(parsed.deliveryDays) > 0
+          ? Number(parsed.deliveryDays)
+          : DEFAULT_PITCH_SETTINGS.deliveryDays,
+        demoOffer: typeof parsed.demoOffer === "string" ? parsed.demoOffer : DEFAULT_PITCH_SETTINGS.demoOffer,
+        geminiApiKey: typeof parsed.geminiApiKey === "string" ? parsed.geminiApiKey : undefined,
+        openrouterApiKey: typeof parsed.openrouterApiKey === "string" ? parsed.openrouterApiKey : undefined,
+      };
+      setPitchSettings(normalized);
       const savedTheme = localStorage.getItem("startupsniper_theme");
       if (savedTheme === "light") {
         setDarkMode(false);
