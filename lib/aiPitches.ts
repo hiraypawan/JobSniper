@@ -111,7 +111,7 @@ async function readBodyText(res: Response): Promise<string> {
   return res.text().catch(() => "");
 }
 
-async function callGemini(
+export async function callGemini(
   apiKey: string,
   prompt: string
 ): Promise<string> {
@@ -153,7 +153,10 @@ async function callGemini(
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-async function callOpenRouter(apiKey: string, prompt: string): Promise<string> {
+export async function callOpenRouter(
+  apiKey: string,
+  prompt: string
+): Promise<string> {
   let lastError: unknown;
   for (const model of OPENROUTER_MODELS) {
     try {

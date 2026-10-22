@@ -60,4 +60,8 @@ export interface WorkerEnv {
   CACHE?: KVNamespace;
   ASSETS?: AssetFetcher;
   GITHUB_TOKEN?: string;
+  // Optional shared AI keys for the /api/ai proxy (AC7). Set via `wrangler secret put`
+  // or Pages dashboard env vars so the app works without BYOK.
+  OPENROUTER_API_KEY?: string;
+  GEMINI_API_KEY?: string;
 }

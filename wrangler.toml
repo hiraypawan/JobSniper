@@ -26,3 +26,15 @@ migrations_dir = "migrations"
 [[kv_namespaces]]
 binding = "CACHE"
 id = "00000000000000000000000000000000" # Optional: replace or omit if using D1 cache only
+
+# --- Optional shared AI keys (server-side /api/ai proxy, AC7) ---------------
+# When set, the app generates AI pitches via /api/ai without requiring users to
+# bring their own key, and the key never reaches the browser.
+# Recommended (secrets, not plaintext):
+#   npx wrangler secret put OPENROUTER_API_KEY
+#   npx wrangler secret put GEMINI_API_KEY
+# (On Cloudflare Pages: Pages dashboard → Settings → Environment variables / Secrets)
+# [vars]
+#   OPENROUTER_API_KEY = ""
+#   GEMINI_API_KEY = ""
+# ---------------------------------------------------------------------------
