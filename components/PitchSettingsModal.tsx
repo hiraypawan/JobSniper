@@ -1,8 +1,15 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import { RotateCcw, Sparkles, X, Eye, EyeOff } from "lucide-react";
-import { setApiKey, clearApiKey } from "@/lib/aiPitches";
+import React, { useCallback, useEffect, useState, useRef } from "react";
+import { RotateCcw, Sparkles, X, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  setApiKey,
+  clearApiKey,
+  validateApiKey,
+  testApiKey,
+  GEMINI_KEY_REGEX,
+  OPENROUTER_KEY_REGEX,
+} from "@/lib/aiPitches";
 import { DEFAULT_PITCH_SETTINGS } from "@/lib/pitchTemplates";
 import { PitchSettings } from "@/lib/types";
 
@@ -11,6 +18,13 @@ interface Props {
   settings: PitchSettings;
   onSave: (next: PitchSettings) => void;
   onClose: () => void;
+}
+
+type TestStatus = "idle" | "testing" | "ok" | "fail";
+
+interface KeyTestState {
+  status: TestStatus;
+  message: string;
 }
 
 export function PitchSettingsModal({
@@ -22,6 +36,14 @@ export function PitchSettingsModal({
   const [draft, setDraft] = useState<PitchSettings>(settings);
   const [showGemini, setShowGemini] = useState(false);
   const [showOpenRouter, setShowOpenRouter] = useState(false);
+  const [keyErrors, setKeyErrors] = useState<{
+    gemini?: string;
+    openrouter?: string;
+  }>({});
+  const [testStatus, setTestStatus] = useState<{
+    gemini?: KeyTestState;
+    openrouter?: KeyTestState;
+  }>({});
   const firstInputRef = useRef<HTMLInputElement>(null);
 
   // Sync draft when modal opens or settings change
@@ -81,8 +103,31 @@ export function PitchSettingsModal({
 
   if (!isOpen) return null;
 
+  const validateDraft = useCallback(() => {
+    const next: { gemini?: string; openrouter?: string } = {};
+    if (draft.geminiApiKey) {
+      const result = validateApiKey("gemini", draft.geminiApiKey);
+      if (!result.valid) next.gemini = result.hint;
+    }
+    if (draft.openrouterApiKey) {
+      const result = validateApiKey("openrouter", draft.openrouterApiKey);
+      if (!result.valid) next.openrouter = result.hint;
+    }
+    setKeyErrors(next);
+    return Object.keys(next).length === 0;
+  }, [draft]);
+
+  const handleTestKey = async (provider: "gemini" | "openrouter") => {
+    const key = provider === "gemini" ? draft.geminiApiKey : draft.openrouterApiKey;
+    if (!key) return;
+    setTestStatus((prev) => ({ ...prev, [provider]: { status: "testing", message: "Testing key…" } }));
+    const result = await testApiKey(provider, key);
+    setTestStatus((prev) => ({ ...prev, [provider]: { status: result.ok ? "ok" : "fail", message: result.message } }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateDraft()) return; // block save on invalid format (AC4)
     // Persist API keys to dedicated localStorage slots for AI features
     if (draft.geminiApiKey !== undefined) {
       if (draft.geminiApiKey) {
@@ -288,8 +333,21 @@ export function PitchSettingsModal({
                   </div>
                   <button
                     type="button"
+                    onClick={() => handleTestKey("gemini")}
+                    disabled={!draft.geminiApiKey || testStatus.gemini?.status === "testing"}
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all shrink-0"
+                  >
+                    {testStatus.gemini?.status === "testing" ? "Testing…" : "Test"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setDraft({ ...draft, geminiApiKey: "" });
+                      setTestStatus((prev) => {
+                        const next = { ...prev };
+                        delete next.gemini;
+                        return next;
+                      });
                       // Don't clear storage until Save — just update draft
                     }}
                     disabled={!draft.geminiApiKey}
@@ -298,11 +356,40 @@ export function PitchSettingsModal({
                     Clear
                   </button>
                 </div>
-                {draft.geminiApiKey ? (
+                {keyErrors.gemini && (
+                  <p className="text-[10px] text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {keyErrors.gemini}
+                  </p>
+                )}
+                {!keyErrors.gemini && draft.geminiApiKey ? (
                   <p className="text-[10px] text-emerald-500 mt-1">
                     Will be saved locally on Save ✓
                   </p>
                 ) : null}
+                {testStatus.gemini && (
+                  <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                    testStatus.gemini.status === "ok"
+                      ? "text-emerald-500"
+                      : testStatus.gemini.status === "fail"
+                        ? "text-red-500"
+                        : "text-slate-500"
+                  }`}>
+                    {testStatus.gemini.status === "ok" ? (
+                      <>
+                        <CheckCircle className="w-3 h-3" /> {testStatus.gemini.message}
+                      </>
+                    ) : (
+                      <>
+                        {testStatus.gemini.status === "testing" ? (
+                          <span className="flex items-center gap-1">Testing key…</span>
+                        ) : (
+                          <AlertCircle className="w-3 h-3" />
+                        )}
+                        {testStatus.gemini.message}
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -338,8 +425,21 @@ export function PitchSettingsModal({
                   </div>
                   <button
                     type="button"
+                    onClick={() => handleTestKey("openrouter")}
+                    disabled={!draft.openrouterApiKey || testStatus.openrouter?.status === "testing"}
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all shrink-0"
+                  >
+                    {testStatus.openrouter?.status === "testing" ? "Testing…" : "Test"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setDraft({ ...draft, openrouterApiKey: "" });
+                      setTestStatus((prev) => {
+                        const next = { ...prev };
+                        delete next.openrouter;
+                        return next;
+                      });
                     }}
                     disabled={!draft.openrouterApiKey}
                     className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all shrink-0"
@@ -347,11 +447,40 @@ export function PitchSettingsModal({
                     Clear
                   </button>
                 </div>
-                {draft.openrouterApiKey ? (
+                {keyErrors.openrouter && (
+                  <p className="text-[10px] text-red-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" /> {keyErrors.openrouter}
+                  </p>
+                )}
+                {!keyErrors.openrouter && draft.openrouterApiKey ? (
                   <p className="text-[10px] text-emerald-500 mt-1">
                     Will be saved locally on Save ✓
                   </p>
                 ) : null}
+                {testStatus.openrouter && (
+                  <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                    testStatus.openrouter.status === "ok"
+                      ? "text-emerald-500"
+                      : testStatus.openrouter.status === "fail"
+                        ? "text-red-500"
+                        : "text-slate-500"
+                  }`}>
+                    {testStatus.openrouter.status === "ok" ? (
+                      <>
+                        <CheckCircle className="w-3 h-3" /> {testStatus.openrouter.message}
+                      </>
+                    ) : (
+                      <>
+                        {testStatus.openrouter.status === "testing" ? (
+                          <span className="flex items-center gap-1">Testing key…</span>
+                        ) : (
+                          <AlertCircle className="w-3 h-3" />
+                        )}
+                        {testStatus.openrouter.message}
+                      </>
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>

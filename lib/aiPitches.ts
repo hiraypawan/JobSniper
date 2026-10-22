@@ -10,24 +10,343 @@ export interface AIPitchResult {
   emailBody: string;
 }
 
+/**
+ * Structured AI error surfaced to the UI instead of silently swallowing failures.
+ * Every fetch rejection, status error, JSON parse error, or timeout becomes an
+ * AIError with provider + status so the drawer can render an inline error box.
+ */
+export class AIError extends Error {
+  readonly status: number | undefined;
+  readonly provider: string;
+  readonly retryable: boolean;
+
+  constructor(
+    message: string,
+    opts: { status?: number; provider: string; retryable?: boolean } = {
+      provider: "unknown",
+    }
+  ) {
+    super(message);
+    this.name = "AIError";
+    this.status = opts.status;
+    this.provider = opts.provider;
+    this.retryable = opts.retryable ?? false;
+  }
+}
+
 const GEMINI_KEY_STORAGE = "startupsniper_gemini_api_key";
 const OPENROUTER_KEY_STORAGE = "startupsniper_openrouter_api_key";
 
-export function getApiKey(provider: AIProvider): string | null {
+// Format hints validated on Save (AC4).
+export const GEMINI_KEY_REGEX = /^AIza[^\s]+$/;
+export const OPENROUTER_KEY_REGEX = /^sk-or-[^\s]+$/;
+
+export function validateApiKey(
+  provider: AIProvider,
+  key: string
+): { valid: boolean; hint?: string } {
+  const trimmed = key.trim();
+  if (!trimmed) return { valid: false, hint: "Key is empty" };
+  if (provider === "gemini") {
+    if (!GEMINI_KEY_REGEX.test(trimmed)) {
+      return {
+        valid: false,
+        hint: 'Invalid Gemini key — it should start with "AIza..."',
+      };
+    }
+    return { valid: true };
+  }
+  if (!OPENROUTER_KEY_REGEX.test(trimmed)) {
+    return {
+      valid: false,
+      hint: 'Invalid OpenRouter key — it should start with "sk-or-..."',
+    };
+  }
+  return { valid: true };
+}
+
+/** OpenRouter model catalog (current). First 404 triggers fallback to the next. */
+export const OPENROUTER_MODELS: string[] = [
+  "google/gemini-1.5-flash-latest",
+  "google/gemini-pro-1.5",
+  "openai/gpt-4o-mini",
+];
+
+export const GEMINI_MODEL = "gemini-1.5-flash";
+export const AI_REQUEST_TIMEOUT_MS = 8000;
+const MAX_429_RETRIES = 2;
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function fetchWithTimeout(
+  url: string,
+  opts: RequestInit,
+  ms: number = AI_REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    fetch(url, { ...opts, signal: controller.signal })
+      .then(resolve)
+      .catch((err) => {
+        // AbortError DOMException name is "AbortError"
+        if (err instanceof Error && err.name === "AbortError") {
+          reject(
+            new AIError(`Request timed out after ${ms}ms`, {
+              provider: "unknown",
+              retryable: true,
+            })
+          );
+        } else {
+          reject(err);
+        }
+      })
+      .finally(() => clearTimeout(timer));
+  });
+}
+
+async function readBodyText(res: Response): Promise<string> {
+  return res.text().catch(() => "");
+}
+
+async function callGemini(
+  apiKey: string,
+  prompt: string
+): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1500,
+      },
+    }),
+  });
+
+  if (res.status === 429) {
+    const retryAfter = res.headers.get("retry-after");
+    const backoffMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 2000;
+    throw new AIError(`Gemini API error: 429 rate limited`, {
+      status: 429,
+      provider: "gemini",
+      retryable: true,
+    });
+    // backoff handled by caller via callWithBackoff; message carries no delay,
+    // callWithBackoff uses fixed schedule. Keep the error retryable.
+  }
+
+  if (!res.ok) {
+    const text = await readBodyText(res);
+    throw new AIError(`Gemini API error: ${res.status} ${text}`, {
+      status: res.status,
+      provider: "gemini",
+      retryable: res.status >= 500,
+    });
+  }
+
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+}
+
+async function callOpenRouter(apiKey: string, prompt: string): Promise<string> {
+  let lastError: unknown;
+  for (const model of OPENROUTER_MODELS) {
+    try {
+      const res = await fetchWithTimeout(
+        "https://openrouter.ai/api/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`,
+            "HTTP-Referer": "https://jobsniper.pages.dev",
+            "X-Title": "StartupSniper",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.7,
+            max_tokens: 1500,
+          }),
+        }
+      );
+
+      if (res.status === 404) {
+        const text = await readBodyText(res);
+        console.debug(
+          "[aiPitches] OpenRouter model 404, trying fallback",
+          model,
+          text
+        );
+        lastError = new AIError(
+          `OpenRouter model not found: ${model}`,
+          { status: 404, provider: "openrouter", retryable: true }
+        );
+        continue;
+      }
+
+      if (res.status === 429) {
+        throw new AIError(`OpenRouter API error: 429 rate limited`, {
+          status: 429,
+          provider: "openrouter",
+          retryable: true,
+        });
+      }
+
+      if (!res.ok) {
+        const text = await readBodyText(res);
+        throw new AIError(`OpenRouter API error: ${res.status} ${text}`, {
+          status: res.status,
+          provider: "openrouter",
+          retryable: res.status >= 500,
+        });
+      }
+
+      const data = await res.json();
+      if (model !== OPENROUTER_MODELS[0]) {
+        console.debug("[aiPitches] OpenRouter fallback model succeeded:", model);
+      }
+      return data.choices?.[0]?.message?.content || "";
+    } catch (err) {
+      if (err instanceof AIError && !err.retryable) throw err;
+      lastError = err;
+      // 404 falls through to next model; anything else re-throws below
+      if (!(err instanceof AIError) || err.status === 404) continue;
+      throw err;
+    }
+  }
+  throw lastError;
+}
+
+/**
+ * Run a provider call with exponential backoff on 429 (and retryable 404 model fallback
+ * is already handled inside callOpenRouter).
+ */
+async function callWithBackoff(fn: () => Promise<string>): Promise<string> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (
+        err instanceof AIError &&
+        err.retryable &&
+        err.status === 429 &&
+        attempt < MAX_429_RETRIES
+      ) {
+        const delayMs = [2000, 5000][attempt] ?? 5000;
+        console.debug(
+          "[aiPitches] rate limited, retrying in",
+          delayMs,
+          "ms (attempt",
+          attempt + 1,
+          ")"
+        );
+        await sleep(delayMs);
+        attempt++;
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+/**
+ * Robust JSON extraction: strips markdown fences, trims, then falls back to
+ * extracting the first balanced `{...}` object before JSON.parse.
+ * Throws AIError with a clear message when no parseable object exists.
+ */
+export function extractJson(text: string): unknown {
+  let cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    // fall through to balanced-brace extraction
+  }
+
+  const start = cleaned.indexOf("{");
+  if (start === -1) {
+    throw new AIError("AI response did not contain a JSON object", {
+      provider: "unknown",
+    });
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (inString) {
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        try {
+          return JSON.parse(cleaned.slice(start, i + 1));
+        } catch {
+          throw new AIError("AI response contained malformed JSON", {
+            provider: "unknown",
+          });
+        }
+      }
+    }
+  }
+
+  throw new AIError("AI response contained no complete JSON object", {
+    provider: "unknown",
+  });
+}
+
+/**
+ * Resolve an API key for a provider.
+ * Priority: dedicated localStorage slot (set by PitchSettingsModal) →
+ * pitchSettings api keys (hydrated from startupsniper_pitch_settings_v1).
+ */
+export function getApiKey(
+  provider: AIProvider,
+  settings?: PitchSettings | null
+): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const key = provider === "gemini"
-      ? localStorage.getItem(GEMINI_KEY_STORAGE)
-      : localStorage.getItem(OPENROUTER_KEY_STORAGE);
-    console.debug(
-      "[aiPitches] getApiKey",
-      provider,
-      "hasKey=",
-      Boolean(key),
-      "source=",
-      key ? "localStorage" : "none"
-    );
-    return key;
+    const stored =
+      provider === "gemini"
+        ? localStorage.getItem(GEMINI_KEY_STORAGE)
+        : localStorage.getItem(OPENROUTER_KEY_STORAGE);
+    if (stored) {
+      console.debug("[aiPitches] getApiKey", provider, "source=localStorage");
+      return stored;
+    }
+    const settingsKey =
+      provider === "gemini"
+        ? settings?.geminiApiKey
+        : settings?.openrouterApiKey;
+    if (settingsKey) {
+      console.debug("[aiPitches] getApiKey", provider, "source=pitchSettings");
+      return settingsKey;
+    }
+    console.debug("[aiPitches] getApiKey", provider, "source=none");
+    return null;
   } catch {
     return null;
   }
@@ -59,83 +378,199 @@ export function clearApiKey(provider: AIProvider): void {
   }
 }
 
-async function callGemini(apiKey: string, prompt: string): Promise<string> {
-  const model = "gemini-1.5-flash";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1500,
-      },
-    }),
-  });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Gemini API error: ${res.status} ${text}`);
+/**
+ * Lightweight auth check used by the "Test Key" button (AC4).
+ * Gemini: lists models (GET). OpenRouter: /auth/key (GET).
+ */
+export async function testApiKey(
+  provider: AIProvider,
+  apiKey: string
+): Promise<{ ok: boolean; message: string }> {
+  try {
+    if (provider === "gemini") {
+      const res = await fetchWithTimeout(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(
+          apiKey
+        )}`,
+        { method: "GET" }
+      );
+      if (!res.ok) {
+        const text = await readBodyText(res);
+        return {
+          ok: false,
+          message: `Gemini test failed: ${res.status} ${text}`,
+        };
+      }
+      return { ok: true, message: "Gemini key is valid ✓" };
+    } else {
+      const res = await fetchWithTimeout(
+        "https://openrouter.ai/api/v1/auth/key",
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${apiKey}` },
+        }
+      );
+      if (!res.ok) {
+        const text = await readBodyText(res);
+        return {
+          ok: false,
+          message: `OpenRouter test failed: ${res.status} ${text}`,
+        };
+      }
+      return { ok: true, message: "OpenRouter key is valid ✓" };
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Key test failed",
+    };
   }
-
-  const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
-async function callOpenRouter(apiKey: string, prompt: string): Promise<string> {
-  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+/**
+ * Analytics-lite: records when AI generation is attempted and whether it
+ * succeeded. Stored in localStorage only, no external endpoint.
+ */
+export function recordAIGeneration(provider: AIProvider, ok: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      "startupsniper_last_ai_generation_at",
+      String(Date.now())
+    );
+    if (ok) {
+      const countKey = "startupsniper_ai_success_count";
+      const prev = Number(localStorage.getItem(countKey) || "0");
+      localStorage.setItem(countKey, String(prev + 1));
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Proxy vs direct fetching                                           */
+/* ------------------------------------------------------------------ */
+
+/** Raised when the /api/ai proxy is not deployed (404) — try direct fetch. */
+class ProxyMissing extends AIError {
+  constructor() {
+    super("AI proxy endpoint not found (404)", {
+      status: 404,
+      provider: "openrouter",
+      retryable: false,
+    });
+  }
+}
+
+async function viaProxy(
+  provider: AIProvider,
+  prompt: string,
+  clientApiKey: string | null
+): Promise<string> {
+  const res = await fetchWithTimeout("/api/ai", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "HTTP-Referer": "https://jobsniper.pages.dev",
-      "X-Title": "StartupSniper",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-flash-1.5",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 1500,
-    }),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ provider, prompt, task: "generation", apiKey: clientApiKey }),
   });
 
+  if (res.status === 404) throw new ProxyMissing();
+
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenRouter API error: ${res.status} ${text}`);
+    let body: { error?: string; status?: number } | null = null;
+    try {
+      body = (await res.json()) as { error?: string; status?: number };
+    } catch {
+      // ignore
+    }
+    throw new AIError(
+      body?.error || `AI proxy error: ${res.status}`,
+      {
+        status: body?.status ?? res.status,
+        provider,
+        retryable: res.status === 429 || res.status >= 500,
+      }
+    );
   }
 
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content || "";
+  const data = (await res.json()) as {
+    ok?: boolean;
+    text?: string;
+    error?: string;
+  };
+  if (!data?.ok || !data.text) {
+    throw new AIError(data?.error || "Empty response from AI proxy", {
+      provider,
+    });
+  }
+  return data.text;
+}
+
+async function callDirect(
+  provider: AIProvider,
+  apiKey: string,
+  prompt: string
+): Promise<string> {
+  return provider === "gemini"
+    ? callWithBackoff(() => callGemini(apiKey, prompt))
+    : callWithBackoff(() => callOpenRouter(apiKey, prompt));
+}
+
+/**
+ * Fetch AI-generated text: prefers the same-origin /api/ai proxy (server key
+ * or forwarded client key — never exposes the key to third parties from the
+ * browser), falling back to a direct browser fetch when the proxy is not
+ * deployed or not configured.
+ */
+export async function fetchAIText(
+  provider: AIProvider,
+  prompt: string,
+  clientApiKey: string | null
+): Promise<string> {
+  try {
+    return await viaProxy(provider, prompt, clientApiKey);
+  } catch (proxyErr) {
+    if (clientApiKey) {
+      console.debug(
+        "[aiPitches] proxy unavailable, falling back to direct fetch",
+        provider,
+        proxyErr instanceof Error ? proxyErr.message : String(proxyErr)
+      );
+      return callDirect(provider, clientApiKey, prompt);
+    }
+    throw proxyErr;
+  }
 }
 
 export async function generateAIPitches(
   company: Company,
   settings: PitchSettings,
   provider: AIProvider
-): Promise<AIPitchResult | null> {
-  try {
-    const apiKey = getApiKey(provider);
-    if (!apiKey) throw new Error(`No ${provider} API key saved`);
+): Promise<AIPitchResult> {
+  const apiKey = getApiKey(provider, settings);
+  if (!apiKey) {
+    throw new AIError(`No ${provider === "gemini" ? "Gemini" : "OpenRouter"} API key saved. Add it in “My 5d Offer” settings.`, {
+      provider,
+    });
+  }
 
-    const founderFirst = company.founder_name
-      ? company.founder_name.split(/[\s,(&/]+/)[0].trim()
-      : "Founder";
+  const founderFirst = company.founder_name
+    ? company.founder_name.split(/[\s,(&/]+/)[0].trim()
+    : "Founder";
 
-    const cohortPhrase = company.batch
-      ? `YC ${company.batch}`
-      : company.funding_amount
-        ? `just raised ${company.funding_amount}`
-        : company.source === "producthunt"
-          ? "launching on Product Hunt"
-          : company.source === "indie"
-            ? "on Hacker News"
-            : "scaling fast";
+  const cohortPhrase = company.batch
+    ? `YC ${company.batch}`
+    : company.funding_amount
+      ? `just raised ${company.funding_amount}`
+      : company.source === "producthunt"
+        ? "launching on Product Hunt"
+        : company.source === "indie"
+          ? "on Hacker News"
+          : "scaling fast";
 
-    const topRole = company.jobs?.[0]?.title || null;
+  const topRole = company.jobs?.[0]?.title || null;
 
-    const prompt = `You are an expert B2B outbound copywriter. Write 4 cold outreach formats for this startup. Sound like a real founder writing to another founder — natural, human, helpful, no hype, no buzzwords, no overly salesy language. Be specific and concise.
+  const prompt = `You are an expert B2B outbound copywriter. Write 4 cold outreach formats for this startup. Sound like a real founder writing to another founder — natural, human, helpful, no hype, no buzzwords, no overly salesy language. Be specific and concise.
 
 Company: ${company.name}
 Domain: ${company.domain}
@@ -169,34 +604,30 @@ Return ONLY a raw JSON object (no markdown code blocks) with these exact keys:
 
 Personalize each format specifically to this company. Do not wrap in markdown.`;
 
-    console.debug(
-      "[aiPitches] generateAIPitches start",
-      provider,
-      company.name,
-      "hasKey=",
-      Boolean(apiKey)
-    );
+  console.debug("[aiPitches] generateAIPitches start", provider, company.name, "hasKey=", Boolean(apiKey));
 
-    const response =
-      provider === "gemini"
-        ? await callGemini(apiKey, prompt)
-        : await callOpenRouter(apiKey, prompt);
+  const response = await callWithBackoff(() => fetchAIText(provider, prompt, apiKey));
 
-    const cleaned = response.replace(/```json/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(cleaned) as AIPitchResult;
-
-    console.debug("[aiPitches] generateAIPitches success", provider, company.name);
-
-    return {
-      classicSpecDm: parsed.classicSpecDm || "",
-      roleHookDm: parsed.roleHookDm || "",
-      linkedinNote: parsed.linkedinNote || "",
-      emailSubject: parsed.emailSubject || "",
-      emailBody: parsed.emailBody || "",
-    };
+  let parsed: unknown;
+  try {
+    parsed = extractJson(response);
   } catch (err) {
-    console.error("AI pitch generation failed:", err);
-    console.debug("[aiPitches] generateAIPitches error", provider, company.name, String(err));
-    return null;
+    console.debug("[aiPitches] JSON parse failed", provider, company.name, String(err), "raw=", response.slice(0, 500));
+    throw new AIError("AI returned invalid JSON — showing template pitch instead.", {
+      provider,
+      retryable: false,
+    });
   }
+
+  const p = parsed as Partial<AIPitchResult>;
+  console.debug("[aiPitches] generateAIPitches success", provider, company.name);
+  recordAIGeneration(provider, true);
+
+  return {
+    classicSpecDm: p.classicSpecDm || "",
+    roleHookDm: p.roleHookDm || "",
+    linkedinNote: p.linkedinNote || "",
+    emailSubject: p.emailSubject || "",
+    emailBody: p.emailBody || "",
+  };
 }

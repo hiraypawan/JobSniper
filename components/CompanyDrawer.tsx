@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Briefcase,
@@ -27,6 +27,7 @@ import {
   getApiKey,
   AIProvider,
   AIPitchResult,
+  AIError,
 } from "@/lib/aiPitches";
 import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
 
@@ -36,6 +37,7 @@ interface Props {
   onClose: () => void;
   onCompanyUpdated: (updated: Company) => void;
   onOpenAIJobHunt?: () => void;
+  onOpenPitchSettings?: () => void;
 }
 
 type PitchTab = "classic" | "role" | "linkedin" | "email";
@@ -55,6 +57,7 @@ export function CompanyDrawer({
   onClose,
   onCompanyUpdated,
   onOpenAIJobHunt,
+  onOpenPitchSettings,
 }: Props) {
   const [liveChecking, setLiveChecking] = useState(false);
   const [liveBadge, setLiveBadge] = useState<string | null>(null);
@@ -65,6 +68,7 @@ export function CompanyDrawer({
   const [savingNotes, setSavingNotes] = useState(false);
   const [aiPitches, setAiPitches] = useState<AIPitchResult | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<{ message: string; provider: string } | null>(null);
   const [useAI, setUseAI] = useState(false);
   const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
 
@@ -175,22 +179,33 @@ export function CompanyDrawer({
     };
   }, [company?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // AI pitch generation
+  // AI pitch generation — never silently disables AI; surfaces errors inline
+  // and keeps the template pitch visible as a fallback (AC2, AC5, AC6).
+  const runAiGeneration = useCallback(async () => {
+    if (!company?.id) return;
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const result = await generateAIPitches(company, pitchSettings, aiProvider);
+      setAiPitches(result);
+    } catch (err) {
+      if (err instanceof AIError) {
+        setAiError({ message: err.message, provider: err.provider });
+      } else {
+        setAiError({
+          message: err instanceof Error ? err.message : "AI generation failed",
+          provider: aiProvider,
+        });
+      }
+    } finally {
+      setAiLoading(false);
+    }
+  }, [company, pitchSettings, aiProvider]);
+
   useEffect(() => {
     if (!company?.id || !useAI) return;
-    const apiKey = getApiKey(aiProvider);
-    if (!apiKey) {
-      setUseAI(false);
-      return;
-    }
-    setAiLoading(true);
-    generateAIPitches(company, pitchSettings, aiProvider)
-      .then((result) => {
-        setAiPitches(result);
-      })
-      .catch(() => undefined)
-      .finally(() => setAiLoading(false));
-  }, [company, useAI, aiProvider, pitchSettings]);
+    runAiGeneration();
+  }, [company, useAI, runAiGeneration]);
 
   if (!company || !generated) return null;
 
@@ -267,7 +282,21 @@ export function CompanyDrawer({
               </span>
               <button
                 type="button"
-                onClick={() => setUseAI((prev) => !prev)}
+                onClick={() => {
+                  const hasKey = Boolean(getApiKey(aiProvider, pitchSettings));
+                  if (!hasKey && !useAI) {
+                    // Turning AI on without a key: stay on AI, show actionable
+                    // error banner instead of silently disabling (AC2).
+                    setUseAI(true);
+                    setAiError({
+                      message: `No ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"} API key saved — add it in “My 5d Offer” settings, then toggle again.`,
+                      provider: aiProvider,
+                    });
+                    return;
+                  }
+                  setUseAI((prev) => !prev);
+                  if (!useAI) setAiError(null);
+                }}
                 className={`ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border transition-all ${
                   useAI
                     ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
@@ -278,6 +307,9 @@ export function CompanyDrawer({
                 {useAI ? `✨ ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"}` : "Template"}
                 {aiLoading && (
                   <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                )}
+                {aiError && useAI && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 )}
               </button>
               {onOpenAIJobHunt && (
@@ -393,8 +425,44 @@ export function CompanyDrawer({
               </div>
               <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-500">
                 {generated.inferred.bottleneckReason}
+                {aiPitches && (
+                  <>
+                    • <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ AI-generated ({aiProvider})</span>
+                  </>
+                )}
               </span>
             </div>
+
+            {aiError && (
+              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-red-600 dark:text-red-400 font-semibold">AI ({aiError.provider}) error:</span>
+                  <span className="text-xs text-red-600 dark:text-red-400 leading-none">{aiError.message}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {onOpenPitchSettings && (
+                    <button
+                      type="button"
+                      onClick={onOpenPitchSettings}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all"
+                    >
+                      Open Settings
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={runAiGeneration}
+                    disabled={aiLoading}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                  <span className="ml-auto text-[10px] text-slate-500">
+                    Template pitch shown instead.
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-wrap gap-1.5">
               {pitchTabs.map((t) => (
