@@ -63,6 +63,12 @@ export function AIJobHuntDrawer({
   const [roleTitle, setRoleTitle] = useState("");
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [tabErrors, setTabErrors] = useState<Record<JobTab, string | null>>({
+    contacts: null,
+    resume: null,
+    interview: null,
+    outreach: null,
+  });
 
   // Resolve API key from either dedicated storage (set by PitchSettingsModal) or from pitchSettings prop
   const resolvedApiKey = useMemo(() => {
@@ -90,9 +96,16 @@ export function AIJobHuntDrawer({
       setResume(null);
       setInterview(null);
       setError(null);
+      setTabErrors({ contacts: null, resume: null, interview: null, outreach: null });
       setActiveTab("contacts");
     }
   }, [company?.id]);
+
+  // Clear stale tab errors when the provider is switched (key status recomputes)
+  useEffect(() => {
+    setTabErrors({ contacts: null, resume: null, interview: null, outreach: null });
+    setError(null);
+  }, [aiProvider]);
 
   // Body scroll lock
   useEffect(() => {
@@ -122,13 +135,16 @@ export function AIJobHuntDrawer({
   const findContacts = async () => {
     if (!company || !hasApiKey) return;
     setLoading((p) => ({ ...p, contacts: true }));
+    setTabErrors((p) => ({ ...p, contacts: null }));
     setError(null);
     try {
       const result = await findAIContacts(company, aiProvider, resolvedApiKey);
-      if (result) setContacts(result.contacts);
-      else setError("Could not infer contacts. Try a different provider.");
-    } catch {
-      setError("Contact search failed.");
+      setContacts(result.contacts);
+    } catch (err) {
+      setTabErrors((p) => ({
+        ...p,
+        contacts: err instanceof Error ? err.message : "Contact search failed.",
+      }));
     } finally {
       setLoading((p) => ({ ...p, contacts: false }));
     }
@@ -137,6 +153,7 @@ export function AIJobHuntDrawer({
   const generateResume = async () => {
     if (!company || !hasApiKey || !userResume) return;
     setLoading((p) => ({ ...p, resume: true }));
+    setTabErrors((p) => ({ ...p, resume: null }));
     setError(null);
     try {
       const result = await tailorResumeAndCoverLetter(
@@ -145,10 +162,12 @@ export function AIJobHuntDrawer({
         aiProvider,
         resolvedApiKey
       );
-      if (result) setResume(result);
-      else setError("Resume generation failed.");
-    } catch {
-      setError("Resume generation failed.");
+      setResume(result);
+    } catch (err) {
+      setTabErrors((p) => ({
+        ...p,
+        resume: err instanceof Error ? err.message : "Resume generation failed.",
+      }));
     } finally {
       setLoading((p) => ({ ...p, resume: false }));
     }
@@ -157,6 +176,7 @@ export function AIJobHuntDrawer({
   const generateInterview = async () => {
     if (!company || !hasApiKey || !roleTitle) return;
     setLoading((p) => ({ ...p, interview: true }));
+    setTabErrors((p) => ({ ...p, interview: null }));
     setError(null);
     try {
       const result = await generateInterviewPrep(
@@ -165,13 +185,22 @@ export function AIJobHuntDrawer({
         aiProvider,
         resolvedApiKey
       );
-      if (result) setInterview(result);
-      else setError("Interview prep failed.");
-    } catch {
-      setError("Interview prep failed.");
+      setInterview(result);
+    } catch (err) {
+      setTabErrors((p) => ({
+        ...p,
+        interview: err instanceof Error ? err.message : "Interview prep failed.",
+      }));
     } finally {
       setLoading((p) => ({ ...p, interview: false }));
     }
+  };
+
+  const retryTab = (tab: JobTab) => {
+    setTabErrors((p) => ({ ...p, [tab]: null }));
+    if (tab === "contacts") findContacts();
+    else if (tab === "resume") generateResume();
+    else generateInterview();
   };
 
   const outreachChannels = useMemo(() => {
@@ -337,6 +366,23 @@ export function AIJobHuntDrawer({
                 </button>
               </div>
 
+              {tabErrors.contacts && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <span className="text-red-600 dark:text-red-400 font-semibold">Contacts error:</span>{" "}
+                    <span className="text-red-600 dark:text-red-400">{tabErrors.contacts}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => retryTab("contacts")}
+                    disabled={loading.contacts}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
               {contacts.length > 0 && (
                 <div className="space-y-3">
                   {contacts.map((c, i) => (
@@ -452,6 +498,23 @@ export function AIJobHuntDrawer({
                 ) : "Generate Tailored Resume"}
               </button>
 
+              {tabErrors.resume && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <span className="text-red-600 dark:text-red-400 font-semibold">Resume error:</span>{" "}
+                    <span className="text-red-600 dark:text-red-400">{tabErrors.resume}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => retryTab("resume")}
+                    disabled={loading.resume}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
               {resume && (
                 <section className="space-y-4 pt-2">
                   <div>
@@ -544,6 +607,23 @@ export function AIJobHuntDrawer({
                   </span>
                 ) : "Generate Interview Prep"}
               </button>
+
+              {tabErrors.interview && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <span className="text-red-600 dark:text-red-400 font-semibold">Interview error:</span>{" "}
+                    <span className="text-red-600 dark:text-red-400">{tabErrors.interview}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => retryTab("interview")}
+                    disabled={loading.interview}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
 
               {interview && (
                 <section className="space-y-4 pt-2">

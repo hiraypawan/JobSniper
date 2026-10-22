@@ -11,6 +11,7 @@ import {
   enrichSingleCompany,
   syncAllSources,
 } from "@/workers/scheduled";
+import { handleAiRequest } from "@/lib/aiProxy";
 
 function jsonResponse(data: unknown, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -169,6 +170,16 @@ export async function handleApiRequest(
         }
         return jsonResponse({ company: updated });
       }
+    }
+
+    // 6. POST /api/ai — server-side AI proxy (OpenRouter / Gemini).
+    // Uses the server key from env when set (shared team key, never exposed to
+    // the browser); otherwise falls back to a client key forwarded in the body.
+    if (pathname === "/api/ai" && request.method === "POST") {
+      return handleAiRequest(request, {
+        GEMINI_API_KEY: env.GEMINI_API_KEY,
+        OPENROUTER_API_KEY: env.OPENROUTER_API_KEY,
+      });
     }
 
     return jsonResponse({ error: `Not found: ${pathname}` }, 404);

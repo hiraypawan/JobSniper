@@ -84,12 +84,25 @@ export default function DashboardPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_PITCH_KEY);
-      if (saved) {
-        setPitchSettings({
-          ...DEFAULT_PITCH_SETTINGS,
-          ...JSON.parse(saved),
-        });
+      let parsed: Partial<PitchSettings> = saved ? JSON.parse(saved) : {};
+
+      // Phase D migration: copy legacy per-provider localStorage slots into
+      // pitch_settings_v1 when no key is stored there yet (single source of truth).
+      if (!parsed.geminiApiKey) {
+        const legacyGemini = localStorage.getItem("startupsniper_gemini_api_key");
+        if (legacyGemini) parsed.geminiApiKey = legacyGemini;
       }
+      if (!parsed.openrouterApiKey) {
+        const legacyOpenRouter = localStorage.getItem(
+          "startupsniper_openrouter_api_key"
+        );
+        if (legacyOpenRouter) parsed.openrouterApiKey = legacyOpenRouter;
+      }
+
+      setPitchSettings({
+        ...DEFAULT_PITCH_SETTINGS,
+        ...parsed,
+      } as PitchSettings);
       const savedTheme = localStorage.getItem("startupsniper_theme");
       if (savedTheme === "light") {
         setDarkMode(false);
@@ -545,6 +558,7 @@ export default function DashboardPage() {
           onOpenAIJobHunt={() => {
             if (selectedCompany) setAiJobHuntCompany(selectedCompany);
           }}
+          onOpenPitchSettings={() => setPitchModalOpen(true)}
         />
       )}
 
