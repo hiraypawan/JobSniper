@@ -192,13 +192,14 @@ export async function enrichSingleCompany(
   if (outcome.jobs.length > 0) {
     const jobStmts = outcome.jobs.map((job) =>
       env.DB.prepare(
-        `INSERT INTO jobs (id, company_id, title, url, location, remote, department, posted_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO jobs (id, company_id, title, url, location, remote, department, description, posted_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            title = excluded.title,
            url = excluded.url,
            location = COALESCE(excluded.location, jobs.location),
-           remote = MAX(jobs.remote, excluded.remote)`
+           remote = MAX(jobs.remote, excluded.remote),
+           description = COALESCE(excluded.description, jobs.description)`
       ).bind(
         job.id,
         companyId,
@@ -207,6 +208,7 @@ export async function enrichSingleCompany(
         job.location ?? null,
         job.remote ? 1 : 0,
         job.department ?? null,
+        job.description ?? null,
         job.posted_at ?? null,
         nowIso
       )
