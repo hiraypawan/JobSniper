@@ -183,11 +183,18 @@ export default function DashboardPage() {
         const res = await fetch(`/api/companies?${params.toString()}`, {
           cache: "no-store",
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          const failure = await res.json().catch(() => null);
+          throw new Error(
+            typeof failure?.error === "string"
+              ? failure.error
+              : `HTTP ${res.status}`
+          );
+        }
         const data = (await res.json()) as CompaniesApiResponse;
         // Visibility changes, filter edits, and initial mount can overlap. Only
         // the newest response is allowed to replace the dashboard snapshot.
-        if (requestId !== latestCompaniesRequest.current) return;
+        if (requestId !== latestCompaniesRequest.current) return false;
 
         setCompanies((prev) =>
           append ? [...prev, ...data.companies] : data.companies
@@ -196,6 +203,16 @@ export default function DashboardPage() {
         setTotal(data.total);
         setHasMore(data.hasMore);
         setPage(data.page);
+        if (!append && data.stats.totalCompanies === 0) {
+          const unavailableSources = data.stats.lastSyncSummary
+            .filter((source) => source.mode === "unavailable" || source.error)
+            .map((source) => source.source);
+          setSyncStatusText(
+            unavailableSources.length > 0
+              ? `No startups loaded. Unavailable feeds: ${unavailableSources.join(", ")}. Open Sources for details.`
+              : "No startup records are available. Open Sources for feed status or run Force Sync."
+          );
+        }
 
         if (data.backgroundSyncTriggered && !append) {
           // Wait for the background sync to commit before applying another
@@ -245,8 +262,15 @@ export default function DashboardPage() {
             }
           })();
         }
+        return true;
       } catch (err) {
         console.error("Failed loading startups:", err);
+        const reason =
+          err instanceof Error ? err.message.slice(0, 140) : "network error";
+        setSyncStatusText(
+          `Dashboard data error: ${reason}. Check the API/database connection and retry.`
+        );
+        return false;
       } finally {
         if (requestId === latestCompaniesRequest.current) {
           setLoading(false);
@@ -297,13 +321,20 @@ export default function DashboardPage() {
         `/api/sync?mode=sources&force=${force ? "1" : "0"}`,
         { method: "POST" }
       );
-      if (syncRes.ok) {
-        const syncJson = await syncRes.json();
-        const upserted = Number(syncJson.upsertedCount ?? 0).toLocaleString();
-        setSyncStatusText(
-          `Saved ${upserted} companies in ${syncJson.durationMs}ms. Checking job boards next.`
+      if (!syncRes.ok) {
+        const failure = await syncRes.json().catch(() => null);
+        throw new Error(
+          typeof failure?.error === "string"
+            ? failure.error
+            : `Sync API returned ${syncRes.status}`
         );
       }
+      const syncJson = await syncRes.json();
+      const upserted = Number(syncJson.upsertedCount ?? 0).toLocaleString();
+      const totalAfterSync = Number(syncJson.stats?.totalCompanies ?? -1);
+      setSyncStatusText(
+        `Saved ${upserted} companies in ${syncJson.durationMs}ms. Checking job boards next.`
+      );
 
       await fetchCompaniesPage(1, false);
 
@@ -318,9 +349,23 @@ export default function DashboardPage() {
         setSyncStatusText(`Job board check ${step} of 2 done.`);
       }
 
-      await fetchCompaniesPage(1, false);
-      setSyncStatusText("All sources checked.");
-      setTimeout(() => setSyncStatusText(null), 3000);
+      const refreshedSuccessfully = await fetchCompaniesPage(1, false);
+      if (!refreshedSuccessfully) return;
+      if (totalAfterSync === 0) {
+        setSyncStatusText(
+          "Sync finished, but the database still has 0 startups. Open Sources for feed errors."
+        );
+      } else {
+        setSyncStatusText("All sources checked.");
+        setTimeout(() => setSyncStatusText(null), 3000);
+      }
+    } catch (err) {
+      console.error("Live sync failed:", err);
+      const reason =
+        err instanceof Error ? err.message.slice(0, 140) : "network error";
+      setSyncStatusText(
+        `Live sync failed: ${reason}. Check the API/database connection and Sources.`
+      );
     } finally {
       setSyncing(false);
     }

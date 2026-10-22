@@ -93,8 +93,21 @@ export async function handleApiRequest(
 
       // Cold start: fill the table once, before responding, so the first visit is not empty.
       if (stats.totalCompanies === 0) {
+        const previousSyncAt = stats.lastSyncedAt;
         await syncAllSources(env, { forceLive: false });
         stats = await getDashboardStats(env);
+
+        // An empty cached feed should not strand a fresh/empty database at zero.
+        // Bypass source caches once when there was no recent sync.
+        const previousSyncMs = previousSyncAt ? Date.parse(previousSyncAt) : 0;
+        const needsLiveRetry =
+          !previousSyncAt ||
+          !Number.isFinite(previousSyncMs) ||
+          Date.now() - previousSyncMs > 15 * 60 * 1000;
+        if (stats.totalCompanies === 0 && needsLiveRetry) {
+          await syncAllSources(env, { forceLive: true });
+          stats = await getDashboardStats(env);
+        }
       } else {
         // Stale-While-Revalidate (>15 mins old): respond immediately in <30ms AND refresh live in background!
         const lastMs = stats.lastSyncedAt
