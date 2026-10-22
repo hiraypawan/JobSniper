@@ -42,7 +42,7 @@ export async function fetchIndieShowHn(
   const companies: NormalizedCompanyInput[] = [];
   let hnSucceeded = false;
 
-  // 1. Primary: Hacker News Algolia Public API — Show HN last 7 days
+  // 1. Hacker News Algolia API, Show HN posts from the last 7 days
   try {
     const sevenDaysUnix = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
     const algoliaUrl = `https://hn.algolia.com/api/v1/search_by_date?tags=show_hn&numericFilters=created_at_i>${sevenDaysUnix},points>5&hitsPerPage=60`;
@@ -59,7 +59,9 @@ export async function fetchIndieShowHn(
       const cleanedTitle = (hit.title || "").replace(/^Show HN:\s*/i, "").trim();
       if (!cleanedTitle) continue;
 
-      const [rawName, ...rest] = cleanedTitle.split(/\s+[–—:-]\s+/);
+      // Titles come as "Name - Tagline" or "Name: Tagline". Dashes are written as
+      // escapes here so the source never contains the characters themselves.
+      const [rawName, ...rest] = cleanedTitle.split(/\s+[\u2013\u2014:-]\s+/);
       const name = rawName.trim().slice(0, 48);
       if (!name) continue;
 
@@ -68,7 +70,7 @@ export async function fetchIndieShowHn(
         `https://news.ycombinator.com/item?id=${hit.objectID}`;
       const domain = normalizeDomain(website, name);
       const companyId = makeCompanyId(domain);
-      const tagline = rest.join(" — ").trim() || cleanedTitle;
+      const tagline = rest.join(": ").trim() || cleanedTitle;
       const plainStory = (hit.story_text || "")
         .replace(/<[^>]+>/g, " ")
         .replace(/\s+/g, " ")
@@ -130,7 +132,7 @@ export async function fetchIndieShowHn(
       const domain = normalizeDomain(targetUrl, item.name);
       const companyId = makeCompanyId(domain);
       const desc = (
-        item.description || `${item.name} — indie TypeScript product build`
+        item.description || `${item.name}, a small TypeScript product launch`
       ).trim();
 
       companies.push({
@@ -168,6 +170,6 @@ export async function fetchIndieShowHn(
     companies,
     durationMs: Date.now() - started,
     mode: hnSucceeded ? "live" : "live+fallback",
-    note: `Synced ${companies.length} recent Show HN & indie builder launches`,
+    note: `Read ${companies.length} Show HN posts from the last week`,
   };
 }

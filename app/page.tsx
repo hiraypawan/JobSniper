@@ -187,9 +187,7 @@ export default function DashboardPage() {
         setPage(data.page);
 
         if (data.backgroundSyncTriggered && !append) {
-          setSyncStatusText(
-            "Auto-refreshing today's live startups in background..."
-          );
+          setSyncStatusText("Refreshing today's startups in the background.");
           setTimeout(async () => {
             try {
               const refreshed = await fetch(
@@ -204,7 +202,7 @@ export default function DashboardPage() {
                 setTotal(freshData.total);
                 setHasMore(freshData.hasMore);
               }
-              setSyncStatusText("Feed auto-synced with latest live startups ✓");
+              setSyncStatusText("Feed refreshed.");
               setTimeout(() => setSyncStatusText(null), 2500);
             } catch {
               setSyncStatusText(null);
@@ -252,8 +250,8 @@ export default function DashboardPage() {
     setSyncing(true);
     setSyncStatusText(
       force
-        ? "Force-fetching all live feeds directly from upstream..."
-        : "Syncing live startup feeds in parallel..."
+        ? "Fetching every source from upstream, cache ignored."
+        : "Fetching all six sources..."
     );
 
     try {
@@ -263,8 +261,9 @@ export default function DashboardPage() {
       );
       if (syncRes.ok) {
         const syncJson = await syncRes.json();
+        const upserted = Number(syncJson.upsertedCount ?? 0).toLocaleString();
         setSyncStatusText(
-          `Synced ${String(syncJson.upsertedCount ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ",")} unique startups in ${syncJson.durationMs}ms · Enriching live ATS boards...`
+          `Saved ${upserted} companies in ${syncJson.durationMs}ms. Checking job boards next.`
         );
       }
 
@@ -278,13 +277,11 @@ export default function DashboardPage() {
         const enrJson = await enr.json();
         if (enrJson.stats) setStats(enrJson.stats);
         if (!enrJson.enriched || enrJson.remaining === 0) break;
-        setSyncStatusText(
-          `ATS & social enrichment pass ${step}/2 complete · Live feed up to date!`
-        );
+        setSyncStatusText(`Job board check ${step} of 2 done.`);
       }
 
       await fetchCompaniesPage(1, false);
-      setSyncStatusText("All live sources & ATS boards up to date!");
+      setSyncStatusText("All sources checked.");
       setTimeout(() => setSyncStatusText(null), 3000);
     } finally {
       setSyncing(false);
@@ -482,11 +479,11 @@ export default function DashboardPage() {
             >
               <Crosshair className="w-10 h-10 text-emerald-500 mx-auto" />
               <h3 className="text-lg font-semibold text-slate-100">
-                No startups matched these filters
+                Nothing matched those filters
               </h3>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
-                Try clearing your search term, toggling off strict filters, or
-                run a fresh Live Worker sync.
+                Clear the search box, turn off a filter, or pull the feeds again.
+                Some weeks are just quiet.
               </p>
               <div className="flex items-center justify-center gap-2">
                 <button
@@ -501,7 +498,7 @@ export default function DashboardPage() {
                   onClick={() => handleSyncLive(true)}
                   className="ml-2 px-5 py-2.5 rounded-2xl text-xs font-medium border border-emerald-500/30 bg-white/5 text-emerald-400 hover:bg-emerald-500/10 transition"
                 >
-                  Force Live Sync
+                  Sync again
                 </button>
               </div>
             </motion.div>
@@ -559,7 +556,7 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* Company Drawer - self-contained overlay */}
+      {/* Company drawer */}
       {selectedCompany && (
         <CompanyDrawer
           company={selectedCompany}
@@ -573,7 +570,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* AI Job Hunt Drawer - self-contained overlay */}
+      {/* AI job hunt drawer */}
       {aiJobHuntCompany && (
         <AIJobHuntDrawer
           company={aiJobHuntCompany}

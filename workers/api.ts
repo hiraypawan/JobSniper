@@ -47,13 +47,13 @@ export async function handleApiRequest(
   const pathname = url.pathname.replace(/\/+$/, "");
 
   try {
-    // 1. GET /api/stats — real-time dashboard counts & source sync health
+    // 1. GET /api/stats: dashboard counts and per source sync health
     if (pathname === "/api/stats" && request.method === "GET") {
       const stats = await getDashboardStats(env);
       return jsonResponse(stats);
     }
 
-    // 2. POST /api/sync — Unlimited on-demand Live Worker refresh & bounded ATS enrichment
+    // 2. POST /api/sync: run the fetchers, then a bounded ATS enrichment pass
     if (pathname === "/api/sync" && request.method === "POST") {
       const mode = url.searchParams.get("mode") || "sources";
       const forceLive = parseBoolParam(url.searchParams.get("force"), false);
@@ -86,12 +86,12 @@ export async function handleApiRequest(
       });
     }
 
-    // 3. GET /api/companies — Instant query + automatic Stale-While-Revalidate live sync!
+    // 3. GET /api/companies: serve from D1, refresh in the background when stale
     if (pathname === "/api/companies" && request.method === "GET") {
       let stats = await getDashboardStats(env);
       let backgroundSyncTriggered = false;
 
-      // First boot cold start: populate synchronously once so the very first visit already has ~1,000 startups!
+      // Cold start: fill the table once, before responding, so the first visit is not empty.
       if (stats.totalCompanies === 0) {
         await syncAllSources(env, { forceLive: false });
         stats = await getDashboardStats(env);
@@ -136,7 +136,7 @@ export async function handleApiRequest(
       return jsonResponse(payload);
     }
 
-    // 4. POST /api/companies/:id/enrich — Instant live ATS + homepage check on drawer click
+    // 4. POST /api/companies/:id/enrich: check this one site and job board now
     const enrichMatch = pathname.match(/^\/api\/companies\/([^/]+)\/enrich$/);
     if (enrichMatch && request.method === "POST") {
       const id = decodeURIComponent(enrichMatch[1]);
@@ -147,7 +147,7 @@ export async function handleApiRequest(
       return jsonResponse(result);
     }
 
-    // 5. GET or PATCH /api/companies/:id — Single company detail + CRM pipeline persistence
+    // 5. GET or PATCH /api/companies/:id: one company, plus CRM status and notes
     const itemMatch = pathname.match(/^\/api\/companies\/([^/]+)$/);
     if (itemMatch) {
       const id = decodeURIComponent(itemMatch[1]);
@@ -172,7 +172,7 @@ export async function handleApiRequest(
       }
     }
 
-    // 6. POST /api/ai — server-side AI proxy (OpenRouter / Gemini).
+    // 6. POST /api/ai: server side AI proxy for OpenRouter or Gemini.
     // Uses the server key from env when set (shared team key, never exposed to
     // the browser); otherwise falls back to a client key forwarded in the body.
     if (pathname === "/api/ai" && request.method === "POST") {

@@ -186,8 +186,9 @@ export function PitchSettingsModal({
 
         <div className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 min-h-0 overscroll-contain [-webkit-overflow-scrolling:touch]">
           <p className="text-xs text-slate-500 leading-relaxed">
-            Leave fields blank to auto-tailor each pitch based on the startup&apos;s
-            industry & open roles, or set your signature offer below.
+            Leave these blank and every pitch is written from the company&apos;s
+            industry and its open roles. Fill them in if you always sell the
+            same thing.
           </p>
 
           <div>
@@ -210,10 +211,10 @@ export function PitchSettingsModal({
 
           <div>
             <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
-              Custom Tool Idea Override
+              Custom tool idea (optional)
             </label>
             <p className="text-[10px] text-slate-500 mb-2">
-              Blank = smart auto-detect based on each startup&apos;s industry
+              Leave blank to pick one from the company&apos;s industry
             </p>
             <input
               type="text"
@@ -229,7 +230,7 @@ export function PitchSettingsModal({
 
           <div>
             <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
-              Proof Anchor (Similar Company)
+              Company you built something for
             </label>
             <input
               type="text"
@@ -246,7 +247,7 @@ export function PitchSettingsModal({
           <div className="grid grid-cols-2 sm:grid-cols-2 gap-3">
             <div>
               <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
-                Delivery (Days)
+                Delivery in days
               </label>
               <input
                 type="number"
@@ -281,7 +282,7 @@ export function PitchSettingsModal({
             </div>
             <div>
               <label className="block font-medium mb-1.5 text-xs text-slate-700 dark:text-slate-300">
-                Low-Friction CTA Hook
+                What you ask for at the end
               </label>
               <input
                 type="text"
@@ -299,7 +300,7 @@ export function PitchSettingsModal({
           {/* AI Keys (BYOK) */}
           <div className="pt-4 border-t border-white/10 dark:border-obsidian-800 shrink-0">
             <p className="text-xs font-medium text-slate-900 dark:text-white mb-3">
-              AI Provider Keys (Bring Your Own Key)
+              Your own API keys
             </p>
 
             <div className="space-y-3">
@@ -348,7 +349,7 @@ export function PitchSettingsModal({
                         delete next.gemini;
                         return next;
                       });
-                      // Don't clear storage until Save — just update draft
+                      // Only the draft changes here. Storage is left alone until Save.
                     }}
                     disabled={!draft.geminiApiKey}
                     className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all shrink-0"

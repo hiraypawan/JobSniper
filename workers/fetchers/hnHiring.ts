@@ -315,6 +315,6 @@ export async function fetchHnWhoIsHiring(
     companies,
     durationMs: Date.now() - started,
     mode: liveSucceeded ? "live" : "live+fallback",
-    note: `Synced ${companies.length} hiring startups with direct engineering roles`,
+    note: `Read ${companies.length} companies from the hiring thread`,
   };
 }

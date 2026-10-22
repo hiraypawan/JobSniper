@@ -57,7 +57,7 @@ export function HeaderBar({
               )}
             </div>
             <p className="text-[10px] text-slate-500">
-              Fresh funded under 12 months &middot; Remote &amp; verified ATS hiring &middot; Updated{" "}
+              Funded in the last 12 months &middot; Remote and ATS hiring &middot; Updated{" "}
               <span className="font-mono text-slate-400">
                 {formatTimeAgo(stats?.lastSyncedAt ?? null)}
               </span>
@@ -141,7 +141,7 @@ export function HeaderBar({
               {syncStatusText}
             </span>
             <span className="hidden sm:inline text-[10px] opacity-70">
-              Cloudflare Worker · 0 Cron
+              Cloudflare Worker · no cron
             </span>
           </div>
         </div>

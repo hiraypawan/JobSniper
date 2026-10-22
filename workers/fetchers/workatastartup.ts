@@ -238,7 +238,7 @@ export async function fetchWorkAtAStartup(
       companies,
       durationMs: Date.now() - started,
       mode: fromCache ? "cached" : "live",
-      note: `Loaded ${companies.length} actively hiring startups with WAAS job boards`,
+      note: `Loaded ${companies.length} companies that are hiring right now`,
     };
   } catch (err) {
     return {

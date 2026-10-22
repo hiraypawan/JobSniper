@@ -14,28 +14,28 @@ interface Props {
 
 const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   yc: {
-    name: "Y Combinator (W25–F26)",
-    desc: "Live 2025–2026 YC cohorts via yc-oss JSON API",
+    name: "Y Combinator (W25 to F26)",
+    desc: "Recent YC cohorts from the yc-oss JSON API",
   },
   workatastartup: {
     name: "Work at a Startup",
-    desc: "Active hiring YC remote startups & open roles",
+    desc: "YC companies that are hiring right now",
   },
   wellfound: {
     name: "Wellfound & Seed RSS",
-    desc: "Funded <12mo (<50 team) + verified ATS boards",
+    desc: "Rounds from the last year, teams under 50",
   },
   producthunt: {
     name: "Product Hunt / Launches",
-    desc: "Fresh 7–14 day product launches with external sites",
+    desc: "Launches from the last week that link to their own site",
   },
   indie: {
     name: "Show HN / Indie Builders",
-    desc: "Recent Show HN & high-velocity indie launches",
+    desc: "Show HN posts from the last week",
   },
   hn_hiring: {
     name: "HN Who is Hiring?",
-    desc: "Remote startup engineering roles & founder emails",
+    desc: "The newest hiring thread, parsed for remote roles",
   },
 };
 
@@ -74,7 +74,7 @@ export function SourceHealthPopover({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Live Data Sources Health"
+      aria-label="Data sources"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -83,7 +83,7 @@ export function SourceHealthPopover({
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-obsidian-900">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Live Data Sources Health</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Data sources</h3>
           </div>
           <button
             type="button"
@@ -99,7 +99,7 @@ export function SourceHealthPopover({
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-obsidian-850 px-3 py-2 rounded-xl border border-slate-200/70 dark:border-slate-800">
             <span className="flex items-center gap-1.5">
               <Database className="w-3.5 h-3.5 text-emerald-500" />
-              Engine: Live Worker + D1 Cache (No Cron Needed)
+              Worker with a D1 cache, no cron needed
             </span>
             {lastSyncedAt && (
               <span className="font-mono flex items-center gap-1">

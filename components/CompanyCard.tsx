@@ -129,7 +129,7 @@ export function CompanyCard({
             <span className="px-2.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
               {company.funding_amount && !company.funding_amount.includes("Standard")
                 ? company.funding_amount
-                : "Funded &lt;12mo"}
+                : "Funded < 12mo"}
             </span>
           )}
           {company.is_remote && (

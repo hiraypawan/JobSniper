@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StartupSniper · Daily Funded Startups & Remote Hiring Radar",
+  title: "StartupSniper · Funded startups that are hiring",
   description:
-    "Live tracker for fresh startups funded within the last 12 months (YC W25–F26, WAAS, Wellfound/Seed, Product Hunt, Indie/HN) with verified ATS job boards and 5-day build outreach pitch studio.",
+    "Startups funded in the last year, pulled from YC, Work at a Startup, funding news, Product Hunt and Hacker News. Real job boards, a 0-100 fit score and a first pitch you can send.",
 };
 
 export default function RootLayout({

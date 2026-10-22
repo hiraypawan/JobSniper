@@ -1,4 +1,5 @@
 import { Company, PitchSettings } from "./types";
+import { HUMAN_VOICE_RULES, humanizeDeep } from "./humanize";
 
 export type AIProvider = "gemini" | "openrouter";
 
@@ -51,7 +52,7 @@ export function validateApiKey(
     if (!GEMINI_KEY_REGEX.test(trimmed)) {
       return {
         valid: false,
-        hint: 'Invalid Gemini key — it should start with "AIza..."',
+        hint: 'That does not look like a Gemini key. It should start with "AIza".',
       };
     }
     return { valid: true };
@@ -59,7 +60,7 @@ export function validateApiKey(
   if (!OPENROUTER_KEY_REGEX.test(trimmed)) {
     return {
       valid: false,
-      hint: 'Invalid OpenRouter key — it should start with "sk-or-..."',
+      hint: 'That does not look like an OpenRouter key. It should start with "sk-or-".',
     };
   }
   return { valid: true };
@@ -260,7 +261,7 @@ async function callWithBackoff(fn: () => Promise<string>): Promise<string> {
 }
 
 /**
- * Robust JSON extraction: strips markdown fences, trims, then falls back to
+ * JSON extraction that keeps going: strips markdown fences, trims, then falls back to
  * extracting the first balanced `{...}` object before JSON.parse.
  * Throws AIError with a clear message when no parseable object exists.
  */
@@ -455,7 +456,7 @@ export function recordAIGeneration(provider: AIProvider, ok: boolean): void {
 /* Proxy vs direct fetching                                           */
 /* ------------------------------------------------------------------ */
 
-/** Raised when the /api/ai proxy is not deployed (404) — try direct fetch. */
+/** Raised when the /api/ai proxy is not deployed (404), so we try a direct fetch. */
 class ProxyMissing extends AIError {
   constructor() {
     super("AI proxy endpoint not found (404)", {
@@ -521,7 +522,7 @@ async function callDirect(
 
 /**
  * Fetch AI-generated text: prefers the same-origin /api/ai proxy (server key
- * or forwarded client key — never exposes the key to third parties from the
+ * or forwarded client key, so the key never reaches a third party from the
  * browser), falling back to a direct browser fetch when the proxy is not
  * deployed or not configured.
  */
@@ -573,7 +574,9 @@ export async function generateAIPitches(
 
   const topRole = company.jobs?.[0]?.title || null;
 
-  const prompt = `You are an expert B2B outbound copywriter. Write 4 cold outreach formats for this startup. Sound like a real founder writing to another founder — natural, human, helpful, no hype, no buzzwords, no overly salesy language. Be specific and concise.
+  const prompt = `You write cold outreach for a developer who sells 5-day builds to early startups. Write 4 formats for the company below. Sound like one founder messaging another: direct, specific, no hype. Match the length limits exactly.
+
+${HUMAN_VOICE_RULES}
 
 Company: ${company.name}
 Domain: ${company.domain}
@@ -605,7 +608,7 @@ Return ONLY a raw JSON object (no markdown code blocks) with these exact keys:
 - "emailSubject": A cold email subject line (under 60 chars)
 - "emailBody": A cold email body (short, human, under 200 words)
 
-Personalize each format specifically to this company. Do not wrap in markdown.`;
+Make each format specific to this company. Do not wrap the JSON in markdown.`;
 
   console.debug("[aiPitches] generateAIPitches start", provider, company.name, "hasKey=", Boolean(apiKey));
 
@@ -616,7 +619,7 @@ Personalize each format specifically to this company. Do not wrap in markdown.`;
     parsed = extractJson(response);
   } catch (err) {
     console.debug("[aiPitches] JSON parse failed", provider, company.name, String(err), "raw=", response.slice(0, 500));
-    throw new AIError("AI returned invalid JSON — showing template pitch instead.", {
+    throw new AIError("The model sent back something that is not JSON, so the template pitch stays up.", {
       provider,
       retryable: false,
     });
@@ -626,11 +629,11 @@ Personalize each format specifically to this company. Do not wrap in markdown.`;
   console.debug("[aiPitches] generateAIPitches success", provider, company.name);
   recordAIGeneration(provider, true);
 
-  return {
+  return humanizeDeep<AIPitchResult>({
     classicSpecDm: p.classicSpecDm || "",
     roleHookDm: p.roleHookDm || "",
     linkedinNote: p.linkedinNote || "",
     emailSubject: p.emailSubject || "",
     emailBody: p.emailBody || "",
-  };
+  });
 }

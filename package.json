@@ -13,7 +13,8 @@
     "db:migrate:local": "npx wrangler d1 execute startupsniper-db --local --file=./migrations/0001_init.sql",
     "db:migrate:remote": "npx wrangler d1 execute startupsniper-db --remote --file=./migrations/0001_init.sql",
     "sync": "node scripts/with-ca.mjs npx tsx scripts/run-sync.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:copy": "node scripts/check-copy.mjs"
   },
   "dependencies": {
     "framer-motion": "^14.5.0",

@@ -64,14 +64,14 @@ export function computeSniperScore(input: {
   if (typeof size === "number" && size >= 1 && size <= 10) {
     score += 25;
     breakdown.push({
-      label: `Tiny team (${size}) — founder reads DMs & needs shipping velocity`,
+      label: `Tiny team (${size}), founder reads DMs and needs things shipped`,
       points: 25,
       positive: true,
     });
   } else if (typeof size === "number" && size > 10 && size <= 25) {
     score += 18;
     breakdown.push({
-      label: `Lean seed team (${size} people) — fast decision cycle`,
+      label: `Lean seed team (${size} people), decisions happen fast`,
       points: 18,
       positive: true,
     });
@@ -96,14 +96,14 @@ export function computeSniperScore(input: {
   if (roles >= 2) {
     score += 20;
     breakdown.push({
-      label: `${roles} open roles — proven budget & immediate ship backlog`,
+      label: `${roles} open roles, budget exists and the backlog is real`,
       points: 20,
       positive: true,
     });
   } else if (roles === 1) {
     score += 15;
     breakdown.push({
-      label: "1 active open role — active hiring bottleneck",
+      label: "1 open role, hiring is the bottleneck right now",
       points: 15,
       positive: true,
     });
