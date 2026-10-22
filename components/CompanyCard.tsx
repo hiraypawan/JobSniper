@@ -61,10 +61,11 @@ export function CompanyCard({
 
   const handleCycleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const order: OutreachStatus[] = ["new", "saved", "pitched", "replied"];
-    const idx = order.indexOf(company.outreach_status);
-    const next = order[(idx + 1) % order.length];
-    onUpdateStatus(company.id, next);
+    const order: OutreachStatus[] = ["new", "saved", "pitched", "demo_sent", "replied", "archived"];
+    const currentIdx = order.indexOf(company.outreach_status);
+    // If status is unknown or archived, wrap to new; otherwise advance
+    const next = currentIdx === -1 ? "saved" : order[(currentIdx + 1) % order.length];
+    onUpdateStatus(company.id, next as OutreachStatus);
   };
 
   return (

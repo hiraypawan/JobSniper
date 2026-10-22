@@ -10,21 +10,43 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
+    /* Prevent horizontal scroll on mobile */
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-obsidian-950 text-slate-100 antialiased selection:bg-emerald-500/25;
     font-feature-settings: "cv11", "ss01";
     -webkit-overflow-scrolling: touch;
+    /* iOS: prevent elastic bounce propagating behind modals */
+    overscroll-behavior-y: contain;
+    overflow-x: hidden;
   }
 
   * {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Remove 300ms tap delay on mobile */
+  /* Remove 300ms tap delay on mobile + improve touch */
   button, a, [role="button"] {
     touch-action: manipulation;
+    -webkit-touch-callout: none;
+  }
+
+  /* Improve input focus on iOS — prevent zoom on focus by ensuring 16px+ font */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  @media (min-width: 640px) {
+    input, textarea, select {
+      font-size: 14px;
+    }
+  }
+
+  /* Prevent iOS input zoom + stuck viewport */
+  input[type="text"], input[type="password"], input[type="number"], textarea {
+    -webkit-appearance: none;
+    appearance: none;
   }
 }
 
@@ -43,6 +65,9 @@
 
   .input-field {
     @apply w-full px-4 py-3 rounded-2xl bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-slate-100 placeholder-slate-500/60 text-sm transition-all duration-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40;
+    /* Ensure iOS keyboard doesn't cause viewport stuck */
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   .badge {
@@ -70,6 +95,16 @@
   .animate-stagger-children > * {
     opacity: 0;
     animation: fadeInUp 0.4s ease-out forwards;
+  }
+
+  /* dvh support for iOS Safari dynamic viewport */
+  .h-dvh-safe {
+    height: 100vh;
+    height: 100dvh;
+  }
+  .max-h-dvh-safe {
+    max-height: 90vh;
+    max-height: 90dvh;
   }
 }
 
@@ -122,11 +157,31 @@
   background: rgba(148, 163, 184, 0.3);
 }
 
-/* Hide scrollbar for clean horizontal bars but keep functionality */
+/* Hide scrollbar for clean horizontal bars but keep functionality + momentum scroll on iOS */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure fixed overlays handle iOS bottom bar correctly */
+@supports (height: 100dvh) {
+  .h-\[92dvh\] {
+    height: 92dvh;
+  }
+  .max-h-\[92dvh\] {
+    max-height: 92dvh;
+  }
+  .max-h-\[90dvh\] {
+    max-height: 90dvh;
+  }
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.5);
+  outline-offset: 2px;
 }
