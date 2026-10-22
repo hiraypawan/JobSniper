@@ -34,6 +34,7 @@ export interface JobPosting {
   location: string | null;
   remote: boolean;
   department?: string | null;
+  description?: string | null;
   posted_at?: string | null;
 }
 

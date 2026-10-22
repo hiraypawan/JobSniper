@@ -69,6 +69,7 @@ const SCHEMA_STATEMENTS = [
     location TEXT,
     remote INTEGER NOT NULL DEFAULT 0,
     department TEXT,
+    description TEXT,
     posted_at TEXT,
     created_at TEXT NOT NULL
   )`,
@@ -99,6 +100,23 @@ export async function ensureSchema(db: D1Database): Promise<void> {
   if (schemaReadyForDb.has(db as unknown as object)) return;
   for (const sql of SCHEMA_STATEMENTS) {
     await db.prepare(sql).run();
+  }
+  // Additive schema upgrade for databases created before job descriptions were
+  // stored. Probe the column instead of relying on SQLite PRAGMA support in D1.
+  try {
+    await db.prepare("SELECT description FROM jobs LIMIT 0").all();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/no such column.*description/i.test(message)) throw error;
+    try {
+      await db.prepare("ALTER TABLE jobs ADD COLUMN description TEXT").run();
+    } catch (alterError) {
+      // Concurrent first requests can both observe the old schema; a duplicate
+      // column means the other request completed the same additive upgrade.
+      const alterMessage =
+        alterError instanceof Error ? alterError.message : String(alterError);
+      if (!/duplicate column/i.test(alterMessage)) throw alterError;
+    }
   }
   schemaReadyForDb.add(db as unknown as object);
 }
@@ -438,14 +456,15 @@ export async function deduplicateAndUpsertCompanies(
       jobsCount++;
       statements.push(
         env.DB.prepare(
-          `INSERT INTO jobs (id, company_id, title, url, location, remote, department, posted_at, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO jobs (id, company_id, title, url, location, remote, department, description, posted_at, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(id) DO UPDATE SET
              title = excluded.title,
              url = excluded.url,
              location = COALESCE(excluded.location, jobs.location),
              remote = MAX(jobs.remote, excluded.remote),
              department = COALESCE(excluded.department, jobs.department),
+             description = COALESCE(excluded.description, jobs.description),
              posted_at = COALESCE(excluded.posted_at, jobs.posted_at)`
         ).bind(
           job.id,
@@ -455,6 +474,7 @@ export async function deduplicateAndUpsertCompanies(
           job.location ?? null,
           job.remote ? 1 : 0,
           job.department ?? null,
+          job.description ?? null,
           job.posted_at ?? null,
           nowIso
         )
@@ -679,7 +699,7 @@ export async function getCompanyById(
   if (!row) return null;
 
   const jobsRes = await env.DB.prepare(
-    `SELECT id, company_id, title, url, location, remote, department, posted_at
+    `SELECT id, company_id, title, url, location, remote, department, description, posted_at
      FROM jobs WHERE company_id = ? ORDER BY remote DESC, title ASC`
   )
     .bind(id)
@@ -691,6 +711,7 @@ export async function getCompanyById(
       location: string | null;
       remote: number;
       department: string | null;
+      description: string | null;
       posted_at: string | null;
     }>();
 
@@ -702,6 +723,7 @@ export async function getCompanyById(
     location: jr.location,
     remote: Boolean(jr.remote),
     department: jr.department,
+    description: jr.description,
     posted_at: jr.posted_at,
   }));
 

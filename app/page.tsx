@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Crosshair, RefreshCw } from "lucide-react";
 import { CompanyCard } from "@/components/CompanyCard";
@@ -80,6 +80,7 @@ export default function DashboardPage() {
   );
   const [darkMode, setDarkMode] = useState(true);
   const [activeLens, setActiveLens] = useState("funded12mo");
+  const latestCompaniesRequest = useRef(0);
 
   useEffect(() => {
     try {
@@ -152,6 +153,12 @@ export default function DashboardPage() {
 
   const fetchCompaniesPage = useCallback(
     async (targetPage: number, append: boolean) => {
+      const requestId = ++latestCompaniesRequest.current;
+      setSyncStatusText((current) =>
+        current === "Refreshing today's startups in the background."
+          ? null
+          : current
+      );
       if (append) setLoadingMore(true);
       else setLoading(true);
 
@@ -177,6 +184,9 @@ export default function DashboardPage() {
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = (await res.json()) as CompaniesApiResponse;
+        // Visibility changes, filter edits, and initial mount can overlap. Only
+        // the newest response is allowed to replace the dashboard snapshot.
+        if (requestId !== latestCompaniesRequest.current) return;
 
         setCompanies((prev) =>
           append ? [...prev, ...data.companies] : data.companies
@@ -187,33 +197,60 @@ export default function DashboardPage() {
         setPage(data.page);
 
         if (data.backgroundSyncTriggered && !append) {
+          // Wait for the background sync to commit before applying another
+          // snapshot. The old fixed-delay read could return too early and make
+          // the dashboard totals jump backwards to stale values.
+          const syncedAtBeforeRefresh = data.stats.lastSyncedAt;
           setSyncStatusText("Refreshing today's startups in the background.");
-          setTimeout(async () => {
-            try {
-              const refreshed = await fetch(
-                `/api/companies?${params.toString()}`,
-                { cache: "no-store" }
-              );
-              if (refreshed.ok) {
+          void (async () => {
+            for (let attempt = 0; attempt < 8; attempt++) {
+              await new Promise((resolve) => setTimeout(resolve, 1800));
+              if (requestId !== latestCompaniesRequest.current) return;
+              try {
+                const refreshed = await fetch(
+                  `/api/companies?${params.toString()}`,
+                  { cache: "no-store" }
+                );
+                if (!refreshed.ok) continue;
                 const freshData =
                   (await refreshed.json()) as CompaniesApiResponse;
+                if (requestId !== latestCompaniesRequest.current) return;
+                const before = syncedAtBeforeRefresh
+                  ? Date.parse(syncedAtBeforeRefresh)
+                  : 0;
+                const after = freshData.stats.lastSyncedAt
+                  ? Date.parse(freshData.stats.lastSyncedAt)
+                  : 0;
+                if (after <= before) continue;
+
                 setCompanies(freshData.companies);
                 setStats(freshData.stats);
                 setTotal(freshData.total);
                 setHasMore(freshData.hasMore);
+                setPage(freshData.page);
+                setSyncStatusText("Feed refreshed.");
+                setTimeout(() => {
+                  setSyncStatusText((current) =>
+                    current === "Feed refreshed." ? null : current
+                  );
+                }, 2500);
+                return;
+              } catch {
+                // A transient read failure should not discard the current data.
               }
-              setSyncStatusText("Feed refreshed.");
-              setTimeout(() => setSyncStatusText(null), 2500);
-            } catch {
+            }
+            if (requestId === latestCompaniesRequest.current) {
               setSyncStatusText(null);
             }
-          }, 2200);
+          })();
         }
       } catch (err) {
         console.error("Failed loading startups:", err);
       } finally {
-        setLoading(false);
-        setLoadingMore(false);
+        if (requestId === latestCompaniesRequest.current) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     },
     [

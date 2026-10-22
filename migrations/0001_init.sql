@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   location TEXT,
   remote INTEGER NOT NULL DEFAULT 0,
   department TEXT,
+  description TEXT,
   posted_at TEXT,
   created_at TEXT NOT NULL,
   FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE

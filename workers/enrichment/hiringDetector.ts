@@ -77,6 +77,28 @@ export function detectAtsFromUrl(rawUrl: string): AtsMatch | null {
   return null;
 }
 
+function normalizeJobDescription(raw?: string | null): string | null {
+  if (!raw) return null;
+  const text = raw
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_match, code: string) => {
+      const point = Number(code);
+      return Number.isInteger(point) && point >= 0 && point <= 0x10ffff
+        ? String.fromCodePoint(point)
+        : " ";
+    })
+    .replace(/\s+/g, " ")
+    .trim();
+  return text ? text.slice(0, 2400) : null;
+}
+
 function sniffTechStackFromHtml(html: string): string[] {
   const stack: string[] = [];
   if (/__NEXT_DATA__|\/_next\/static/i.test(html)) stack.push("Next.js");
@@ -178,7 +200,7 @@ export async function fetchAtsOpenRoles(
   // 1. Greenhouse Public Boards API: https://boards-api.greenhouse.io/v1/boards/{board}/jobs
   if (ats.provider === "greenhouse" && ats.slug) {
     const { text } = await fetchWithResilience(
-      `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(ats.slug)}/jobs`,
+      `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(ats.slug)}/jobs?content=true`,
       { timeoutMs: 4500, headers: { Accept: "application/json" } }
     );
     const data = JSON.parse(text) as {
@@ -187,6 +209,7 @@ export async function fetchAtsOpenRoles(
         title: string;
         absolute_url: string;
         updated_at?: string;
+        content?: string;
         location?: { name?: string };
       }[];
     };
@@ -199,6 +222,7 @@ export async function fetchAtsOpenRoles(
         url: j.absolute_url,
         location: loc,
         remote: Boolean(loc && /remote|anywhere|distributed/i.test(loc)),
+        description: normalizeJobDescription(j.content),
         posted_at: j.updated_at ? j.updated_at.slice(0, 10) : null,
       };
     });
@@ -214,6 +238,7 @@ export async function fetchAtsOpenRoles(
       id: string;
       text: string;
       hostedUrl: string;
+      descriptionPlain?: string;
       workplaceType?: string;
       createdAt?: number;
       categories?: { location?: string; team?: string };
@@ -231,6 +256,7 @@ export async function fetchAtsOpenRoles(
         url: p.hostedUrl,
         location: loc,
         remote: isRemote,
+        description: normalizeJobDescription(p.descriptionPlain),
         department: p.categories?.team || null,
         posted_at: p.createdAt
           ? new Date(p.createdAt).toISOString().slice(0, 10)
@@ -253,6 +279,8 @@ export async function fetchAtsOpenRoles(
         location?: string;
         isRemote?: boolean;
         department?: string;
+        descriptionPlain?: string;
+        descriptionHtml?: string;
         publishedAt?: string;
       }[];
     };
@@ -268,6 +296,7 @@ export async function fetchAtsOpenRoles(
           Boolean(j.isRemote) ||
           Boolean(j.location && /remote|anywhere/i.test(j.location)),
         department: j.department || null,
+        description: normalizeJobDescription(j.descriptionPlain || j.descriptionHtml),
         posted_at: j.publishedAt ? j.publishedAt.slice(0, 10) : null,
       };
     });
@@ -291,6 +320,7 @@ export async function fetchAtsOpenRoles(
       results?: {
         shortcode: string;
         title: string;
+        description?: string;
         remote?: boolean;
         location?: { city?: string; country?: string };
         published?: string;
@@ -308,6 +338,7 @@ export async function fetchAtsOpenRoles(
         url,
         location: loc || null,
         remote: Boolean(r.remote),
+        description: normalizeJobDescription(r.description),
         posted_at: r.published ? r.published.slice(0, 10) : null,
       };
     });

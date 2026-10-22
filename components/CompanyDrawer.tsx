@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Briefcase,
@@ -71,6 +71,8 @@ export function CompanyDrawer({
   const [aiError, setAiError] = useState<{ message: string; provider: string } | null>(null);
   const [useAI, setUseAI] = useState(false);
   const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
+  const aiRequestId = useRef(0);
+  const aiModeChosenByUser = useRef(false);
 
   const generated = useMemo(() => {
     if (!company) return null;
@@ -78,11 +80,12 @@ export function CompanyDrawer({
       return {
         inferred: {
           toolIdea:
+            aiPitches.proposedBuildIdea ||
             pitchSettings.customToolIdea ||
             "small custom tool",
-          similarCompany:
-            pitchSettings.similarCompanyProof || "a recent seed-stage startup",
-          bottleneckReason: "Written by the model from this company's data",
+          similarCompany: pitchSettings.similarCompanyProof || "",
+          bottleneckReason:
+            aiPitches.angleRationale || "Personalized from this company's available data",
           topRole: company.jobs?.[0]?.title || null,
         },
         classicSpecDm: aiPitches.classicSpecDm,
@@ -183,12 +186,17 @@ export function CompanyDrawer({
   // in the drawer and the template pitch stays on screen.
   const runAiGeneration = useCallback(async () => {
     if (!company?.id) return;
+    const requestId = ++aiRequestId.current;
     setAiLoading(true);
     setAiError(null);
+    // Keep the tailored local draft visible while regenerating instead of
+    // briefly showing the last company's AI copy.
+    setAiPitches(null);
     try {
       const result = await generateAIPitches(company, pitchSettings, aiProvider);
-      setAiPitches(result);
+      if (requestId === aiRequestId.current) setAiPitches(result);
     } catch (err) {
+      if (requestId !== aiRequestId.current) return;
       if (err instanceof AIError) {
         setAiError({ message: err.message, provider: err.provider });
       } else {
@@ -198,14 +206,26 @@ export function CompanyDrawer({
         });
       }
     } finally {
-      setAiLoading(false);
+      if (requestId === aiRequestId.current) setAiLoading(false);
     }
   }, [company, pitchSettings, aiProvider]);
 
   useEffect(() => {
+    aiRequestId.current++;
+    setAiPitches(null);
+    setAiError(null);
+    setAiLoading(false);
+    if (company?.id && !aiModeChosenByUser.current) {
+      // Use AI automatically when the user has already configured a provider.
+      // Without a key, the personalized local draft remains the default.
+      setUseAI(Boolean(getApiKey(aiProvider, pitchSettings)));
+    }
+  }, [company?.id]);
+
+  useEffect(() => {
     if (!company?.id || !useAI) return;
     runAiGeneration();
-  }, [company, useAI, runAiGeneration]);
+  }, [company?.id, useAI, runAiGeneration]);
 
   if (!company || !generated) return null;
 
@@ -294,6 +314,7 @@ export function CompanyDrawer({
                     });
                     return;
                   }
+                  aiModeChosenByUser.current = true;
                   setUseAI((prev) => !prev);
                   if (!useAI) setAiError(null);
                 }}
@@ -432,6 +453,10 @@ export function CompanyDrawer({
                 )}
               </span>
             </div>
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Build angle:</span>{" "}
+              {generated.inferred.toolIdea}
+            </p>
 
             {aiError && (
               <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
@@ -575,6 +600,11 @@ export function CompanyDrawer({
                         {job.location && <span>{job.location}</span>}
                         {job.department && <span>· {job.department}</span>}
                       </div>
+                      {job.description && (
+                        <p className="text-[10px] leading-relaxed text-slate-500 mt-1 max-h-8 overflow-hidden">
+                          {job.description}
+                        </p>
+                      )}
                     </div>
                     <a
                       href={job.url}
