@@ -40,7 +40,8 @@ export async function fetchIndieShowHn(
   const started = Date.now();
   const forceLive = Boolean(options.forceLive);
   const companies: NormalizedCompanyInput[] = [];
-  let hnSucceeded = false;
+  let sourceAvailable = false;
+  let anyLive = false;
 
   // 1. Hacker News Algolia API, Show HN posts from the last 7 days
   try {
@@ -53,7 +54,8 @@ export async function fetchIndieShowHn(
       algoliaUrl,
       { ttlSeconds: 600, forceLive, timeoutMs: 4500 }
     );
-    hnSucceeded = true;
+    sourceAvailable = true;
+    if (!res.fromCache) anyLive = true;
 
     for (const hit of res.data.hits || []) {
       const cleanedTitle = (hit.title || "").replace(/^Show HN:\s*/i, "").trim();
@@ -65,9 +67,14 @@ export async function fetchIndieShowHn(
       const name = rawName.trim().slice(0, 48);
       if (!name) continue;
 
-      const website =
-        cleanWebsiteUrl(hit.url) ||
-        `https://news.ycombinator.com/item?id=${hit.objectID}`;
+      const website = cleanWebsiteUrl(hit.url);
+      if (!website) continue;
+      try {
+        const host = new URL(website).hostname.toLowerCase();
+        if (["news.ycombinator.com", "github.com", "linkedin.com", "x.com", "twitter.com"].some((blocked) => host === blocked || host.endsWith(`.${blocked}`))) continue;
+      } catch {
+        continue;
+      }
       const domain = normalizeDomain(website, name);
       const companyId = makeCompanyId(domain);
       const tagline = rest.join(": ").trim() || cleanedTitle;
@@ -75,10 +82,6 @@ export async function fetchIndieShowHn(
         .replace(/<[^>]+>/g, " ")
         .replace(/\s+/g, " ")
         .trim();
-
-      const createdDate = hit.created_at
-        ? hit.created_at.slice(0, 10)
-        : new Date().toISOString().slice(0, 10);
 
       companies.push({
         id: companyId,
@@ -90,14 +93,12 @@ export async function fetchIndieShowHn(
           `${cleanedTitle} (${hit.points || 0} pts · ${hit.num_comments || 0} comments on Show HN)`,
         one_liner: tagline.slice(0, 130),
         website,
-        location: "Remote / Indie",
-        team_size: 2,
-        is_remote: true,
-        last_funding_date: createdDate,
-        funding_amount: `Show HN (${hit.points || 0} pts)`,
-        is_funded_last_12mo: true,
-        tags: ["Show HN", "Indie Builder", "Early Launch"],
-        founder_name: hit.author || null,
+        location: null,
+        team_size: null,
+        is_remote: false,
+        is_funded_last_12mo: false,
+        tags: ["Show HN", "Indie Builder"],
+        founder_name: null,
       });
     }
   } catch {
@@ -126,14 +127,21 @@ export async function fetchIndieShowHn(
       ghUrl,
       { ttlSeconds: 600, forceLive, timeoutMs: 7000, headers: ghHeaders }
     );
+    sourceAvailable = true;
+    if (!ghRes.fromCache) anyLive = true;
 
     for (const item of ghRes.data.items || []) {
-      const targetUrl = cleanWebsiteUrl(item.homepage) || item.html_url;
+      const targetUrl = cleanWebsiteUrl(item.homepage);
+      if (!targetUrl) continue;
+      try {
+        const host = new URL(targetUrl).hostname.toLowerCase();
+        if (["github.com", "gitlab.com", "bitbucket.org", "codeberg.org"].some((blocked) => host === blocked || host.endsWith(`.${blocked}`))) continue;
+      } catch {
+        continue;
+      }
       const domain = normalizeDomain(targetUrl, item.name);
       const companyId = makeCompanyId(domain);
-      const desc = (
-        item.description || `${item.name}, a small TypeScript product launch`
-      ).trim();
+      const desc = (item.description || item.name).trim();
 
       companies.push({
         id: companyId,
@@ -145,20 +153,17 @@ export async function fetchIndieShowHn(
         description: desc,
         one_liner: desc.slice(0, 120),
         website: targetUrl,
-        logo_url: item.owner?.avatar_url || null,
-        location: "Remote / Indie",
-        team_size: 2,
-        is_remote: true,
-        last_funding_date: item.created_at.slice(0, 10),
-        funding_amount: `Indie ★ ${item.stargazers_count}`,
-        is_funded_last_12mo: true,
+        location: null,
+        team_size: null,
+        is_remote: false,
+        is_funded_last_12mo: false,
         tags: [
           "Indie Hacker",
           ...(item.language ? [item.language] : []),
           ...((item.topics || []).slice(0, 3)),
         ],
         tech_stack: item.language ? [item.language] : [],
-        founder_name: item.owner?.login || null,
+        founder_name: null,
       });
     }
   } catch {
@@ -169,7 +174,7 @@ export async function fetchIndieShowHn(
     source: "indie",
     companies,
     durationMs: Date.now() - started,
-    mode: hnSucceeded ? "live" : "live+fallback",
-    note: `Read ${companies.length} Show HN posts from the last week`,
+    mode: anyLive ? "live" : sourceAvailable ? "cached" : "unavailable",
+    note: `Loaded ${companies.length} recent Show HN posts and GitHub projects with linked websites`,
   };
 }

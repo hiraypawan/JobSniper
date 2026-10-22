@@ -107,7 +107,7 @@ export interface FetcherResult {
   source: CompanySource;
   companies: NormalizedCompanyInput[];
   durationMs: number;
-  mode: "live" | "live+fallback" | "cached";
+  mode: "live" | "live+fallback" | "cached" | "unavailable";
   note?: string;
   error?: string;
 }
@@ -117,7 +117,7 @@ export interface SyncSourceSummary {
   count: number;
   jobsCount: number;
   durationMs: number;
-  mode: "live" | "live+fallback" | "cached";
+  mode: "live" | "live+fallback" | "cached" | "unavailable";
   note?: string;
   error?: string;
 }

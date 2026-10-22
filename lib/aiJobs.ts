@@ -31,50 +31,33 @@ export interface AIInterviewPrep {
 }
 
 /**
- * Guess who to write to at a company.
- *
- * The model gets the domain, the named founder and any public profiles we
- * already have, and returns contacts with an email pattern guess and a
- * confidence number. Treat the addresses as guesses until a send bounces back.
+ * Return only contacts explicitly stored on the source record. AI cannot verify
+ * identity or live email/profile details from a company domain, so never guess.
  */
 export async function findAIContacts(
   company: Company,
-  provider: AIProvider,
-  apiKey: string
+  _provider: AIProvider,
+  _apiKey: string
 ): Promise<AIContactResult> {
-  const prompt = `You are sourcing contacts at an early stage startup. Work out the most likely founder, CTO and HR contacts from the domain, the named founder and the public links below. Build email guesses from the usual patterns.
+  // A language model cannot verify identities or discover live contact details
+  // from a domain. Return only person fields already supplied by a source.
+  const contacts: ContactInfo[] = company.founder_name
+    ? [{
+        name: company.founder_name,
+        role: "founder",
+        ...(company.founder_email ? { email: company.founder_email } : {}),
+        ...(company.founder_linkedin ? { linkedin: company.founder_linkedin } : {}),
+        ...(company.founder_twitter ? { twitter: company.founder_twitter } : {}),
+        source: "Listed in the company record. Verify before contacting.",
+      }]
+    : [];
 
-${HUMAN_VOICE_RULES}
-
-Company: ${company.name}
-Domain: ${company.domain}
-Website: ${company.website}
-Founder Name: ${company.founder_name || "Unknown"}
-Founder Twitter: ${company.founder_twitter || "None"}
-Founder LinkedIn: ${company.founder_linkedin || "None"}
-Team Size: ${company.team_size || "Unknown"}
-Open Roles: ${company.open_roles_count || 0}
-Description: ${company.description}
-
-Return ONLY raw JSON (no markdown) with:
-- "contacts": array of {name, role ("founder"|"hr"|"cto"|"recruiter"|"engineering_manager"), email (a pattern guess such as founder@domain.com or first.last@domain.com), linkedin, twitter, confidence (0-100), source}
-- "reasoning": two sentences on how you got there
-
-Order them founder first, then HR or recruiter, then CTO or engineering manager.`;
-
-  try {
-    const response = await fetchAIText(provider, prompt, apiKey);
-    const parsed = extractJson(response) as AIContactResult;
-    recordAIGeneration(provider, true);
-    return humanizeDeep<AIContactResult>(parsed);
-  } catch (err) {
-    recordAIGeneration(provider, false);
-    if (err instanceof AIError) throw err;
-    throw new AIError(
-      `Could not fetch contacts: ${err instanceof Error ? err.message : String(err)}`,
-      { provider }
-    );
-  }
+  return {
+    contacts,
+    reasoning: contacts.length
+      ? "These details were already present in the company record. No email pattern or social profile was guessed. Verify the details on the linked source before reaching out."
+      : "No named person with source-listed contact details is available. No email address or social profile was generated.",
+  };
 }
 
 /**

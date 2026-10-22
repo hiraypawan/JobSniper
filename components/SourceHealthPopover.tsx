@@ -22,16 +22,16 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
     desc: "YC companies that are hiring right now",
   },
   wellfound: {
-    name: "Wellfound & Seed RSS",
-    desc: "Rounds from the last year, teams under 50",
+    name: "Funding RSS (FinSMEs, EU-Startups, TechCrunch)",
+    desc: "Funding headlines with an explicitly linked company website",
   },
   producthunt: {
     name: "Product Hunt / Launches",
     desc: "Launches from the last week that link to their own site",
   },
   indie: {
-    name: "Show HN / Indie Builders",
-    desc: "Show HN posts from the last week",
+    name: "Show HN & GitHub Projects",
+    desc: "Recent Show HN posts or repositories with an explicit project website",
   },
   hn_hiring: {
     name: "HN Who is Hiring?",
@@ -124,7 +124,11 @@ export function SourceHealthPopover({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    {sum?.mode === "unavailable" ? (
+                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    )}
                     <span className="text-xs font-semibold truncate text-slate-900 dark:text-white">
                       {meta.name}
                     </span>
@@ -137,7 +141,11 @@ export function SourceHealthPopover({
                   <div className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
                     {sum?.count ?? dbCount} leads
                   </div>
-                  <div className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <div className={`font-mono text-[10px] ${
+                    sum?.mode === "unavailable"
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-emerald-600 dark:text-emerald-400"
+                  }`}>
                     {sum ? `${sum.durationMs}ms · ${sum.mode}` : "synced"}
                   </div>
                 </div>

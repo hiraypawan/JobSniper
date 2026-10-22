@@ -7,7 +7,6 @@ export interface ContactInfo {
   email?: string;
   linkedin?: string;
   twitter?: string;
-  confidence: number;
   source: string;
 }
 

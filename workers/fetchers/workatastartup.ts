@@ -56,7 +56,7 @@ function extractNextDataCompanies(html: string): NormalizedCompanyInput[] {
 
     for (const c of rawList) {
       if (!c?.name) continue;
-      const website = cleanWebsiteUrl(c.website || c.url);
+      const website = cleanWebsiteUrl(c.website);
       if (!website) continue;
       const domain = normalizeDomain(website, c.name);
       const companyId = makeCompanyId(domain);
@@ -66,20 +66,23 @@ function extractNextDataCompanies(html: string): NormalizedCompanyInput[] {
         : "https://www.workatastartup.com/companies";
 
       const rawJobs = Array.isArray(c.jobs) ? c.jobs : [];
-      const jobs = rawJobs.map(
+      const jobs: NonNullable<NormalizedCompanyInput["jobs"]> = rawJobs.flatMap(
         (j: { title?: string; url?: string; location?: string; remote?: boolean }) => {
-          const title = j.title || "Founding Engineer";
-          const jobUrl = j.url || waasUrl;
-          return {
+          const title = typeof j.title === "string" ? j.title.trim() : "";
+          const jobUrl = cleanWebsiteUrl(j.url);
+          if (!title || !jobUrl) return [];
+          return [{
             id: makeJobId(companyId, title, jobUrl),
             title,
             url: jobUrl,
-            location: j.location || "Remote",
-            remote: j.remote ?? true,
-            department: "Engineering",
-          };
+            location: j.location?.trim() || null,
+            remote: j.remote === true,
+            department: null,
+          }];
         }
       );
+      const location = c.location?.trim() || c.all_locations?.trim() || null;
+      const isRemote = /remote/i.test(location || "") || jobs.some((job) => job.remote);
 
       out.push({
         id: companyId,
@@ -90,14 +93,14 @@ function extractNextDataCompanies(html: string): NormalizedCompanyInput[] {
         one_liner: c.one_liner || "",
         website,
         logo_url: c.logo_url || null,
-        location: c.location || "Remote",
+        location,
         team_size: typeof c.team_size === "number" ? c.team_size : null,
-        is_remote: true,
-        last_funding_date: batchInfo.approximateDate,
-        is_funded_last_12mo: batchInfo.withinLast12Mo,
+        is_remote: isRemote,
+        last_funding_date: null,
+        is_funded_last_12mo: false,
         hiring_page_url: waasUrl,
         hiring_provider: "yc",
-        open_roles_count: Math.max(1, jobs.length),
+        open_roles_count: jobs.length,
         jobs,
       });
     }
@@ -160,49 +163,16 @@ export async function fetchWorkAtAStartup(
         /remote/i.test(loc) ||
         (item.regions || []).some((r) => /remote/i.test(r));
 
-      // Per spec: focus WAAS feed on remote-friendly + small/early recently funded cohorts
+      // Keep the target feed focused on remote or smaller YC companies.
       if (!isRemote && (item.team_size || 0) > 25) {
         continue;
       }
 
-      const website =
-        cleanWebsiteUrl(item.website) ||
-        `https://www.workatastartup.com/companies/${item.slug}`;
+      const website = cleanWebsiteUrl(item.website);
+      if (!website) continue;
       const domain = normalizeDomain(website, item.name);
       const companyId = makeCompanyId(domain);
       const waasCompanyUrl = `https://www.workatastartup.com/companies/${item.slug}`;
-      const ycJobsUrl = `https://www.ycombinator.com/companies/${item.slug}/jobs`;
-
-      const textSignal = `${item.one_liner || ""} ${(item.tags || []).join(" ")}`.toLowerCase();
-      const roleTemplates = [
-        {
-          title: /ai|ml|agent|llm/.test(textSignal)
-            ? "Founding AI Product Engineer (Remote)"
-            : "Founding Full-Stack Engineer (Remote)",
-          dept: "Engineering",
-        },
-        ...(item.team_size && item.team_size >= 3
-          ? [
-              {
-                title: /b2b|enterprise|fintech|sales/.test(textSignal)
-                  ? "Founding GTM / Growth Engineer"
-                  : "Senior Frontend & Design Engineer",
-                dept: "Product / Growth",
-              },
-            ]
-          : []),
-      ];
-
-      const jobs = roleTemplates.map((rt, idx) => ({
-        id: makeJobId(companyId, rt.title, idx === 0 ? waasCompanyUrl : ycJobsUrl),
-        title: rt.title,
-        url: idx === 0 ? waasCompanyUrl : ycJobsUrl,
-        location: isRemote ? "Remote" : loc || "San Francisco / Hybrid",
-        remote: isRemote,
-        department: rt.dept,
-        posted_at: batchInfo.approximateDate,
-      }));
-
       companies.push({
         id: companyId,
         name: item.name,
@@ -216,20 +186,20 @@ export async function fetchWorkAtAStartup(
         website,
         yc_url: item.url || `https://www.ycombinator.com/companies/${item.slug}`,
         logo_url: item.small_logo_thumb_url || null,
-        location: loc || (isRemote ? "Remote" : "San Francisco, CA"),
+        location: loc || null,
         team_size:
           typeof item.team_size === "number" && item.team_size > 0
             ? item.team_size
             : null,
         is_remote: isRemote,
-        last_funding_date: batchInfo.approximateDate,
-        funding_amount: "$500K+ Seed / YC",
-        is_funded_last_12mo: batchInfo.withinLast12Mo,
+        last_funding_date: null,
+        funding_amount: null,
+        is_funded_last_12mo: false,
         hiring_page_url: waasCompanyUrl,
         hiring_provider: "yc",
-        open_roles_count: jobs.length,
+        open_roles_count: 0,
         tags: (item.tags || []).slice(0, 6),
-        jobs,
+        jobs: [],
       });
     }
 
