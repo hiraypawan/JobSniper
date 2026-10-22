@@ -101,8 +101,6 @@ export function PitchSettingsModal({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const validateDraft = useCallback(() => {
     const next: { gemini?: string; openrouter?: string } = {};
     if (draft.geminiApiKey) {
@@ -116,6 +114,8 @@ export function PitchSettingsModal({
     setKeyErrors(next);
     return Object.keys(next).length === 0;
   }, [draft]);
+
+  if (!isOpen) return null;
 
   const handleTestKey = async (provider: "gemini" | "openrouter") => {
     const key = provider === "gemini" ? draft.geminiApiKey : draft.openrouterApiKey;
