@@ -11,7 +11,7 @@ import {
   enrichSingleCompany,
   syncAllSources,
 } from "@/workers/scheduled";
-import { handleAiRequest } from "@/app/api/ai/utils";
+import { handleAiRequest } from "@/lib/aiProxy";
 
 function jsonResponse(data: unknown, status: number = 200): Response {
   return new Response(JSON.stringify(data), {
