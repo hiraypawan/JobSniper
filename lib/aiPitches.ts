@@ -16,9 +16,18 @@ const OPENROUTER_KEY_STORAGE = "startupsniper_openrouter_api_key";
 export function getApiKey(provider: AIProvider): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return provider === "gemini"
+    const key = provider === "gemini"
       ? localStorage.getItem(GEMINI_KEY_STORAGE)
       : localStorage.getItem(OPENROUTER_KEY_STORAGE);
+    console.debug(
+      "[aiPitches] getApiKey",
+      provider,
+      "hasKey=",
+      Boolean(key),
+      "source=",
+      key ? "localStorage" : "none"
+    );
+    return key;
   } catch {
     return null;
   }
@@ -160,6 +169,14 @@ Return ONLY a raw JSON object (no markdown code blocks) with these exact keys:
 
 Personalize each format specifically to this company. Do not wrap in markdown.`;
 
+    console.debug(
+      "[aiPitches] generateAIPitches start",
+      provider,
+      company.name,
+      "hasKey=",
+      Boolean(apiKey)
+    );
+
     const response =
       provider === "gemini"
         ? await callGemini(apiKey, prompt)
@@ -167,6 +184,8 @@ Personalize each format specifically to this company. Do not wrap in markdown.`;
 
     const cleaned = response.replace(/```json/g, "").replace(/```/g, "").trim();
     const parsed = JSON.parse(cleaned) as AIPitchResult;
+
+    console.debug("[aiPitches] generateAIPitches success", provider, company.name);
 
     return {
       classicSpecDm: parsed.classicSpecDm || "",
@@ -177,6 +196,7 @@ Personalize each format specifically to this company. Do not wrap in markdown.`;
     };
   } catch (err) {
     console.error("AI pitch generation failed:", err);
+    console.debug("[aiPitches] generateAIPitches error", provider, company.name, String(err));
     return null;
   }
 }

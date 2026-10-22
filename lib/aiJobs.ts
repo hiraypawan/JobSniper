@@ -31,6 +31,7 @@ export async function findAIContacts(
   provider: "gemini" | "openrouter",
   apiKey: string
 ): Promise<AIContactResult | null> {
+  console.debug("[aiJobs] findAIContacts start", provider, company.name, "hasKey=", Boolean(apiKey));
   try {
     const prompt = `You are an expert recruiter and sourcer. Given this startup, infer the most likely founder, CTO, and HR/recruiter contacts. Use the domain, founder name, and any social links provided to construct likely email patterns.
 
@@ -56,6 +57,7 @@ Focus on the founder first (highest response rate for early startups), then HR/r
     return parsed;
   } catch (err) {
     console.error("AI contact finder failed:", err);
+    console.debug("[aiJobs] findAIContacts error", provider, company.name, String(err));
     return null;
   }
 }
@@ -69,6 +71,7 @@ export async function tailorResumeAndCoverLetter(
   provider: "gemini" | "openrouter",
   apiKey: string
 ): Promise<AITailoredResume | null> {
+  console.debug("[aiJobs] tailorResumeAndCoverLetter start", provider, company.name, "hasKey=", Boolean(apiKey));
   try {
     const prompt = `You are an expert resume writer and career coach. Tailor this user's resume and write a cover letter for this specific startup.
 
@@ -98,6 +101,7 @@ Sound like a real person, not corporate speak. Be specific to this company.`;
     return parsed;
   } catch (err) {
     console.error("AI resume tailor failed:", err);
+    console.debug("[aiJobs] tailorResumeAndCoverLetter error", provider, company.name, String(err));
     return null;
   }
 }
@@ -111,6 +115,7 @@ export async function generateInterviewPrep(
   provider: "gemini" | "openrouter",
   apiKey: string
 ): Promise<AIInterviewPrep | null> {
+  console.debug("[aiJobs] generateInterviewPrep start", provider, company.name, "hasKey=", Boolean(apiKey));
   try {
     const prompt = `You are an expert interview coach. Generate interview preparation for this startup role.
 
@@ -136,6 +141,7 @@ Be specific to this company's stage, stack, and mission.`;
     return parsed;
   } catch (err) {
     console.error("AI interview prep failed:", err);
+    console.debug("[aiJobs] generateInterviewPrep error", provider, company.name, String(err));
     return null;
   }
 }
