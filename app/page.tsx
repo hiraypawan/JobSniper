@@ -11,10 +11,7 @@ import { HeaderBar } from "@/components/HeaderBar";
 import { KpiStrip } from "@/components/KpiStrip";
 import { PitchSettingsModal } from "@/components/PitchSettingsModal";
 import { SourceHealthPopover } from "@/components/SourceHealthPopover";
-import {
-  buildOutreachPitches,
-  DEFAULT_PITCH_SETTINGS,
-} from "@/lib/pitchTemplates";
+import { DEFAULT_PITCH_SETTINGS } from "@/lib/pitchSettings";
 import {
   CompaniesApiResponse,
   Company,
@@ -104,13 +101,17 @@ export default function DashboardPage() {
       // can leave malformed values that would otherwise break the settings UI.
       const normalized: PitchSettings = {
         ...DEFAULT_PITCH_SETTINGS,
+        aiProvider: parsed.aiProvider === "openrouter" ? "openrouter" : "gemini",
         senderName: typeof parsed.senderName === "string" ? parsed.senderName : DEFAULT_PITCH_SETTINGS.senderName,
         customToolIdea: typeof parsed.customToolIdea === "string" ? parsed.customToolIdea : DEFAULT_PITCH_SETTINGS.customToolIdea,
         similarCompanyProof: typeof parsed.similarCompanyProof === "string" ? parsed.similarCompanyProof : DEFAULT_PITCH_SETTINGS.similarCompanyProof,
         deliveryDays: Number.isFinite(parsed.deliveryDays) && Number(parsed.deliveryDays) > 0
           ? Number(parsed.deliveryDays)
           : DEFAULT_PITCH_SETTINGS.deliveryDays,
-        demoOffer: typeof parsed.demoOffer === "string" ? parsed.demoOffer : DEFAULT_PITCH_SETTINGS.demoOffer,
+        demoOffer:
+          typeof parsed.demoOffer === "string" && parsed.demoOffer !== "45 sec Loom demo"
+            ? parsed.demoOffer
+            : DEFAULT_PITCH_SETTINGS.demoOffer,
         geminiApiKey: typeof parsed.geminiApiKey === "string" ? parsed.geminiApiKey : undefined,
         openrouterApiKey: typeof parsed.openrouterApiKey === "string" ? parsed.openrouterApiKey : undefined,
       };
@@ -407,11 +408,8 @@ export default function DashboardPage() {
       "Founder LinkedIn",
       "Founder Email",
       "CRM Status",
-      "Prefilled 5-Day Pitch",
     ];
-    const rows = companies.map((c) => {
-      const pitch = buildOutreachPitches(c, pitchSettings).classicSpecDm;
-      return [
+    const rows = companies.map((c) => [
         c.name,
         c.domain,
         c.website,
@@ -429,9 +427,7 @@ export default function DashboardPage() {
         c.founder_linkedin || "",
         c.founder_email || "",
         c.outreach_status,
-        pitch,
-      ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`);
-    });
+      ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`));
 
     const csvContent =
       headers.join(",") + "\n" + rows.map((r) => r.join(",")).join("\n");
@@ -559,7 +555,6 @@ export default function DashboardPage() {
                 >
                   <CompanyCard
                     company={company}
-                    pitchSettings={pitchSettings}
                     onSelect={setSelectedCompany}
                     onUpdateStatus={handleUpdateCompanyStatus}
                   />

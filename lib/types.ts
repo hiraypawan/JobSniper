@@ -149,6 +149,7 @@ export interface CompaniesApiResponse {
 }
 
 export interface PitchSettings {
+  aiProvider?: "gemini" | "openrouter";
   senderName: string;
   customToolIdea: string;
   similarCompanyProof: string;

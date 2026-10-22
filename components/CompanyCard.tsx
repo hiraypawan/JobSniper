@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { Briefcase, Check, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, Send, Users } from "lucide-react";
-import { copyTextSafe } from "@/lib/clipboard";
-import { buildOutreachPitches } from "@/lib/pitchTemplates";
-import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
+import React from "react";
+import { Briefcase, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, Send, Sparkles, Users } from "lucide-react";
+import { Company, OutreachStatus } from "@/lib/types";
 
 interface Props {
   company: Company;
-  pitchSettings: PitchSettings;
   onSelect: (company: Company) => void;
   onUpdateStatus: (companyId: string, status: OutreachStatus) => void;
 }
@@ -36,12 +33,9 @@ const STATUS_META: Record<
 
 export function CompanyCard({
   company,
-  pitchSettings,
   onSelect,
   onUpdateStatus,
 }: Props) {
-  const [copied, setCopied] = useState(false);
-
   const initials = company.name
     .split(/[\s-]+/)
     .slice(0, 2)
@@ -51,12 +45,9 @@ export function CompanyCard({
 
   const statusInfo = STATUS_META[company.outreach_status] || STATUS_META.new;
 
-  const handleCopyPitch = async (e: React.MouseEvent) => {
+  const handleOpenAIPitch = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const pitches = buildOutreachPitches(company, pitchSettings);
-    await copyTextSafe(pitches.classicSpecDm);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    onSelect(company);
   };
 
   const handleCycleSave = (e: React.MouseEvent) => {
@@ -158,22 +149,10 @@ export function CompanyCard({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={handleCopyPitch}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
-              copied
-                ? "bg-emerald-500 text-slate-950"
-                : "bg-white/5 dark:bg-obsidian-900 text-white hover:bg-white/10 dark:hover:bg-obsidian-800 border border-white/10 dark:border-obsidian-800"
-            }`}
+            onClick={handleOpenAIPitch}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold bg-white/5 dark:bg-obsidian-900 text-white hover:bg-emerald-500/10 hover:text-emerald-400 border border-white/10 dark:border-obsidian-800 transition-all"
           >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5" /> Copied
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" /> Copy Pitch
-              </>
-            )}
+            <Sparkles className="w-3.5 h-3.5" /> AI Pitch
           </button>
 
           <button

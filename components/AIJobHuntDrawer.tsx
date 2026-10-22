@@ -30,7 +30,6 @@ import {
 import { findAIContacts, tailorResumeAndCoverLetter, generateInterviewPrep } from "@/lib/aiJobs";
 import { OUTREACH_CHANNELS, ContactInfo } from "@/lib/outreach";
 import { Company, PitchSettings } from "@/lib/types";
-import { buildOutreachPitches } from "@/lib/pitchTemplates";
 
 interface Props {
   company: Company | null;
