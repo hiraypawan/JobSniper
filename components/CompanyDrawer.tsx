@@ -20,11 +20,9 @@ import {
   X,
 } from "lucide-react";
 import { copyTextSafe } from "@/lib/clipboard";
-import { buildOutreachPitches } from "@/lib/pitchTemplates";
 import { computeSniperScore } from "@/lib/scoring";
 import {
   generateAIPitches,
-  getApiKey,
   AIProvider,
   AIPitchResult,
   AIError,
@@ -66,37 +64,34 @@ export function CompanyDrawer({
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
-  const [aiPitches, setAiPitches] = useState<AIPitchResult | null>(null);
+  const [aiPitchState, setAiPitchState] = useState<{
+    companyId: string;
+    pitches: AIPitchResult;
+  } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<{ message: string; provider: string } | null>(null);
-  const [useAI, setUseAI] = useState(false);
-  const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
+  const aiProvider: AIProvider = pitchSettings.aiProvider || "gemini";
   const aiRequestId = useRef(0);
-  const aiModeChosenByUser = useRef(false);
+  const aiPitches = aiPitchState && aiPitchState.companyId === company?.id
+    ? aiPitchState.pitches
+    : null;
 
   const generated = useMemo(() => {
     if (!company) return null;
-    if (useAI && aiPitches) {
-      return {
-        inferred: {
-          toolIdea:
-            aiPitches.proposedBuildIdea ||
-            pitchSettings.customToolIdea ||
-            "small custom tool",
-          similarCompany: pitchSettings.similarCompanyProof || "",
-          bottleneckReason:
-            aiPitches.angleRationale || "Personalized from this company's available data",
-          topRole: company.jobs?.[0]?.title || null,
-        },
-        classicSpecDm: aiPitches.classicSpecDm,
-        roleHookDm: aiPitches.roleHookDm,
-        linkedinNote: aiPitches.linkedinNote,
-        emailSubject: aiPitches.emailSubject,
-        emailBody: aiPitches.emailBody,
-      };
-    }
-    return buildOutreachPitches(company, pitchSettings);
-  }, [company, pitchSettings, useAI, aiPitches]);
+    return {
+      inferred: {
+        toolIdea: aiPitches?.proposedBuildIdea || "",
+        similarCompany: "",
+        bottleneckReason: aiPitches?.angleRationale || "",
+        topRole: company.jobs?.[0]?.title || null,
+      },
+      classicSpecDm: aiPitches?.classicSpecDm || "",
+      roleHookDm: aiPitches?.roleHookDm || "",
+      linkedinNote: aiPitches?.linkedinNote || "",
+      emailSubject: aiPitches?.emailSubject || "",
+      emailBody: aiPitches?.emailBody || "",
+    };
+  }, [company, aiPitches]);
 
   const scoreDetail = useMemo(() => {
     if (!company) return null;
@@ -182,19 +177,20 @@ export function CompanyDrawer({
     };
   }, [company?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // AI pitch generation. A failure never quietly turns AI off: the error shows
-  // in the drawer and the template pitch stays on screen.
+  // AI is the only pitch source. Errors stay visible and never fall back to
+  // generic or fabricated copy.
   const runAiGeneration = useCallback(async () => {
     if (!company?.id) return;
     const requestId = ++aiRequestId.current;
     setAiLoading(true);
     setAiError(null);
-    // Keep the tailored local draft visible while regenerating instead of
-    // briefly showing the last company's AI copy.
-    setAiPitches(null);
+    // Clear the previous result so no company's copy survives regeneration.
+    setAiPitchState(null);
     try {
       const result = await generateAIPitches(company, pitchSettings, aiProvider);
-      if (requestId === aiRequestId.current) setAiPitches(result);
+      if (requestId === aiRequestId.current) {
+        setAiPitchState({ companyId: company.id, pitches: result });
+      }
     } catch (err) {
       if (requestId !== aiRequestId.current) return;
       if (err instanceof AIError) {
@@ -212,20 +208,15 @@ export function CompanyDrawer({
 
   useEffect(() => {
     aiRequestId.current++;
-    setAiPitches(null);
+    setAiPitchState(null);
     setAiError(null);
     setAiLoading(false);
-    if (company?.id && !aiModeChosenByUser.current) {
-      // Use AI automatically when the user has already configured a provider.
-      // Without a key, the personalized local draft remains the default.
-      setUseAI(Boolean(getApiKey(aiProvider, pitchSettings)));
-    }
   }, [company?.id]);
 
   useEffect(() => {
-    if (!company?.id || !useAI) return;
+    if (!company?.id) return;
     runAiGeneration();
-  }, [company?.id, useAI, runAiGeneration]);
+  }, [company?.id, runAiGeneration]);
 
   if (!company || !generated) return null;
 
@@ -253,6 +244,7 @@ export function CompanyDrawer({
   };
 
   const handleCopyAndMark = async (markPitched: boolean) => {
+    if (!aiPitches || !customPitchText.trim()) return;
     await copyTextSafe(customPitchText);
     setCopiedKey(markPitched ? "marked" : "copied");
     setTimeout(() => setCopiedKey(null), 2200);
@@ -302,36 +294,14 @@ export function CompanyDrawer({
               </span>
               <button
                 type="button"
-                onClick={() => {
-                  const hasKey = Boolean(getApiKey(aiProvider, pitchSettings));
-                  if (!hasKey && !useAI) {
-                    // Turning AI on without a key: stay on AI, show actionable
-                    // error banner instead of silently disabling (AC2).
-                    setUseAI(true);
-                    setAiError({
-                      message: `No ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"} key saved yet. Add one in “My 5d Offer”, then switch AI back on.`,
-                      provider: aiProvider,
-                    });
-                    return;
-                  }
-                  aiModeChosenByUser.current = true;
-                  setUseAI((prev) => !prev);
-                  if (!useAI) setAiError(null);
-                }}
-                className={`ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border transition-all ${
-                  useAI
-                    ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30"
-                    : "bg-white dark:bg-obsidian-900 border-white/20 dark:border-obsidian-800 text-slate-500"
-                }`}
-                title={useAI ? "Use template pitches" : "Use AI pitches"}
+                onClick={runAiGeneration}
+                disabled={aiLoading}
+                className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 transition-all disabled:opacity-60"
+                title="Generate a fresh company-specific pitch with AI"
               >
-                {useAI ? `✨ ${aiProvider === "gemini" ? "Gemini" : "OpenRouter"}` : "Template"}
-                {aiLoading && (
-                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
-                )}
-                {aiError && useAI && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                )}
+                {aiLoading ? <RefreshCw className="w-2.5 h-2.5 animate-spin" /> : <Sparkles className="w-2.5 h-2.5" />}
+                {aiLoading ? "Writing with AI" : "Regenerate AI"}
+                {aiError && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
               </button>
               {onOpenAIJobHunt && (
                 <button
@@ -425,7 +395,7 @@ export function CompanyDrawer({
               </a>
             )}
 
-            {company.founder_email && (
+            {company.founder_email && aiPitches && (
               <a
                 href={`mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`}
                 className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
@@ -441,11 +411,15 @@ export function CompanyDrawer({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-emerald-500" />
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  5-Day Build Outreach
+                  AI Outreach Studio
                 </h3>
               </div>
               <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-500">
-                {generated.inferred.bottleneckReason}
+                {aiPitches
+                  ? aiPitches.angleRationale
+                  : aiLoading
+                    ? "AI is checking the company and role details..."
+                    : "AI pitch is waiting for a successful generation."}
                 {aiPitches && (
                   <>
                     • <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ AI-generated ({aiProvider})</span>
@@ -453,10 +427,12 @@ export function CompanyDrawer({
                 )}
               </span>
             </div>
-            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-              <span className="font-semibold text-slate-700 dark:text-slate-300">Build angle:</span>{" "}
-              {generated.inferred.toolIdea}
-            </p>
+            {aiPitches && (
+              <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Proposed angle:</span>{" "}
+                {aiPitches.proposedBuildIdea}
+              </p>
+            )}
 
             {aiError && (
               <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
@@ -483,7 +459,7 @@ export function CompanyDrawer({
                     Retry
                   </button>
                   <span className="ml-auto text-[10px] text-slate-500">
-                    Showing the template pitch instead.
+                    No canned copy was substituted. Configure AI access, then retry.
                   </span>
                 </div>
               </div>
@@ -506,7 +482,7 @@ export function CompanyDrawer({
               ))}
             </div>
 
-            {activeTab === "email" && (
+            {activeTab === "email" && aiPitches && (
               <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-xs">
                 <span className="truncate">
                   <span className="text-slate-500">Subject:</span>{" "}
@@ -528,9 +504,13 @@ export function CompanyDrawer({
 
             <textarea
               rows={activeTab === "email" ? 8 : 4}
-              value={customPitchText}
+              value={aiPitches ? customPitchText : ""}
               onChange={(e) => setCustomPitchText(e.target.value)}
-              className="w-full p-3.5 rounded-2xl text-xs leading-relaxed bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all"
+              disabled={!aiPitches || aiLoading}
+              placeholder={aiLoading
+                ? "AI is analyzing the company's product and job requirements..."
+                : "AI-generated copy appears here when generation succeeds."}
+              className="w-full p-3.5 rounded-2xl text-xs leading-relaxed bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all disabled:opacity-70"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -545,7 +525,8 @@ export function CompanyDrawer({
                 <button
                   type="button"
                   onClick={() => handleCopyAndMark(false)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-obsidian-800 transition-all"
+                  disabled={!aiPitches || aiLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {copiedKey === "copied" ? (
                     <>
@@ -562,7 +543,8 @@ export function CompanyDrawer({
                 <button
                   type="button"
                   onClick={() => handleCopyAndMark(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all"
+                  disabled={!aiPitches || aiLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3 h-3" />
                   {copiedKey === "marked" ? "Copied & Marked" : "Copy & Mark Pitched"}
