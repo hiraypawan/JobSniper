@@ -48,6 +48,14 @@
     -webkit-appearance: none;
     appearance: none;
   }
+
+  /* iOS: force 16px font on inputs so focusing never triggers zoom.
+     Beats utility text-sm via !important; applied only on iOS webkit. */
+  @supports (-webkit-touch-callout: none) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @layer components {

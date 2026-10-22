@@ -64,3 +64,31 @@ Deploys static assets (`./out`) + `/api/*` Worker endpoints + optional `30 0 * *
 npm run db:migrate:remote
 npm run deploy:cf
 ```
+
+---
+
+## AI Keys & the AI Pitch Generator
+
+### Bring-Your-Own-Key (default)
+AI features (Spec DM / Role Hook / LinkedIn / Cold Email in the company drawer, and Founder & HR Contacts / AI Resume / AI Interview Prep in AI Job Hunt) require an API key saved in **"My 5d Offer" → Settings** (the drawer opens from the header or from the "No key" banner when you toggle AI).
+
+- **Gemini**: key starts with `AIza...` (Google AI Studio).
+- **OpenRouter**: key starts with `sk-or-...` (access to Gemini, Claude, GPT, Llama models).
+
+Keys are saved to `localStorage` only — nothing is sent to StartupSniper servers. On Save, keys are format-validated (`^AIza…` / `^sk-or-…`) and a "Test Key" button pings the provider directly (1-token call) with ✓/✗ feedback.
+
+### Optional: shared server key via `/api/ai` proxy (no BYOK required)
+To let everyone use AI without saving a key, set a shared key server-side and the app calls `POST /api/ai` automatically — the key never reaches the browser:
+
+```bash
+# Workers / wrangler deploy:
+npx wrangler secret put OPENROUTER_API_KEY   # or GEMINI_API_KEY
+# Cloudflare Pages: Pages dashboard → Settings → Environment variables (secrets)
+```
+
+Supported env vars: `OPENROUTER_API_KEY`, `GEMINI_API_KEY` (documented in `wrangler.toml`).
+The proxy is used on `*.pages.dev` and production deploys; on localhost it falls back to direct fetch when the proxy isn't configured.
+
+### Error behavior (no silent fails)
+Every AI failure surfaces inline: `401` invalid key, `404` model (automatically falls back to another OpenRouter model), `429` rate limit (auto-retries with backoff), 8s timeout, JSON parse failures. When AI fails, the template pitch stays visible and an "Open Settings" / "Retry" action is shown instead of silently turning AI off.
+
