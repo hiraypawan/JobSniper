@@ -711,7 +711,32 @@ export async function deduplicateAndUpsertCompanies(
           founder_linkedin = COALESCE(excluded.founder_linkedin, companies.founder_linkedin),
           founder_email = COALESCE(excluded.founder_email, companies.founder_email),
           sniper_score = MAX(companies.sniper_score, excluded.sniper_score),
-          updated_at = excluded.updated_at`
+          updated_at = excluded.updated_at
+        WHERE companies.name IS NOT excluded.name
+          OR companies.source IS NOT (CASE WHEN companies.source = 'yc' THEN 'yc' ELSE excluded.source END)
+          OR companies.sources_json IS NOT excluded.sources_json
+          OR companies.batch IS NOT COALESCE(excluded.batch, companies.batch)
+          OR companies.description IS NOT (CASE WHEN length(excluded.description) >= length(companies.description) THEN excluded.description ELSE companies.description END)
+          OR companies.one_liner IS NOT (CASE WHEN excluded.one_liner != '' THEN excluded.one_liner ELSE companies.one_liner END)
+          OR companies.website IS NOT excluded.website
+          OR companies.yc_url IS NOT COALESCE(excluded.yc_url, companies.yc_url)
+          OR companies.logo_url IS NOT COALESCE(excluded.logo_url, companies.logo_url)
+          OR companies.location IS NOT COALESCE(excluded.location, companies.location)
+          OR companies.team_size IS NOT COALESCE(excluded.team_size, companies.team_size)
+          OR companies.is_remote IS NOT MAX(companies.is_remote, excluded.is_remote)
+          OR companies.last_funding_date IS NOT COALESCE(excluded.last_funding_date, companies.last_funding_date)
+          OR companies.funding_amount IS NOT COALESCE(excluded.funding_amount, companies.funding_amount)
+          OR companies.is_funded_last_12mo IS NOT excluded.is_funded_last_12mo
+          OR companies.hiring_page_url IS NOT COALESCE(excluded.hiring_page_url, companies.hiring_page_url)
+          OR companies.hiring_provider IS NOT COALESCE(excluded.hiring_provider, companies.hiring_provider)
+          OR companies.open_roles_count IS NOT MAX(companies.open_roles_count, excluded.open_roles_count)
+          OR companies.tags_json IS NOT (CASE WHEN excluded.tags_json != '[]' THEN excluded.tags_json ELSE companies.tags_json END)
+          OR companies.tech_stack_json IS NOT (CASE WHEN excluded.tech_stack_json != '[]' THEN excluded.tech_stack_json ELSE companies.tech_stack_json END)
+          OR companies.founder_name IS NOT COALESCE(excluded.founder_name, companies.founder_name)
+          OR companies.founder_twitter IS NOT COALESCE(excluded.founder_twitter, companies.founder_twitter)
+          OR companies.founder_linkedin IS NOT COALESCE(excluded.founder_linkedin, companies.founder_linkedin)
+          OR companies.founder_email IS NOT COALESCE(excluded.founder_email, companies.founder_email)
+          OR companies.sniper_score IS NOT MAX(companies.sniper_score, excluded.sniper_score)`
       ).bind(
         companyId,
         record.domain,
@@ -758,7 +783,14 @@ export async function deduplicateAndUpsertCompanies(
              remote = MAX(jobs.remote, excluded.remote),
              department = COALESCE(excluded.department, jobs.department),
              description = COALESCE(excluded.description, jobs.description),
-             posted_at = COALESCE(excluded.posted_at, jobs.posted_at)`
+             posted_at = COALESCE(excluded.posted_at, jobs.posted_at)
+           WHERE jobs.title IS NOT excluded.title
+             OR jobs.url IS NOT excluded.url
+             OR jobs.location IS NOT COALESCE(excluded.location, jobs.location)
+             OR jobs.remote IS NOT MAX(jobs.remote, excluded.remote)
+             OR jobs.department IS NOT COALESCE(excluded.department, jobs.department)
+             OR jobs.description IS NOT COALESCE(excluded.description, jobs.description)
+             OR jobs.posted_at IS NOT COALESCE(excluded.posted_at, jobs.posted_at)`
         ).bind(
           job.id,
           companyId,
