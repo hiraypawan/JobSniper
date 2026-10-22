@@ -86,45 +86,11 @@ export async function handleApiRequest(
       });
     }
 
-    // 3. GET /api/companies: serve from D1, refresh in the background when stale
+    // 3. GET /api/companies: read dashboard data from D1 without triggering a sync
     if (pathname === "/api/companies" && request.method === "GET") {
-      let stats = await getDashboardStats(env);
-      let backgroundSyncTriggered = false;
-
-      // Cold start: fill the table once, before responding, so the first visit is not empty.
-      if (stats.totalCompanies === 0) {
-        const previousSyncAt = stats.lastSyncedAt;
-        await syncAllSources(env, { forceLive: false });
-        stats = await getDashboardStats(env);
-
-        // An empty cached feed should not strand a fresh/empty database at zero.
-        // Bypass source caches once when there was no recent sync.
-        const previousSyncMs = previousSyncAt ? Date.parse(previousSyncAt) : 0;
-        const needsLiveRetry =
-          !previousSyncAt ||
-          !Number.isFinite(previousSyncMs) ||
-          Date.now() - previousSyncMs > 15 * 60 * 1000;
-        if (stats.totalCompanies === 0 && needsLiveRetry) {
-          await syncAllSources(env, { forceLive: true });
-          stats = await getDashboardStats(env);
-        }
-      } else {
-        // Stale-While-Revalidate (>15 mins old): respond immediately in <30ms AND refresh live in background!
-        const lastMs = stats.lastSyncedAt
-          ? Date.parse(stats.lastSyncedAt)
-          : 0;
-        const isStale = Date.now() - lastMs > 15 * 60 * 1000;
-        if (isStale) {
-          backgroundSyncTriggered = true;
-          const bgTask = syncAllSources(env, { forceLive: false }).catch(
-            () => undefined
-          );
-          if (ctx?.waitUntil) {
-            ctx.waitUntil(bgTask);
-          }
-        }
-      }
-
+      // Keep dashboard reads read-only. D1 charges row writes on every upsert,
+      // so source syncs run only from explicit POST /api/sync requests.
+      const stats = await getDashboardStats(env);
       const queryResult = await queryCompanies(env, {
         source: url.searchParams.get("source") || "all",
         batch: url.searchParams.get("batch") || "all",
@@ -144,7 +110,7 @@ export async function handleApiRequest(
       const payload: CompaniesApiResponse = {
         ...queryResult,
         stats,
-        backgroundSyncTriggered,
+        backgroundSyncTriggered: false,
       };
       return jsonResponse(payload);
     }

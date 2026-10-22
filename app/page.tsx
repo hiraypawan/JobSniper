@@ -36,6 +36,14 @@ const DEFAULT_FILTERS: FilterState = {
 
 const STORAGE_PITCH_KEY = "startupsniper_pitch_settings_v1";
 
+function getErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "network error";
+  if (/exceeded D1's free tier daily row write limit/i.test(message)) {
+    return "Cloudflare D1's daily write quota is exhausted. It resets at 05:30 IST (00:00 UTC); retry after then.";
+  }
+  return message.slice(0, 180);
+}
+
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
@@ -214,61 +222,12 @@ export default function DashboardPage() {
           );
         }
 
-        if (data.backgroundSyncTriggered && !append) {
-          // Wait for the background sync to commit before applying another
-          // snapshot. The old fixed-delay read could return too early and make
-          // the dashboard totals jump backwards to stale values.
-          const syncedAtBeforeRefresh = data.stats.lastSyncedAt;
-          setSyncStatusText("Refreshing today's startups in the background.");
-          void (async () => {
-            for (let attempt = 0; attempt < 8; attempt++) {
-              await new Promise((resolve) => setTimeout(resolve, 1800));
-              if (requestId !== latestCompaniesRequest.current) return;
-              try {
-                const refreshed = await fetch(
-                  `/api/companies?${params.toString()}`,
-                  { cache: "no-store" }
-                );
-                if (!refreshed.ok) continue;
-                const freshData =
-                  (await refreshed.json()) as CompaniesApiResponse;
-                if (requestId !== latestCompaniesRequest.current) return;
-                const before = syncedAtBeforeRefresh
-                  ? Date.parse(syncedAtBeforeRefresh)
-                  : 0;
-                const after = freshData.stats.lastSyncedAt
-                  ? Date.parse(freshData.stats.lastSyncedAt)
-                  : 0;
-                if (after <= before) continue;
-
-                setCompanies(freshData.companies);
-                setStats(freshData.stats);
-                setTotal(freshData.total);
-                setHasMore(freshData.hasMore);
-                setPage(freshData.page);
-                setSyncStatusText("Feed refreshed.");
-                setTimeout(() => {
-                  setSyncStatusText((current) =>
-                    current === "Feed refreshed." ? null : current
-                  );
-                }, 2500);
-                return;
-              } catch {
-                // A transient read failure should not discard the current data.
-              }
-            }
-            if (requestId === latestCompaniesRequest.current) {
-              setSyncStatusText(null);
-            }
-          })();
-        }
         return true;
       } catch (err) {
         console.error("Failed loading startups:", err);
-        const reason =
-          err instanceof Error ? err.message.slice(0, 140) : "network error";
+        const reason = getErrorMessage(err);
         setSyncStatusText(
-          `Dashboard data error: ${reason}. Check the API/database connection and retry.`
+          `Dashboard data error: ${reason}`
         );
         return false;
       } finally {
@@ -361,10 +320,9 @@ export default function DashboardPage() {
       }
     } catch (err) {
       console.error("Live sync failed:", err);
-      const reason =
-        err instanceof Error ? err.message.slice(0, 140) : "network error";
+      const reason = getErrorMessage(err);
       setSyncStatusText(
-        `Live sync failed: ${reason}. Check the API/database connection and Sources.`
+        `Live sync failed: ${reason}`
       );
     } finally {
       setSyncing(false);
