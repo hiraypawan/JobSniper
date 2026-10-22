@@ -211,7 +211,7 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       db.prepare(
         `UPDATE companies
          SET name = 'Unverified YC directory record',
-             domain = 'unverified.invalid',
+             domain = lower(replace(id, '_', '-')) || '.invalid',
              description = '',
              one_liner = '',
              website = '',
@@ -298,7 +298,7 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       ).bind(now),
       db.prepare(
         `UPDATE companies
-         SET domain = 'unverified.invalid',
+         SET domain = lower(replace(id, '_', '-')) || '.invalid',
              website = '',
              description = '',
              one_liner = '',
