@@ -3,7 +3,6 @@ import {
   cleanWebsiteUrl,
   getRollingYcBatchSlugs,
   makeCompanyId,
-  makeJobId,
   normalizeDomain,
   normalizeYcBatchCode,
 } from "@/lib/domain";
@@ -29,33 +28,6 @@ interface YcOssCompany {
   status?: string;
   regions?: string[];
   url?: string;
-}
-
-function inferRolesForYcStartup(company: YcOssCompany): string[] {
-  const blob = [
-    company.one_liner || "",
-    company.long_description || "",
-    ...(company.tags || []),
-    company.industry || "",
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  const roles: string[] = [];
-  if (/ai|agent|llm|ml|vision|robotics|voice/.test(blob)) {
-    roles.push("Founding AI / Systems Engineer");
-  } else {
-    roles.push("Founding Full-Stack Engineer");
-  }
-
-  if ((company.team_size || 0) >= 4) {
-    if (/b2b|saas|sales|enterprise|fintech/.test(blob)) {
-      roles.push("Founding GTM & Growth Lead");
-    } else {
-      roles.push("Product Engineer (Frontend / Design)");
-    }
-  }
-  return roles;
 }
 
 async function fetchBatchList(
@@ -134,10 +106,10 @@ export async function fetchYcCompanies(
         if (!raw.name) continue;
         if (raw.status && raw.status.toLowerCase() === "inactive") continue;
 
-        const website =
-          cleanWebsiteUrl(raw.website) ||
-          raw.url ||
-          `https://www.ycombinator.com/companies/${raw.slug}`;
+        const website = cleanWebsiteUrl(raw.website);
+        // Without an official company site, do not use YC's directory URL as
+        // the website/domain; that would merge unrelated companies together.
+        if (!website) continue;
         const domain = normalizeDomain(website, raw.name);
         const companyId = makeCompanyId(domain);
         const batchInfo = normalizeYcBatchCode(raw.batch);
@@ -153,22 +125,12 @@ export async function fetchYcCompanies(
 
         const ycJobsUrl = `https://www.ycombinator.com/companies/${raw.slug}/jobs`;
         const isHiring = Boolean(raw.isHiring);
-        const inferredTitles = isHiring ? inferRolesForYcStartup(raw) : [];
-
-        const jobs = inferredTitles.map((title) => ({
-          id: makeJobId(companyId, title, ycJobsUrl),
-          title,
-          url: ycJobsUrl,
-          location: isRemote ? "Remote / Hybrid" : locationStr,
-          remote: isRemote,
-          department: "Engineering / Core Team",
-          posted_at: batchInfo.approximateDate,
-        }));
+        // YC's feed exposes an isHiring flag, not real job postings. Keep the
+        // careers link but never manufacture role titles from the company bio.
+        const jobs: NormalizedCompanyInput["jobs"] = [];
 
         const descriptionText =
-          raw.long_description?.trim() ||
-          raw.one_liner?.trim() ||
-          `${raw.name} (${batchInfo.shortCode || "YC"}) startup.`;
+          raw.long_description?.trim() || raw.one_liner?.trim() || "";
 
         companies.push({
           id: companyId,
@@ -187,9 +149,9 @@ export async function fetchYcCompanies(
               ? raw.team_size
               : null,
           is_remote: isRemote,
-          last_funding_date: batchInfo.approximateDate,
-          funding_amount: "$500K YC Standard Deal",
-          is_funded_last_12mo: batchInfo.withinLast12Mo,
+          last_funding_date: null,
+          funding_amount: null,
+          is_funded_last_12mo: false,
           hiring_page_url: isHiring ? ycJobsUrl : null,
           hiring_provider: isHiring ? "yc" : null,
           open_roles_count: jobs.length,

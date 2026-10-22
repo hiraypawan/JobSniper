@@ -118,6 +118,244 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       if (!/duplicate column/i.test(alterMessage)) throw alterError;
     }
   }
+
+  // Remove legacy generated roles and unsupported seed metadata once. Verified
+  // ATS refreshes can repopulate actual postings without losing CRM status.
+  const staleRoleMigration = "cleanup-unverified-seed-roles-v1";
+  const completedMigration = await db
+    .prepare("SELECT cache_key FROM http_cache WHERE cache_key = ?")
+    .bind(staleRoleMigration)
+    .first<{ cache_key: string }>();
+  if (!completedMigration) {
+    const now = new Date().toISOString();
+    await db.batch([
+      db.prepare(
+        `UPDATE companies
+         SET open_roles_count = 0, enriched_at = NULL, sniper_score = 50
+         WHERE EXISTS (
+           SELECT 1 FROM jobs
+           WHERE jobs.company_id = companies.id
+             AND (
+               (companies.sources_json LIKE '%wellfound%' AND jobs.url = companies.hiring_page_url)
+               OR (companies.sources_json LIKE '%hn_hiring%' AND jobs.title IN (
+                 'Senior TypeScript Ecosystem & Sync Engineer (Remote)',
+                 'Developer Experience & Example Apps Engineer',
+                 'Founding Distributed Systems & SDK Engineer',
+                 'Founding Solutions & Developer Growth Engineer',
+                 'Senior Applied AI & Graph Memory Engineer',
+                 'Full-Stack Cloud Console Engineer (Next.js)',
+                 'Senior Design & Frontend Product Engineer',
+                 'Rust / TypeScript Runtime Engineer'
+               ))
+               OR (companies.sources_json LIKE '%yc%' AND jobs.title IN (
+                 'Founding AI / Systems Engineer',
+                 'Founding Full-Stack Engineer',
+                 'Founding GTM & Growth Lead',
+                 'Product Engineer (Frontend / Design)'
+               ))
+               OR (companies.sources_json LIKE '%workatastartup%' AND (
+                 jobs.title IN (
+                   'Founding AI Product Engineer (Remote)',
+                   'Founding Full-Stack Engineer (Remote)',
+                   'Founding GTM / Growth Engineer',
+                   'Senior Frontend & Design Engineer'
+                 )
+                 OR (jobs.title = 'Founding Engineer' AND jobs.url = companies.hiring_page_url)
+               ))
+             )
+         )`
+      ),
+      db.prepare(
+        `DELETE FROM jobs
+         WHERE id IN (
+           SELECT jobs.id FROM jobs
+           JOIN companies ON companies.id = jobs.company_id
+           WHERE (
+             (companies.sources_json LIKE '%wellfound%' AND jobs.url = companies.hiring_page_url)
+             OR (companies.sources_json LIKE '%hn_hiring%' AND jobs.title IN (
+               'Senior TypeScript Ecosystem & Sync Engineer (Remote)',
+               'Developer Experience & Example Apps Engineer',
+               'Founding Distributed Systems & SDK Engineer',
+               'Founding Solutions & Developer Growth Engineer',
+               'Senior Applied AI & Graph Memory Engineer',
+               'Full-Stack Cloud Console Engineer (Next.js)',
+               'Senior Design & Frontend Product Engineer',
+               'Rust / TypeScript Runtime Engineer'
+             ))
+             OR (companies.sources_json LIKE '%yc%' AND jobs.title IN (
+               'Founding AI / Systems Engineer',
+               'Founding Full-Stack Engineer',
+               'Founding GTM & Growth Lead',
+               'Product Engineer (Frontend / Design)'
+             ))
+             OR (companies.sources_json LIKE '%workatastartup%' AND (
+               jobs.title IN (
+                 'Founding AI Product Engineer (Remote)',
+                 'Founding Full-Stack Engineer (Remote)',
+                 'Founding GTM / Growth Engineer',
+                 'Senior Frontend & Design Engineer'
+               )
+               OR (jobs.title = 'Founding Engineer' AND jobs.url = companies.hiring_page_url)
+             ))
+           )
+         )`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             sniper_score = 50
+         WHERE source = 'yc'`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET name = 'Unverified YC directory record',
+             domain = 'unverified.invalid',
+             description = '',
+             one_liner = '',
+             website = '',
+             location = NULL,
+             team_size = NULL,
+             is_remote = 0,
+             last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             hiring_page_url = NULL,
+             hiring_provider = NULL,
+             open_roles_count = 0,
+             founder_name = NULL,
+             founder_twitter = NULL,
+             founder_linkedin = NULL,
+             founder_email = NULL,
+             enriched_at = NULL,
+             sniper_score = 50,
+             outreach_status = CASE WHEN outreach_status = 'new' THEN 'archived' ELSE outreach_status END
+         WHERE source = 'yc' AND domain = 'ycombinator.com'`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET location = NULL,
+             is_remote = 0,
+             last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             sniper_score = 50
+         WHERE source = 'workatastartup'`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET location = NULL,
+             team_size = NULL,
+             is_remote = 0,
+             last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             founder_name = NULL,
+             founder_twitter = NULL,
+             founder_linkedin = NULL,
+             founder_email = NULL,
+             enriched_at = NULL,
+             sniper_score = 50
+         WHERE source IN ('producthunt', 'indie')`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET description = '',
+             one_liner = '',
+             batch = NULL,
+             location = NULL,
+             team_size = NULL,
+             is_remote = 0,
+             last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             tags_json = '[]',
+             tech_stack_json = '[]',
+             founder_name = NULL,
+             founder_twitter = NULL,
+             founder_linkedin = NULL,
+             founder_email = NULL,
+             hiring_page_url = NULL,
+             hiring_provider = NULL,
+             open_roles_count = 0,
+             enriched_at = NULL,
+             sniper_score = 50
+         WHERE sources_json LIKE '%hn_hiring%'
+           AND domain IN ('electric-sql.com', 'hatchet.run', 'getzep.com', 'encore.dev')`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET outreach_status = 'archived', updated_at = ?
+         WHERE outreach_status = 'new'
+           AND ((source = 'producthunt' AND lower(website) LIKE '%producthunt.com%')
+             OR (source = 'indie' AND (lower(website) LIKE '%news.ycombinator.com%' OR lower(website) LIKE '%github.com%'))
+             OR (source = 'wellfound' AND (
+               lower(website) LIKE '%finsmes.com%'
+               OR lower(website) LIKE '%eu-startups.com%'
+               OR lower(website) LIKE '%techcrunch.com%'
+             )))`
+      ).bind(now),
+      db.prepare(
+        `UPDATE companies
+         SET domain = 'unverified.invalid',
+             website = '',
+             description = '',
+             one_liner = '',
+             location = NULL,
+             team_size = NULL,
+             is_remote = 0,
+             last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             founder_name = NULL,
+             founder_twitter = NULL,
+             founder_linkedin = NULL,
+             founder_email = NULL,
+             hiring_page_url = NULL,
+             hiring_provider = NULL,
+             open_roles_count = 0,
+             sniper_score = 50,
+             enriched_at = NULL
+         WHERE (source = 'producthunt' AND lower(website) LIKE '%producthunt.com%')
+            OR (source = 'indie' AND (lower(website) LIKE '%news.ycombinator.com%' OR lower(website) LIKE '%github.com%'))
+            OR (source = 'wellfound' AND (
+              lower(website) LIKE '%finsmes.com%'
+              OR lower(website) LIKE '%eu-startups.com%'
+              OR lower(website) LIKE '%techcrunch.com%'
+            ))`
+      ),
+      db.prepare(
+        `UPDATE companies
+         SET batch = NULL,
+             description = '',
+             one_liner = '',
+             location = NULL,
+             team_size = NULL,
+             is_remote = 0,
+             last_funding_date = NULL,
+             funding_amount = NULL,
+             is_funded_last_12mo = 0,
+             hiring_page_url = NULL,
+             hiring_provider = NULL,
+             open_roles_count = 0,
+             tags_json = '[]',
+             tech_stack_json = '[]',
+             founder_name = NULL,
+             founder_twitter = NULL,
+             founder_linkedin = NULL,
+             founder_email = NULL,
+             enriched_at = NULL,
+             sniper_score = 50
+         WHERE sources_json LIKE '%wellfound%'
+           AND hiring_page_url IS NOT NULL`
+      ),
+      db.prepare(
+        `INSERT OR IGNORE INTO http_cache (cache_key, payload, content_type, expires_at, updated_at)
+         VALUES (?, 'done', 'text/plain', 4102444800000, ?)`
+      ).bind(staleRoleMigration, now),
+    ]);
+  }
   schemaReadyForDb.add(db as unknown as object);
 }
 
@@ -167,8 +405,75 @@ function safeJsonArray<T = string>(raw: string | null | undefined): T[] {
   }
 }
 
+function normalizeContactText(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function nameTokens(name: string): string[] {
+  return normalizeContactText(name).split(/\s+/).filter((token) => token.length > 2);
+}
+
+function profileMatchesFounder(value: string | null, name: string, kind: "linkedin" | "twitter"): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const parts = url.pathname.split("/").filter(Boolean);
+    const validHost = kind === "linkedin"
+      ? host === "linkedin.com" && parts[0]?.toLowerCase() === "in"
+      : ["x.com", "twitter.com"].includes(host);
+    if (!validHost || !parts[1]) return false;
+    const handle = normalizeContactText(parts[1]).replace(/\s/g, "");
+    const tokens = nameTokens(name);
+    return tokens.length > 0 && tokens.every((token) => handle.includes(token));
+  } catch {
+    return false;
+  }
+}
+
+function emailMatchesFounder(value: string | null, name: string, companyDomain: string): boolean {
+  if (!value) return false;
+  const match = value.trim().match(/^([^@\s]+)@([^@\s]+)$/);
+  if (!match) return false;
+  const emailDomain = match[2].toLowerCase().replace(/^www\./, "");
+  const normalizedCompanyDomain = companyDomain.toLowerCase().replace(/^www\./, "");
+  if (
+    emailDomain !== normalizedCompanyDomain &&
+    !emailDomain.endsWith(`.${normalizedCompanyDomain}`)
+  ) return false;
+  const local = normalizeContactText(match[1]).replace(/\s/g, "");
+  const genericAliases = new Set([
+    "hello", "info", "contact", "team", "support", "sales", "jobs",
+    "careers", "press", "privacy", "legal", "admin", "billing", "office",
+    "recruiting", "noreply", "no-reply",
+  ]);
+  if (genericAliases.has(local)) return false;
+  const tokens = nameTokens(name);
+  return tokens.length > 0 && tokens.every((token) => local.includes(token));
+}
+
 export function mapCompanyRow(row: RawCompanyRow, jobs?: JobPosting[]): Company {
   const sources = safeJsonArray<CompanySource>(row.sources_json);
+  // HN comments identify the person posting a hiring ad, not necessarily the
+  // founder. Do not expose that author as a founder contact.
+  const authorBasedSources: CompanySource[] = ["hn_hiring", "producthunt", "indie"];
+  const contactName = sources.some((source) => authorBasedSources.includes(source))
+    ? null
+    : row.founder_name;
+  const founderEmail = contactName && emailMatchesFounder(row.founder_email, contactName, row.domain)
+    ? row.founder_email
+    : null;
+  const founderLinkedin = contactName && profileMatchesFounder(row.founder_linkedin, contactName, "linkedin")
+    ? row.founder_linkedin
+    : null;
+  const founderTwitter = contactName && profileMatchesFounder(row.founder_twitter, contactName, "twitter")
+    ? row.founder_twitter
+    : null;
   return {
     id: row.id,
     domain: row.domain,
@@ -192,10 +497,10 @@ export function mapCompanyRow(row: RawCompanyRow, jobs?: JobPosting[]): Company 
     open_roles_count: row.open_roles_count || 0,
     tags: safeJsonArray<string>(row.tags_json),
     tech_stack: safeJsonArray<string>(row.tech_stack_json),
-    founder_name: row.founder_name,
-    founder_twitter: row.founder_twitter,
-    founder_linkedin: row.founder_linkedin,
-    founder_email: row.founder_email,
+    founder_name: contactName,
+    founder_twitter: founderTwitter,
+    founder_linkedin: founderLinkedin,
+    founder_email: founderEmail,
     sniper_score: row.sniper_score || 50,
     outreach_status: row.outreach_status || "new",
     outreach_notes: row.outreach_notes || "",
@@ -340,20 +645,8 @@ export async function deduplicateAndUpsertCompanies(
     const companyId = record.id!;
     const jobsList = Array.from(record.mergedJobs.values());
     const openRoles = Math.max(record.open_roles_count || 0, jobsList.length);
-    const recentBatchSet = new Set([
-      "F26",
-      "S26",
-      "X26",
-      "W26",
-      "F25",
-      "S25",
-      "X25",
-      "W25",
-    ]);
     const funded12mo = Boolean(
-      record.is_funded_last_12mo ||
-        (record.batch && recentBatchSet.has(record.batch)) ||
-        isDateWithinDays(record.last_funding_date, 365)
+      record.is_funded_last_12mo || isDateWithinDays(record.last_funding_date, 365)
     );
 
     const sourcesArr = Array.from(record.sourcesSet);

@@ -132,7 +132,7 @@ export function AIJobHuntDrawer({
   }, [company, onClose]);
 
   const findContacts = async () => {
-    if (!company || !hasApiKey) return;
+    if (!company) return;
     setLoading((p) => ({ ...p, contacts: true }));
     setTabErrors((p) => ({ ...p, contacts: null }));
     setError(null);
@@ -290,8 +290,7 @@ export function AIJobHuntDrawer({
               No API key yet
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
-              Add a Gemini or OpenRouter key in &quot;My 5d Offer&quot; and the three
-              tabs below start working.
+              Add a Gemini or OpenRouter key in &quot;My 5d Offer&quot; for AI resume and interview tools. Source-listed contacts remain available without a key; no addresses or profiles are guessed.
             </p>
             <button
               type="button"
@@ -344,16 +343,16 @@ export function AIJobHuntDrawer({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Founder & HR Contacts
+                    Source-listed Contacts
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Guessed from the domain. Check them before you send.
+                    Only source-listed people and links are shown. No contact details are guessed.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={findContacts}
-                  disabled={loading.contacts || !hasApiKey}
+                  disabled={loading.contacts}
                   className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 transition-all disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {loading.contacts ? (
@@ -361,7 +360,7 @@ export function AIJobHuntDrawer({
                       <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
                       Finding...
                     </span>
-                  ) : "Find Contacts"}
+                  ) : "Show Source Contacts"}
                 </button>
               </div>
 
@@ -403,8 +402,8 @@ export function AIJobHuntDrawer({
                         >
                           {c.role}
                         </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {Math.round(c.confidence)}% confidence
+                        <span className="text-[10px] text-slate-400">
+                          {c.source}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-sm text-slate-900 dark:text-white flex-wrap">
@@ -450,8 +449,7 @@ export function AIJobHuntDrawer({
               {contacts.length === 0 && !loading.contacts && !error && (
                 <div className="text-center py-8">
                   <p className="text-xs text-slate-500">
-                    Nothing here yet. Run Find Contacts and the model will guess
-                    founder and HR emails from the domain.
+                    No named contact is listed in the source data. Use the company&apos;s official site or LinkedIn search to verify a person; the app will not guess an email or profile.
                   </p>
                 </div>
               )}

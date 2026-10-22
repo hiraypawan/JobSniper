@@ -1,5 +1,5 @@
 import { WorkerEnv } from "@/lib/cf-types";
-import { cleanWebsiteUrl, makeJobId, slugify } from "@/lib/domain";
+import { cleanWebsiteUrl, makeJobId } from "@/lib/domain";
 import { HiringProvider, JobPosting } from "@/lib/types";
 import { fetchWithResilience } from "@/workers/httpCache";
 
@@ -8,9 +8,7 @@ export interface EnrichmentOutcome {
   hiring_provider: HiringProvider;
   open_roles_count: number;
   jobs: JobPosting[];
-  founder_twitter?: string | null;
-  founder_linkedin?: string | null;
-  founder_email?: string | null;
+  jobsVerified: boolean;
   tech_stack: string[];
   checkedLive: boolean;
 }
@@ -118,32 +116,17 @@ function extractSocialAndCareerSignals(
 ): {
   careerLinks: string[];
   atsMatch: AtsMatch | null;
-  twitter: string | null;
-  linkedin: string | null;
-  email: string | null;
   stack: string[];
 } {
   const hrefRegex = /href=["']([^"'#]+)["']/gi;
   const careerLinks: string[] = [];
   let atsMatch: AtsMatch | null = null;
-  let twitter: string | null = null;
-  let linkedin: string | null = null;
-  let email: string | null = null;
-
   let m: RegExpExecArray | null;
+
   while ((m = hrefRegex.exec(html)) !== null) {
     const rawHref = m[1].trim();
     if (!rawHref) continue;
-
-    if (!email && rawHref.startsWith("mailto:")) {
-      const addr = rawHref.replace(/^mailto:/i, "").split("?")[0].trim();
-      if (addr && !/privacy|abuse|legal|dmca/i.test(addr)) {
-        email = addr;
-      }
-      continue;
-    }
-
-    let resolved = rawHref;
+    let resolved: string;
     try {
       resolved = new URL(rawHref, baseWebsite).toString();
     } catch {
@@ -153,42 +136,16 @@ function extractSocialAndCareerSignals(
     const ats = detectAtsFromUrl(resolved);
     if (ats && !atsMatch) {
       atsMatch = ats;
-      careerLinks.unshift(resolved);
+      careerLinks.unshift(ats.boardUrl);
     }
-
-    if (
-      /\/(careers|jobs|hiring|join|join-us|open-positions|work-with-us)(\/|$|\?)/i.test(
-        resolved
-      )
-    ) {
+    if (/\/(careers|jobs|hiring|join|join-us|open-positions|work-with-us)(\/|$|\?)/i.test(resolved)) {
       careerLinks.push(resolved);
-    }
-
-    if (
-      !twitter &&
-      /^https?:\/\/(www\.)?(x|twitter)\.com\/(?!intent|share|home)([a-zA-Z0-9_]{2,30})/i.test(
-        resolved
-      )
-    ) {
-      twitter = resolved;
-    }
-
-    if (
-      !linkedin &&
-      /^https?:\/\/(www\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9_-]+/i.test(
-        resolved
-      )
-    ) {
-      linkedin = resolved;
     }
   }
 
   return {
     careerLinks: Array.from(new Set(careerLinks)),
     atsMatch,
-    twitter,
-    linkedin,
-    email,
     stack: sniffTechStackFromHtml(html),
   };
 }
@@ -348,7 +305,7 @@ export async function fetchAtsOpenRoles(
 }
 
 export async function detectCompanyHiringAndSignals(
-  env: WorkerEnv,
+  _env: WorkerEnv,
   company: {
     id: string;
     name: string;
@@ -364,9 +321,6 @@ export async function detectCompanyHiringAndSignals(
     ? detectAtsFromUrl(company.hiring_page_url)
     : null;
   let hiringPageUrl = company.hiring_page_url;
-  let twitter: string | null | undefined;
-  let linkedin: string | null | undefined;
-  let email: string | null | undefined;
   let stack: string[] = [];
   let checkedLive = false;
 
@@ -377,9 +331,6 @@ export async function detectCompanyHiringAndSignals(
       checkedLive = true;
       const signals = extractSocialAndCareerSignals(homeRes.text, cleanSite);
       stack = signals.stack;
-      twitter = signals.twitter;
-      linkedin = signals.linkedin;
-      email = signals.email;
 
       if (signals.atsMatch) {
         atsMatch = signals.atsMatch;
@@ -408,69 +359,27 @@ export async function detectCompanyHiringAndSignals(
     }
   }
 
-  // Step 2: Enrich social/email metadata from public GitHub org profile when slug matches
-  try {
-    const slug = slugify(company.name).replace(/-/g, "");
-    if (slug.length >= 3) {
-      const ghHeaders: Record<string, string> = {
-        Accept: "application/vnd.github+json",
-      };
-      if (env.GITHUB_TOKEN) {
-        ghHeaders.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
-      }
-      const orgRes = await fetchWithResilience(
-        `https://api.github.com/users/${encodeURIComponent(slug)}`,
-        { timeoutMs: 3000, headers: ghHeaders }
-      );
-      const profile = JSON.parse(orgRes.text) as {
-        blog?: string;
-        twitter_username?: string | null;
-        email?: string | null;
-        type?: string;
-      };
-      // Only adopt profile signals if blog matches domain or twitter_username exists
-      const domainRoot = cleanSite
-        .replace(/^https?:\/\/(www\.)?/i, "")
-        .split("/")[0]
-        .toLowerCase();
-      if (
-        profile.blog &&
-        domainRoot &&
-        profile.blog.toLowerCase().includes(domainRoot)
-      ) {
-        checkedLive = true;
-        if (profile.twitter_username && !twitter) {
-          twitter = `https://x.com/${profile.twitter_username}`;
-        }
-        if (profile.email && !email) {
-          email = profile.email;
-        }
-      }
-    }
-  } catch {
-    // Optional GitHub org lookup skipped
-  }
-
-  // Step 3: Query ATS public API if Greenhouse / Lever / Ashby / Workable board detected
-  if (atsMatch) {
+  // Only these public ATS APIs return actual job listings. A successful empty
+  // response is still authoritative and must clear roles that have since closed.
+  if (
+    atsMatch &&
+    atsMatch.provider &&
+    new Set(["greenhouse", "lever", "ashby", "workable"]).has(atsMatch.provider)
+  ) {
     try {
       const liveJobs = await fetchAtsOpenRoles(company.id, atsMatch);
-      if (liveJobs.length > 0) {
-        checkedLive = true;
-        return {
-          hiring_page_url: atsMatch.boardUrl,
-          hiring_provider: atsMatch.provider,
-          open_roles_count: liveJobs.length,
-          jobs: liveJobs,
-          founder_twitter: twitter,
-          founder_linkedin: linkedin,
-          founder_email: email,
-          tech_stack: stack,
-          checkedLive,
-        };
-      }
+      checkedLive = true;
+      return {
+        hiring_page_url: atsMatch.boardUrl,
+        hiring_provider: atsMatch.provider,
+        open_roles_count: liveJobs.length,
+        jobs: liveJobs,
+        jobsVerified: true,
+        tech_stack: stack,
+        checkedLive,
+      };
     } catch {
-      // Preserve existing known ATS roles if live ATS API fetch is unreachable
+      // Preserve existing known ATS roles if the live board is unreachable.
     }
   }
 
@@ -485,9 +394,7 @@ export async function detectCompanyHiringAndSignals(
     hiring_provider: finalProvider,
     open_roles_count: Math.max(company.open_roles_count || 0, fallbackJobs.length),
     jobs: fallbackJobs,
-    founder_twitter: twitter,
-    founder_linkedin: linkedin,
-    founder_email: email,
+    jobsVerified: false,
     tech_stack: stack,
     checkedLive,
   };

@@ -156,9 +156,9 @@ export function FilterBar({
               { value: "all", label: "All" },
               { value: "yc", label: "Y Combinator" },
               { value: "workatastartup", label: "WAAS" },
-              { value: "wellfound", label: "Wellfound" },
+              { value: "wellfound", label: "Funding RSS" },
               { value: "producthunt", label: "Product Hunt" },
-              { value: "indie", label: "Indie / HN" },
+              { value: "indie", label: "Show HN / GitHub" },
               { value: "hn_hiring", label: "HN Hiring" },
             ]}
           />

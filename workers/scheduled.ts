@@ -139,10 +139,9 @@ export async function enrichSingleCompany(
   const mergedStack = Array.from(
     new Set([...(existing.tech_stack || []), ...outcome.tech_stack])
   );
-  const nextTwitter = existing.founder_twitter || outcome.founder_twitter || null;
-  const nextLinkedin =
-    existing.founder_linkedin || outcome.founder_linkedin || null;
-  const nextEmail = existing.founder_email || outcome.founder_email || null;
+  const nextTwitter = existing.founder_twitter || null;
+  const nextLinkedin = existing.founder_linkedin || null;
+  const nextEmail = existing.founder_email || null;
 
   const { score } = computeSniperScore({
     batch: existing.batch,
@@ -189,6 +188,12 @@ export async function enrichSingleCompany(
     )
     .run();
 
+  if (outcome.jobsVerified) {
+    await env.DB.prepare("DELETE FROM jobs WHERE company_id = ?")
+      .bind(companyId)
+      .run();
+  }
+
   if (outcome.jobs.length > 0) {
     const jobStmts = outcome.jobs.map((job) =>
       env.DB.prepare(
@@ -228,21 +233,24 @@ export async function enrichCompanyBatch(
   await ensureSchema(env.DB);
   const safeLimit = Math.min(20, Math.max(1, batchSize));
 
+  const staleBefore = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const candidates = await env.DB.prepare(
     `SELECT id FROM companies
-     WHERE enriched_at IS NULL
+     WHERE enriched_at IS NULL OR enriched_at <= ?
      ORDER BY sniper_score DESC, open_roles_count DESC
      LIMIT ?`
   )
-    .bind(safeLimit)
+    .bind(staleBefore, safeLimit)
     .all<{ id: string }>();
 
   const ids = (candidates.results || []).map((r) => r.id);
   await Promise.allSettled(ids.map((id) => enrichSingleCompany(env, id)));
 
   const remRow = await env.DB.prepare(
-    "SELECT COUNT(*) AS cnt FROM companies WHERE enriched_at IS NULL"
-  ).first<{ cnt: number }>();
+    "SELECT COUNT(*) AS cnt FROM companies WHERE enriched_at IS NULL OR enriched_at <= ?"
+  )
+    .bind(staleBefore)
+    .first<{ cnt: number }>();
 
   return {
     enriched: ids.length,
