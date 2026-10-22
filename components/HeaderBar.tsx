@@ -38,7 +38,7 @@ export function HeaderBar({
   onExportCsv,
 }: Props) {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 dark:border-obsidian-800/60 bg-obsidian-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-obsidian-800/60 bg-white/90 dark:bg-obsidian-950/80 backdrop-blur-md">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Brand */}
         <div className="flex items-center gap-3">
@@ -47,11 +47,11 @@ export function HeaderBar({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-100">
+              <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
                 StartupSniper
               </h1>
               {stats && (
-                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-white/5 dark:bg-obsidian-900 text-slate-400 border border-white/10 dark:border-obsidian-800">
+                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-slate-100 dark:bg-obsidian-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-obsidian-800">
                   {stats.totalCompanies.toLocaleString()} startups
                 </span>
               )}

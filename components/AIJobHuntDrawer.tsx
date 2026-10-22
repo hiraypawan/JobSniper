@@ -36,6 +36,7 @@ interface Props {
   company: Company | null;
   pitchSettings: PitchSettings;
   onClose: () => void;
+  onOpenPitchSettings?: () => void;
 }
 
 type JobTab = "contacts" | "resume" | "interview" | "outreach";
@@ -51,10 +52,10 @@ export function AIJobHuntDrawer({
   company,
   pitchSettings,
   onClose,
+  onOpenPitchSettings,
 }: Props) {
   const [activeTab, setActiveTab] = useState<JobTab>("contacts");
   const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
-  const [apiKey, setApiKey] = useState("");
   const [contacts, setContacts] = useState<ContactInfo[]>([]);
   const [resume, setResume] = useState<AITailoredResume | null>(null);
   const [interview, setInterview] = useState<AIInterviewPrep | null>(null);
@@ -63,29 +64,67 @@ export function AIJobHuntDrawer({
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const apiKeyFromStorage = useMemo(() => {
+  // Resolve API key from either dedicated storage (set by PitchSettingsModal) or from pitchSettings prop
+  const resolvedApiKey = useMemo(() => {
     if (typeof window === "undefined") return "";
     try {
-      return (
-        localStorage.getItem("startupsniper_gemini_api_key") ||
-        localStorage.getItem("startupsniper_openrouter_api_key") ||
-        ""
-      );
+      const geminiStored = localStorage.getItem("startupsniper_gemini_api_key");
+      const openrouterStored = localStorage.getItem("startupsniper_openrouter_api_key");
+      if (aiProvider === "gemini") {
+        return geminiStored || pitchSettings.geminiApiKey || "";
+      }
+      return openrouterStored || pitchSettings.openrouterApiKey || "";
     } catch {
-      return "";
+      return aiProvider === "gemini"
+        ? pitchSettings.geminiApiKey || ""
+        : pitchSettings.openrouterApiKey || "";
     }
-  }, []);
+  }, [aiProvider, pitchSettings.geminiApiKey, pitchSettings.openrouterApiKey]);
 
+  const hasApiKey = Boolean(resolvedApiKey);
+
+  // Reset state when company changes
   useEffect(() => {
-    if (apiKeyFromStorage) setApiKey(apiKeyFromStorage);
-  }, [apiKeyFromStorage]);
+    if (company?.id) {
+      setContacts([]);
+      setResume(null);
+      setInterview(null);
+      setError(null);
+      setActiveTab("contacts");
+    }
+  }, [company?.id]);
+
+  // Body scroll lock
+  useEffect(() => {
+    if (!company) return;
+    const prevOverflow = document.body.style.overflow;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) document.body.style.paddingRight = `${scrollbarWidth}px`;
+    document.documentElement.style.overscrollBehavior = "contain";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = "";
+      document.documentElement.style.overscrollBehavior = "";
+    };
+  }, [company]);
+
+  // Escape to close
+  useEffect(() => {
+    if (!company) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [company, onClose]);
 
   const findContacts = async () => {
-    if (!company || !apiKey) return;
+    if (!company || !hasApiKey) return;
     setLoading((p) => ({ ...p, contacts: true }));
     setError(null);
     try {
-      const result = await findAIContacts(company, aiProvider, apiKey);
+      const result = await findAIContacts(company, aiProvider, resolvedApiKey);
       if (result) setContacts(result.contacts);
       else setError("Could not infer contacts. Try a different provider.");
     } catch {
@@ -96,7 +135,7 @@ export function AIJobHuntDrawer({
   };
 
   const generateResume = async () => {
-    if (!company || !apiKey || !userResume) return;
+    if (!company || !hasApiKey || !userResume) return;
     setLoading((p) => ({ ...p, resume: true }));
     setError(null);
     try {
@@ -104,7 +143,7 @@ export function AIJobHuntDrawer({
         company,
         userResume,
         aiProvider,
-        apiKey
+        resolvedApiKey
       );
       if (result) setResume(result);
       else setError("Resume generation failed.");
@@ -116,7 +155,7 @@ export function AIJobHuntDrawer({
   };
 
   const generateInterview = async () => {
-    if (!company || !apiKey || !roleTitle) return;
+    if (!company || !hasApiKey || !roleTitle) return;
     setLoading((p) => ({ ...p, interview: true }));
     setError(null);
     try {
@@ -124,7 +163,7 @@ export function AIJobHuntDrawer({
         company,
         roleTitle,
         aiProvider,
-        apiKey
+        resolvedApiKey
       );
       if (result) setInterview(result);
       else setError("Interview prep failed.");
@@ -147,28 +186,34 @@ export function AIJobHuntDrawer({
     }));
   }, [company, contacts]);
 
+  if (!company) return null;
+
   return (
-    <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-md p-4 sm:p-6" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-md p-0 sm:p-6"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`AI Job Hunt for ${company.name}`}
+    >
       <motion.div
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 40 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-[600px] h-auto sm:h-[85vh] bg-white dark:bg-obsidian-950 border border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col rounded-3xl"
+        className="w-full sm:max-w-[640px] h-[92dvh] sm:h-[85vh] sm:max-h-[85dvh] bg-white dark:bg-obsidian-950 border border-white/10 dark:border-obsidian-800 shadow-2xl overflow-hidden flex flex-col rounded-t-3xl sm:rounded-3xl overscroll-contain"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 dark:border-obsidian-800 flex items-start justify-between gap-4">
+        <div className="px-6 py-4 border-b border-white/10 dark:border-obsidian-800 flex items-start justify-between gap-4 shrink-0 bg-white dark:bg-obsidian-950">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                 AI Job Hunt Assistant
               </h2>
-              {company && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
-                  {company.name}
-                </span>
-              )}
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+                {company.name}
+              </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               Find contacts, tailor applications, and prep for interviews using AI.
@@ -177,25 +222,55 @@ export function AIJobHuntDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all shrink-0"
+            aria-label="Close"
           >
             <XIcon className="w-4 h-4" />
           </button>
         </div>
 
-        {/* AI Key Setup */}
-        {!apiKey && (
-          <div className="p-6 space-y-3 border-b border-white/10 dark:border-obsidian-800 bg-slate-50/50 dark:bg-obsidian-900/50">
-            <h3 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-wider">
+        {/* Provider toggle */}
+        <div className="px-6 py-2 border-b border-white/5 dark:border-obsidian-800/50 bg-slate-50/50 dark:bg-obsidian-900/30 flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">AI Provider:</span>
+          <div className="inline-flex rounded-xl border border-white/10 dark:border-obsidian-800 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setAiProvider("gemini")}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "gemini" ? "bg-emerald-500 text-slate-950" : "bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-obsidian-800"}`}
+            >
+              Gemini
+            </button>
+            <button
+              type="button"
+              onClick={() => setAiProvider("openrouter")}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "openrouter" ? "bg-emerald-500 text-slate-950" : "bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-obsidian-800"}`}
+            >
+              OpenRouter
+            </button>
+          </div>
+          {hasApiKey ? (
+            <span className="ml-2 text-[10px] text-emerald-600 dark:text-emerald-500 font-mono">Key set ✓</span>
+          ) : (
+            <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-500 font-mono">No key</span>
+          )}
+        </div>
+
+        {/* AI Key Setup banner */}
+        {!hasApiKey && (
+          <div className="mx-6 mt-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-3 shrink-0">
+            <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
               AI API Key Required
             </h3>
-            <p className="text-xs text-slate-500">
-              Add your Gemini or OpenRouter key in "My 5d Offer" settings to use
+            <p className="text-xs text-slate-600 dark:text-slate-400">
+              Add your Gemini or OpenRouter key in &quot;My 5d Offer&quot; settings to use
               AI contact finder, resume tailor, and interview prep.
             </p>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => {
+                if (onOpenPitchSettings) onOpenPitchSettings();
+                else onClose();
+              }}
               className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all"
             >
               Open Settings
@@ -203,8 +278,8 @@ export function AIJobHuntDrawer({
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-b border-white/10 dark:border-obsidian-800 px-6">
+        {/* Tabs — scrollable on mobile */}
+        <div className="flex gap-1 border-b border-white/10 dark:border-obsidian-800 px-3 sm:px-6 overflow-x-auto no-scrollbar shrink-0 [-webkit-overflow-scrolling:touch] overscroll-x-contain">
           {(Object.keys(TAB_LABELS) as JobTab[]).map((tab) => {
             const LabelIcon = TAB_LABELS[tab].icon;
             const active = activeTab === tab;
@@ -213,23 +288,24 @@ export function AIJobHuntDrawer({
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-2 px-4 py-3 rounded-xl text-xs font-medium transition-all ${
+                className={`shrink-0 flex items-center gap-2 px-3 sm:px-4 py-3 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
                   active
-                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 font-semibold"
-                    : "text-slate-500 hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800"
+                    ? "border-emerald-500 text-emerald-600 dark:text-emerald-500 font-semibold"
+                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800"
                 }`}
               >
-                <LabelIcon className="w-3 h-3" />
-                {TAB_LABELS[tab].label}
+                <LabelIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{TAB_LABELS[tab].label}</span>
+                <span className="sm:hidden">{tab === "contacts" ? "Contacts" : tab === "resume" ? "Resume" : tab === "interview" ? "Interview" : "Outreach"}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Tab Content */}
-        <div className="p-6 sm:p-8 space-y-6">
+        {/* Tab Content — scrollable */}
+        <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 overscroll-contain [-webkit-overflow-scrolling:touch]">
           {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-500">
+            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-600 dark:text-red-400">
               {error}
             </div>
           )}
@@ -237,7 +313,7 @@ export function AIJobHuntDrawer({
           {/* CONTACTS TAB */}
           {activeTab === "contacts" && (
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                     Founder & HR Contacts
@@ -249,11 +325,11 @@ export function AIJobHuntDrawer({
                 <button
                   type="button"
                   onClick={findContacts}
-                  disabled={loading.contacts || !apiKey}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 transition-all disabled:opacity-50"
+                  disabled={loading.contacts || !hasApiKey}
+                  className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 transition-all disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {loading.contacts ? (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1.5">
                       <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
                       Finding...
                     </span>
@@ -272,11 +348,11 @@ export function AIJobHuntDrawer({
                         <span
                           className={`text-[9px] font-bold uppercase tracking-wider ${
                             c.role === "founder"
-                              ? "text-emerald-500"
+                              ? "text-emerald-600 dark:text-emerald-500"
                               : c.role === "hr"
-                                ? "text-sky-500"
+                                ? "text-sky-600 dark:text-sky-500"
                                 : c.role === "cto"
-                                  ? "text-violet-500"
+                                  ? "text-violet-600 dark:text-violet-500"
                                   : "text-slate-500"
                           }`}
                         >
@@ -286,12 +362,12 @@ export function AIJobHuntDrawer({
                           {Math.round(c.confidence)}% confidence
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-slate-900 dark:text-white">
+                      <div className="flex items-center gap-1 text-sm text-slate-900 dark:text-white flex-wrap">
                         <span className="font-medium">{c.name}</span>
                         {c.email && (
                           <a
                             href={`mailto:${c.email}`}
-                            className="ml-1 text-emerald-500 hover:text-emerald-400 font-mono text-[10px]"
+                            className="ml-1 text-emerald-600 dark:text-emerald-500 hover:text-emerald-500 font-mono text-[11px] break-all"
                           >
                             {c.email}
                           </a>
@@ -303,10 +379,10 @@ export function AIJobHuntDrawer({
                             href={c.linkedin}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-sky-500 hover:bg-sky-500/10 transition-all"
+                            className="p-1.5 rounded-lg text-sky-600 dark:text-sky-500 hover:bg-sky-500/10 transition-all"
                             title="LinkedIn"
                           >
-                            <LinkedinIcon className="w-3 h-3" />
+                            <LinkedinIcon className="w-3.5 h-3.5" />
                           </a>
                         )}
                         {c.twitter && (
@@ -329,7 +405,7 @@ export function AIJobHuntDrawer({
               {contacts.length === 0 && !loading.contacts && !error && (
                 <div className="text-center py-8">
                   <p className="text-xs text-slate-500">
-                    No contacts found yet. Click "Find Contacts" to use AI to
+                    No contacts found yet. Click &quot;Find Contacts&quot; to use AI to
                     infer founder and HR emails.
                   </p>
                 </div>
@@ -340,15 +416,13 @@ export function AIJobHuntDrawer({
           {/* RESUME TAB */}
           {activeTab === "resume" && (
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    AI Resume & Cover Letter
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Tailor your resume and write a cover letter for this company
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  AI Resume & Cover Letter
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Tailor your resume and write a cover letter for this company
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -367,11 +441,11 @@ export function AIJobHuntDrawer({
               <button
                 type="button"
                 onClick={generateResume}
-                disabled={loading.resume || !apiKey || !userResume}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50"
+                disabled={loading.resume || !hasApiKey || !userResume.trim()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading.resume ? (
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
                     Generating...
                   </span>
@@ -379,7 +453,7 @@ export function AIJobHuntDrawer({
               </button>
 
               {resume && (
-                <section className="space-y-4">
+                <section className="space-y-4 pt-2">
                   <div>
                     <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                       Tailored Summary
@@ -396,7 +470,7 @@ export function AIJobHuntDrawer({
                       {resume.skills.map((s) => (
                         <span
                           key={s}
-                          className="px-2.5 py-1 rounded-xl text-[10px] bg-white/5 dark:bg-obsidian-900 text-slate-500 border border-white/10 dark:border-obsidian-800"
+                          className="px-2.5 py-1 rounded-xl text-[10px] bg-white/5 dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 border border-white/10 dark:border-obsidian-800"
                         >
                           {s}
                         </span>
@@ -423,7 +497,7 @@ export function AIJobHuntDrawer({
                     <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
                       {resume.cover_letter}
                     </p>
-                    <p className="mt-2 text-[10px] font-mono text-emerald-500">
+                    <p className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-500">
                       Subject: {resume.subject_line}
                     </p>
                   </div>
@@ -435,15 +509,13 @@ export function AIJobHuntDrawer({
           {/* INTERVIEW TAB */}
           {activeTab === "interview" && (
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    AI Interview Prep
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Company-specific questions and talking points
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  AI Interview Prep
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Company-specific questions and talking points
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -462,11 +534,11 @@ export function AIJobHuntDrawer({
               <button
                 type="button"
                 onClick={generateInterview}
-                disabled={loading.interview || !apiKey || !roleTitle}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50"
+                disabled={loading.interview || !hasApiKey || !roleTitle.trim()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading.interview ? (
-                  <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1.5">
                     <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
                     Generating...
                   </span>
@@ -474,7 +546,7 @@ export function AIJobHuntDrawer({
               </button>
 
               {interview && (
-                <section className="space-y-4">
+                <section className="space-y-4 pt-2">
                   <section>
                     <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                       Company Questions
@@ -535,15 +607,13 @@ export function AIJobHuntDrawer({
           {/* OUTREACH TAB */}
           {activeTab === "outreach" && (
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Multi-Platform Outreach
-                  </h3>
-                  <p className="text-xs text-slate-500">
-                    Reach founders on less competitive platforms
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Multi-Platform Outreach
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Reach founders on less competitive platforms
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -565,13 +635,13 @@ export function AIJobHuntDrawer({
                       rel="noopener noreferrer"
                       className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all border ${
                         ch.color === "text-violet-500"
-                          ? "border-violet-500/20 bg-violet-500/5 text-violet-600 hover:bg-violet-500/15"
+                          ? "border-violet-500/20 bg-violet-500/5 text-violet-700 dark:text-violet-400 hover:bg-violet-500/15"
                           : ch.color === "text-sky-500"
-                            ? "border-sky-500/20 bg-sky-500/5 text-sky-600 hover:bg-sky-500/15"
+                            ? "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-400 hover:bg-sky-500/15"
                             : ch.color === "text-emerald-500"
-                              ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/15"
+                              ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15"
                               : ch.color === "text-orange-500"
-                                ? "border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/15"
+                                ? "border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400 hover:bg-orange-500/15"
                                 : "border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-white/10 dark:hover:bg-obsidian-800"
                       }`}
                     >

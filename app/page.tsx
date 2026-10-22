@@ -79,6 +79,7 @@ export default function DashboardPage() {
     DEFAULT_PITCH_SETTINGS
   );
   const [darkMode, setDarkMode] = useState(true);
+  const [activeLens, setActiveLens] = useState("funded12mo");
 
   useEffect(() => {
     try {
@@ -89,6 +90,19 @@ export default function DashboardPage() {
           ...JSON.parse(saved),
         });
       }
+      const savedTheme = localStorage.getItem("startupsniper_theme");
+      if (savedTheme === "light") {
+        setDarkMode(false);
+        document.documentElement.classList.remove("dark");
+      } else if (savedTheme === "dark") {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+      } else {
+        // Respect system preference on first visit
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        setDarkMode(prefersDark ? true : true); // default dark for branding
+        document.documentElement.classList.toggle("dark", prefersDark || true);
+      }
     } catch {
       // ignore storage errors
     }
@@ -98,6 +112,9 @@ export default function DashboardPage() {
     setDarkMode((prev) => {
       const next = !prev;
       document.documentElement.classList.toggle("dark", next);
+      try {
+        localStorage.setItem("startupsniper_theme", next ? "dark" : "light");
+      } catch {}
       return next;
     });
   };
@@ -277,8 +294,6 @@ export default function DashboardPage() {
     }
   };
 
-  const [activeLens, setActiveLens] = useState("funded12mo");
-
   const handleUpdateCompanyStatus = async (
     companyId: string,
     status: OutreachStatus
@@ -372,7 +387,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-obsidian-950 text-slate-100 selection:bg-emerald-500/25">
+    <div className={`min-h-screen flex flex-col selection:bg-emerald-500/25 ${darkMode ? "bg-obsidian-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
       <HeaderBar
         stats={stats}
         syncing={syncing}
@@ -520,58 +535,30 @@ export default function DashboardPage() {
         )}
       </main>
 
-      {/* Company Drawer Overlay */}
+      {/* Company Drawer - self-contained overlay */}
       {selectedCompany && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm sm:p-6"
-          onClick={() => setSelectedCompany(null)}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full sm:max-w-[480px] h-auto sm:h-full bg-white dark:bg-obsidian-950 border-t sm:border-t-0 sm:border-l border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col rounded-t-3xl sm:rounded-none sm:rounded-l-3xl"
-          >
-            <CompanyDrawer
-              company={selectedCompany}
-              pitchSettings={pitchSettings}
-              onClose={() => setSelectedCompany(null)}
-              onCompanyUpdated={handleCompanyUpdated}
-              onOpenAIJobHunt={() => setAiJobHuntCompany(selectedCompany)}
-            />
-          </motion.div>
-        </motion.div>
+        <CompanyDrawer
+          company={selectedCompany}
+          pitchSettings={pitchSettings}
+          onClose={() => setSelectedCompany(null)}
+          onCompanyUpdated={handleCompanyUpdated}
+          onOpenAIJobHunt={() => {
+            if (selectedCompany) setAiJobHuntCompany(selectedCompany);
+          }}
+        />
       )}
 
-      {/* AI Job Hunt Drawer Overlay */}
+      {/* AI Job Hunt Drawer - self-contained overlay */}
       {aiJobHuntCompany && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-60 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-md sm:p-6"
-          onClick={() => setAiJobHuntCompany(null)}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 40 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full sm:max-w-[600px] h-auto sm:h-[85vh] bg-white dark:bg-obsidian-950 border border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col rounded-3xl"
-          >
-            <AIJobHuntDrawer
-              company={aiJobHuntCompany}
-              pitchSettings={pitchSettings}
-              onClose={() => setAiJobHuntCompany(null)}
-            />
-          </motion.div>
-        </motion.div>
+        <AIJobHuntDrawer
+          company={aiJobHuntCompany}
+          pitchSettings={pitchSettings}
+          onClose={() => setAiJobHuntCompany(null)}
+          onOpenPitchSettings={() => {
+            setAiJobHuntCompany(null);
+            setPitchModalOpen(true);
+          }}
+        />
       )}
 
       <SourceHealthPopover
