@@ -67,9 +67,11 @@ export async function handleAiRequest(
   const key = serverKey || apiKey;
 
   if (!key) {
+    const providerName = provider === "gemini" ? "Gemini" : "OpenRouter";
+    const serverKeyName = provider === "gemini" ? "GEMINI_API_KEY" : "OPENROUTER_API_KEY";
     return jsonResponse(
       {
-        error: `No ${provider} API key configured. Set OPENROUTER_API_KEY/GEMINI_API_KEY on the server, or save a key in “My 5d Offer” settings.`,
+        error: `No ${providerName} API key is available. Select ${providerName} as the AI provider and save its key in “My 5d Offer” settings, or configure ${serverKeyName} on the server.`,
         status: 400,
         provider,
       },
