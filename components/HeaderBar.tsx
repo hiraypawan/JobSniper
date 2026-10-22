@@ -37,6 +37,10 @@ export function HeaderBar({
   onOpenPitchSettings,
   onExportCsv,
 }: Props) {
+  const statusIsWarning = /^(Dashboard data error|Live sync failed|No startup|No startups|Sync finished)/.test(
+    syncStatusText ?? ""
+  );
+
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-obsidian-800/60 bg-white/90 dark:bg-obsidian-950/80 backdrop-blur-md">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
@@ -134,8 +138,20 @@ export function HeaderBar({
       </div>
 
       {syncStatusText && (
-        <div className="bg-emerald-500/10 border-t border-emerald-500/20 px-4 sm:px-6 py-1.5">
-          <div className="max-w-[1440px] mx-auto flex items-center justify-between text-xs font-mono text-emerald-400 dark:text-emerald-300">
+        <div
+          className={`px-4 sm:px-6 py-1.5 border-t ${
+            statusIsWarning
+              ? "bg-amber-500/10 border-amber-500/20"
+              : "bg-emerald-500/10 border-emerald-500/20"
+          }`}
+        >
+          <div
+            className={`max-w-[1440px] mx-auto flex items-center justify-between text-xs font-mono ${
+              statusIsWarning
+                ? "text-amber-700 dark:text-amber-300"
+                : "text-emerald-400 dark:text-emerald-300"
+            }`}
+          >
             <span className="flex items-center gap-2">
               <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
               {syncStatusText}
