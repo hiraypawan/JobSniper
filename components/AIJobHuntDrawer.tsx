@@ -353,7 +353,7 @@ export function AIJobHuntDrawer({
                     Source-listed Contacts
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Only source-listed people and links are shown. No contact details are guessed.
+                    Person details are source-listed; company email and LinkedIn links are scanned from the listed website. Nothing is guessed.
                   </p>
                 </div>
                 <button
@@ -451,10 +451,30 @@ export function AIJobHuntDrawer({
                 </div>
               )}
 
+              {(company.company_email || company.company_linkedin_url) && (
+                <div className="p-3.5 rounded-xl border border-sky-500/20 bg-sky-500/5 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+                    Company website contacts
+                  </p>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    {company.company_email && (
+                      <a href={`mailto:${company.company_email}`} className="text-violet-600 dark:text-violet-400 hover:underline">
+                        {company.company_email}
+                      </a>
+                    )}
+                    {company.company_linkedin_url && (
+                      <a href={company.company_linkedin_url} className="text-sky-600 dark:text-sky-400 hover:underline">
+                        Company LinkedIn page
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {contacts.length === 0 && !loading.contacts && !error && (
                 <div className="text-center py-8">
                   <p className="text-xs text-slate-500">
-                    No named contact is listed in the source data. Use the company&apos;s official site or LinkedIn search to verify a person; the app will not guess an email or profile.
+                    No named person is listed in the source data. Company-level links above come from the website scan. If not checked yet, close this panel and use Check company website &amp; jobs in the company drawer. The app will not guess contact details.
                   </p>
                 </div>
               )}
@@ -709,28 +729,40 @@ export function AIJobHuntDrawer({
                     Building2: BuildingIcon,
                   };
                   const Icon = IconMap[ch.icon] || Briefcase;
-                  return (
+                  const channelClass = `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all border ${
+                    ch.color === "text-violet-500"
+                      ? "border-violet-500/20 bg-violet-500/5 text-violet-700 dark:text-violet-400 hover:bg-violet-500/15"
+                      : ch.color === "text-sky-500"
+                        ? "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-400 hover:bg-sky-500/15"
+                        : ch.color === "text-emerald-500"
+                          ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15"
+                          : ch.color === "text-orange-500"
+                            ? "border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400 hover:bg-orange-500/15"
+                            : "border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-white/10 dark:hover:bg-obsidian-800"
+                  }`;
+                  return ch.url ? (
                     <a
                       key={ch.id}
                       href={ch.url}
                       target={ch.id === "linkedin" ? undefined : "_blank"}
                       rel={ch.id === "linkedin" ? undefined : "noopener noreferrer"}
-                      className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all border ${
-                        ch.color === "text-violet-500"
-                          ? "border-violet-500/20 bg-violet-500/5 text-violet-700 dark:text-violet-400 hover:bg-violet-500/15"
-                          : ch.color === "text-sky-500"
-                            ? "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-400 hover:bg-sky-500/15"
-                            : ch.color === "text-emerald-500"
-                              ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15"
-                              : ch.color === "text-orange-500"
-                                ? "border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400 hover:bg-orange-500/15"
-                                : "border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-white/10 dark:hover:bg-obsidian-800"
-                      }`}
+                      className={channelClass}
                     >
                       <Icon className="w-4 h-4" />
                       <span className="flex-1">{ch.label}</span>
                       <ChevronRight className="w-3 h-3 text-slate-400" />
                     </a>
+                  ) : (
+                    <div
+                      key={ch.id}
+                      aria-disabled="true"
+                      title="No direct contact link is stored; use Check company website in the company drawer"
+                      className={`${channelClass} cursor-not-allowed opacity-50`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="flex-1">{ch.label}</span>
+                      <span className="text-[10px]">Not found yet</span>
+                    </div>
                   );
                 })}
               </div>

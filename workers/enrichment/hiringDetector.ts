@@ -10,6 +10,9 @@ export interface EnrichmentOutcome {
   jobs: JobPosting[];
   jobsVerified: boolean;
   tech_stack: string[];
+  company_email: string | null;
+  company_linkedin_url: string | null;
+  contactPageChecked: boolean;
   checkedLive: boolean;
 }
 
@@ -110,28 +113,97 @@ function sniffTechStackFromHtml(html: string): string[] {
   return stack;
 }
 
+function domainCandidates(companyDomain: string, websiteHost: string): string[] {
+  return Array.from(new Set([companyDomain, websiteHost]
+    .map((host) => host.toLowerCase().replace(/^www\./, "").replace(/\.$/, ""))
+    .filter(Boolean)));
+}
+
+function emailBelongsToCompany(email: string, companyDomain: string, websiteHost: string): boolean {
+  const at = email.lastIndexOf("@");
+  if (at <= 0) return false;
+  const local = email.slice(0, at).toLowerCase();
+  const host = email.slice(at + 1).toLowerCase().replace(/^www\./, "");
+  if (!/^[a-z0-9._%+-]+$/.test(local) || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) return false;
+  if (["noreply", "no-reply", "donotreply", "do-not-reply"].includes(local)) return false;
+  return domainCandidates(companyDomain, websiteHost).some(
+    (domain) => host === domain || host.endsWith(`.${domain}`)
+  );
+}
+
+function extractCompanyEmail(html: string, companyDomain: string, websiteHost: string): string | null {
+  const visibleText = html
+    .replace(/<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<!--([\s\S]*?)-->/g, " ")
+    .replace(/&commat;|&#64;|&#x40;/gi, "@");
+  const candidates = new Set<string>();
+  const emailRegex = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
+  for (const match of visibleText.matchAll(emailRegex)) {
+    candidates.add(match[0].toLowerCase());
+  }
+  for (const match of html.matchAll(/href=["']mailto:([^"'?#]+)[^"']*["']/gi)) {
+    try {
+      candidates.add(decodeURIComponent(match[1]).trim().toLowerCase());
+    } catch {
+      candidates.add(match[1].trim().toLowerCase());
+    }
+  }
+  return Array.from(candidates).find((email) => emailBelongsToCompany(email, companyDomain, websiteHost)) || null;
+}
+
+function companyLinkedinFromUrl(rawUrl: string): string | null {
+  try {
+    const url = new URL(rawUrl);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const match = url.pathname.match(/^\/(company|showcase)\/([^/]+)/i);
+    if (url.protocol !== "https:" || host !== "linkedin.com" || !match) return null;
+    const section = match[1].toLowerCase();
+    const slug = decodeURIComponent(match[2]);
+    if (!/^[a-z0-9-]+$/i.test(slug)) return null;
+    return `https://www.linkedin.com/${section}/${slug}/`;
+  } catch {
+    return null;
+  }
+}
+
 function extractSocialAndCareerSignals(
   html: string,
-  baseWebsite: string
+  baseWebsite: string,
+  companyDomain = ""
 ): {
   careerLinks: string[];
   atsMatch: AtsMatch | null;
   stack: string[];
+  companyEmail: string | null;
+  companyLinkedinUrl: string | null;
+  contactLinks: string[];
 } {
   const hrefRegex = /href=["']([^"'#]+)["']/gi;
   const careerLinks: string[] = [];
+  const contactLinks: string[] = [];
   let atsMatch: AtsMatch | null = null;
+  let companyLinkedinUrl: string | null = null;
   let m: RegExpExecArray | null;
+  let baseHost = "";
+  try {
+    baseHost = new URL(baseWebsite).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    // Invalid base URLs are rejected by the caller's fetch path.
+  }
+  const companyEmail = extractCompanyEmail(html, companyDomain, baseHost);
 
   while ((m = hrefRegex.exec(html)) !== null) {
     const rawHref = m[1].trim();
     if (!rawHref) continue;
-    let resolved: string;
+    let resolvedUrl: URL;
     try {
-      resolved = new URL(rawHref, baseWebsite).toString();
+      resolvedUrl = new URL(rawHref, baseWebsite);
     } catch {
       continue;
     }
+    const resolved = resolvedUrl.toString();
+    const linkedinUrl = companyLinkedinFromUrl(resolved);
+    if (linkedinUrl && !companyLinkedinUrl) companyLinkedinUrl = linkedinUrl;
 
     const ats = detectAtsFromUrl(resolved);
     if (ats && !atsMatch) {
@@ -141,12 +213,24 @@ function extractSocialAndCareerSignals(
     if (/\/(careers|jobs|hiring|join|join-us|open-positions|work-with-us)(\/|$|\?)/i.test(resolved)) {
       careerLinks.push(resolved);
     }
+
+    const resolvedHost = resolvedUrl.hostname.toLowerCase().replace(/^www\./, "");
+    const belongsToSite = domainCandidates(companyDomain, baseHost).some(
+      (domain) => resolvedHost === domain || resolvedHost.endsWith(`.${domain}`)
+    );
+    if (belongsToSite && /\/(contact|contact-us|get-in-touch|about|about-us|team|who-we-are)(\/|$|\?)/i.test(resolvedUrl.pathname)) {
+      contactLinks.push(resolvedUrl.toString());
+    }
   }
 
+  contactLinks.sort((a, b) => Number(!/contact|get-in-touch/i.test(a)) - Number(!/contact|get-in-touch/i.test(b)));
   return {
     careerLinks: Array.from(new Set(careerLinks)),
     atsMatch,
     stack: sniffTechStackFromHtml(html),
+    companyEmail,
+    companyLinkedinUrl,
+    contactLinks: Array.from(new Set(contactLinks)),
   };
 }
 
@@ -309,6 +393,7 @@ export async function detectCompanyHiringAndSignals(
   company: {
     id: string;
     name: string;
+    domain: string;
     website: string;
     hiring_page_url: string | null;
     hiring_provider: HiringProvider;
@@ -322,15 +407,21 @@ export async function detectCompanyHiringAndSignals(
     : null;
   let hiringPageUrl = company.hiring_page_url;
   let stack: string[] = [];
+  let companyEmail: string | null = null;
+  let companyLinkedinUrl: string | null = null;
+  let contactPageChecked = false;
   let checkedLive = false;
 
-  // Step 1: Fetch company homepage HTML to find /careers, /jobs, /hiring links & social handles
+  // Fetch the official homepage, then at most one same-domain contact/about page.
   if (cleanSite && !/ycombinator\.com|news\.ycombinator\.com/i.test(cleanSite)) {
     try {
       const homeRes = await fetchWithResilience(cleanSite, { timeoutMs: 3500 });
       checkedLive = true;
-      const signals = extractSocialAndCareerSignals(homeRes.text, cleanSite);
+      const signals = extractSocialAndCareerSignals(homeRes.text, cleanSite, company.domain);
       stack = signals.stack;
+      companyEmail = signals.companyEmail;
+      companyLinkedinUrl = signals.companyLinkedinUrl;
+      contactPageChecked = true;
 
       if (signals.atsMatch) {
         atsMatch = signals.atsMatch;
@@ -344,14 +435,37 @@ export async function detectCompanyHiringAndSignals(
           });
           const nested = extractSocialAndCareerSignals(
             careerHtml.text,
-            hiringPageUrl
+            hiringPageUrl,
+            company.domain
           );
+          companyEmail = companyEmail || nested.companyEmail;
+          companyLinkedinUrl = companyLinkedinUrl || nested.companyLinkedinUrl;
           if (nested.atsMatch) {
             atsMatch = nested.atsMatch;
             hiringPageUrl = nested.atsMatch.boardUrl;
           }
         } catch {
           // Keep discovered /careers link
+        }
+      }
+
+      if ((!companyEmail || !companyLinkedinUrl) && signals.contactLinks.length > 0) {
+        const contactUrl = signals.contactLinks.find((candidate) => candidate !== hiringPageUrl);
+        if (contactUrl) {
+          try {
+            const contactHtml = await fetchWithResilience(contactUrl, { timeoutMs: 2500 });
+            contactPageChecked = true;
+            checkedLive = true;
+            const contactSignals = extractSocialAndCareerSignals(
+              contactHtml.text,
+              contactUrl,
+              company.domain
+            );
+            companyEmail = companyEmail || contactSignals.companyEmail;
+            companyLinkedinUrl = companyLinkedinUrl || contactSignals.companyLinkedinUrl;
+          } catch {
+            // Keep only details obtained from pages that did respond.
+          }
         }
       }
     } catch {
@@ -376,6 +490,9 @@ export async function detectCompanyHiringAndSignals(
         jobs: liveJobs,
         jobsVerified: true,
         tech_stack: stack,
+        company_email: companyEmail,
+        company_linkedin_url: companyLinkedinUrl,
+        contactPageChecked,
         checkedLive,
       };
     } catch {
@@ -396,6 +513,9 @@ export async function detectCompanyHiringAndSignals(
     jobs: fallbackJobs,
     jobsVerified: false,
     tech_stack: stack,
+    company_email: companyEmail,
+    company_linkedin_url: companyLinkedinUrl,
+    contactPageChecked,
     checkedLive,
   };
 }

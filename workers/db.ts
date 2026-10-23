@@ -46,6 +46,9 @@ const SCHEMA_STATEMENTS = [
     founder_twitter TEXT,
     founder_linkedin TEXT,
     founder_email TEXT,
+    company_linkedin_url TEXT,
+    company_email TEXT,
+    contact_checked_at TEXT,
     sniper_score INTEGER NOT NULL DEFAULT 50,
     outreach_status TEXT NOT NULL DEFAULT 'new',
     outreach_notes TEXT NOT NULL DEFAULT '',
@@ -116,6 +119,27 @@ export async function ensureSchema(db: D1Database): Promise<void> {
       const alterMessage =
         alterError instanceof Error ? alterError.message : String(alterError);
       if (!/duplicate column/i.test(alterMessage)) throw alterError;
+    }
+  }
+
+  // Add source-site contact fields to existing D1 databases without requiring
+  // a separate paid service or a destructive migration.
+  for (const [column, type] of [
+    ["company_linkedin_url", "TEXT"],
+    ["company_email", "TEXT"],
+    ["contact_checked_at", "TEXT"],
+  ] as const) {
+    try {
+      await db.prepare(`SELECT ${column} FROM companies LIMIT 0`).all();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!new RegExp(`no such column.*${column}`, "i").test(message)) throw error;
+      try {
+        await db.prepare(`ALTER TABLE companies ADD COLUMN ${column} ${type}`).run();
+      } catch (alterError) {
+        const alterMessage = alterError instanceof Error ? alterError.message : String(alterError);
+        if (!/duplicate column/i.test(alterMessage)) throw alterError;
+      }
     }
   }
 
@@ -386,6 +410,9 @@ interface RawCompanyRow {
   founder_twitter: string | null;
   founder_linkedin: string | null;
   founder_email: string | null;
+  company_linkedin_url: string | null;
+  company_email: string | null;
+  contact_checked_at: string | null;
   sniper_score: number;
   outreach_status: OutreachStatus;
   outreach_notes: string;
@@ -501,6 +528,9 @@ export function mapCompanyRow(row: RawCompanyRow, jobs?: JobPosting[]): Company 
     founder_twitter: founderTwitter,
     founder_linkedin: founderLinkedin,
     founder_email: founderEmail,
+    company_linkedin_url: row.company_linkedin_url ?? null,
+    company_email: row.company_email ?? null,
+    contact_checked_at: row.contact_checked_at ?? null,
     sniper_score: row.sniper_score || 50,
     outreach_status: row.outreach_status || "new",
     outreach_notes: row.outreach_notes || "",
@@ -623,6 +653,12 @@ export async function deduplicateAndUpsertCompanies(
         existing.founder_linkedin || item.founder_linkedin || null;
       existing.founder_email =
         existing.founder_email || item.founder_email || null;
+      existing.company_linkedin_url =
+        existing.company_linkedin_url || item.company_linkedin_url || null;
+      existing.company_email =
+        existing.company_email || item.company_email || null;
+      existing.contact_checked_at =
+        existing.contact_checked_at || item.contact_checked_at || null;
 
       existing.tags = Array.from(
         new Set([...(existing.tags || []), ...(item.tags || [])])
@@ -678,6 +714,7 @@ export async function deduplicateAndUpsertCompanies(
           hiring_page_url, hiring_provider, open_roles_count,
           tags_json, tech_stack_json,
           founder_name, founder_twitter, founder_linkedin, founder_email,
+          company_linkedin_url, company_email, contact_checked_at,
           sniper_score, created_at, updated_at
         ) VALUES (
           ?, ?, ?, ?, ?, ?, ?, ?,
@@ -686,7 +723,7 @@ export async function deduplicateAndUpsertCompanies(
           ?, ?, ?,
           ?, ?,
           ?, ?, ?, ?,
-          ?, ?, ?
+          ?, ?, ?, ?, ?, ?
         )
         ON CONFLICT(domain) DO UPDATE SET
           name = excluded.name,
@@ -713,6 +750,9 @@ export async function deduplicateAndUpsertCompanies(
           founder_twitter = COALESCE(excluded.founder_twitter, companies.founder_twitter),
           founder_linkedin = COALESCE(excluded.founder_linkedin, companies.founder_linkedin),
           founder_email = COALESCE(excluded.founder_email, companies.founder_email),
+          company_linkedin_url = CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_linkedin_url ELSE COALESCE(excluded.company_linkedin_url, companies.company_linkedin_url) END,
+          company_email = CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_email ELSE COALESCE(excluded.company_email, companies.company_email) END,
+          contact_checked_at = CASE WHEN companies.website IS NOT excluded.website THEN excluded.contact_checked_at ELSE COALESCE(excluded.contact_checked_at, companies.contact_checked_at) END,
           sniper_score = MAX(companies.sniper_score, excluded.sniper_score),
           updated_at = excluded.updated_at
         WHERE companies.name IS NOT excluded.name
@@ -739,6 +779,9 @@ export async function deduplicateAndUpsertCompanies(
           OR companies.founder_twitter IS NOT COALESCE(excluded.founder_twitter, companies.founder_twitter)
           OR companies.founder_linkedin IS NOT COALESCE(excluded.founder_linkedin, companies.founder_linkedin)
           OR companies.founder_email IS NOT COALESCE(excluded.founder_email, companies.founder_email)
+          OR companies.company_linkedin_url IS NOT (CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_linkedin_url ELSE COALESCE(excluded.company_linkedin_url, companies.company_linkedin_url) END)
+          OR companies.company_email IS NOT (CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_email ELSE COALESCE(excluded.company_email, companies.company_email) END)
+          OR companies.contact_checked_at IS NOT (CASE WHEN companies.website IS NOT excluded.website THEN excluded.contact_checked_at ELSE COALESCE(excluded.contact_checked_at, companies.contact_checked_at) END)
           OR companies.sniper_score IS NOT MAX(companies.sniper_score, excluded.sniper_score)`
       ).bind(
         companyId,
@@ -767,6 +810,9 @@ export async function deduplicateAndUpsertCompanies(
         record.founder_twitter ?? null,
         record.founder_linkedin ?? null,
         record.founder_email ?? null,
+        record.company_linkedin_url ?? null,
+        record.company_email ?? null,
+        record.contact_checked_at ?? null,
         score,
         nowIso,
         nowIso
