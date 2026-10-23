@@ -21,6 +21,7 @@ import { detectCompanyHiringAndSignals } from "@/workers/enrichment/hiringDetect
 import { fetchHnWhoIsHiring } from "@/workers/fetchers/hnHiring";
 import { fetchIndieShowHn } from "@/workers/fetchers/indie";
 import { fetchProductHuntLaunches } from "@/workers/fetchers/producthunt";
+import { fetchTrustMrrStartups } from "@/workers/fetchers/trustmrr";
 import { fetchWellfoundFunded } from "@/workers/fetchers/wellfound";
 import { fetchWorkAtAStartup } from "@/workers/fetchers/workatastartup";
 import { fetchYcCompanies } from "@/workers/fetchers/yc";
@@ -97,6 +98,7 @@ export async function syncAllSources(
       { source: "wellfound", run: fetchWellfoundFunded(env, options) },
       { source: "producthunt", run: fetchProductHuntLaunches(env, options) },
       { source: "indie", run: fetchIndieShowHn(env, options) },
+      { source: "trustmrr", run: fetchTrustMrrStartups(env, options) },
       { source: "hn_hiring", run: fetchHnWhoIsHiring(env, options) },
     ];
 

@@ -60,6 +60,8 @@ export interface WorkerEnv {
   CACHE?: KVNamespace;
   ASSETS?: AssetFetcher;
   GITHUB_TOKEN?: string;
+  // Optional TrustMRR API key. The adapter remains disabled when no key is set.
+  TRUSTMRR_API_KEY?: string;
   // Optional shared AI keys for the /api/ai proxy (AC7). Set via `wrangler secret put`
   // or Pages dashboard env vars so the app works without BYOK.
   OPENROUTER_API_KEY?: string;

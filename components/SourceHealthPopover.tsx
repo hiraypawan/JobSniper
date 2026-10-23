@@ -33,6 +33,10 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
     name: "Show HN & GitHub Projects",
     desc: "Recent Show HN posts or repositories with an explicit project website",
   },
+  trustmrr: {
+    name: "TrustMRR · Revenue Evidence",
+    desc: "Optional bearer-key API; shows MRR, last-30-day receipts, and lifetime revenue separately",
+  },
   hn_hiring: {
     name: "HN Who is Hiring?",
     desc: "The newest hiring thread, parsed for remote roles",

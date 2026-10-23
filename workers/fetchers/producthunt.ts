@@ -26,10 +26,7 @@ function parseProductHuntAtom(xml: string): NormalizedCompanyInput[] {
   for (const entry of entries) {
     const titleRaw =
       entry.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
-    const publishedRaw =
-      entry.match(/<published>([\s\S]*?)<\/published>/i)?.[1] ||
-      entry.match(/<updated>([\s\S]*?)<\/updated>/i)?.[1] ||
-      "";
+    const publishedRaw = entry.match(/<published>([\s\S]*?)<\/published>/i)?.[1] || "";
     const contentRaw =
       entry.match(/<content[^>]*>([\s\S]*?)<\/content>/i)?.[1] || "";
 
@@ -69,6 +66,16 @@ function parseProductHuntAtom(xml: string): NormalizedCompanyInput[] {
 
     const domain = normalizeDomain(website, name);
     const companyId = makeCompanyId(domain);
+    const listingHref = Array.from(entry.matchAll(/<link\b[^>]*href=["']([^"']+)["'][^>]*>/gi))
+      .map((match) => match[1])
+      .find((href) => {
+        try {
+          const parsed = new URL(href);
+          return (parsed.hostname.toLowerCase() === "producthunt.com" || parsed.hostname.toLowerCase().endsWith(".producthunt.com")) && /\/posts\//i.test(parsed.pathname);
+        } catch {
+          return false;
+        }
+      });
 
     companies.push({
       id: companyId,
@@ -84,6 +91,9 @@ function parseProductHuntAtom(xml: string): NormalizedCompanyInput[] {
       is_funded_last_12mo: false,
       tags: ["Product Hunt Launch"],
       founder_name: null,
+      launch_date: new Date(publishedTs).toISOString(),
+      launch_source: "Product Hunt",
+      launch_url: listingHref || null,
     });
   }
 

@@ -27,9 +27,27 @@ that loop in one page.
 | Y Combinator | Recent cohorts (W25 to F26), about 940 companies, through the yc-oss JSON endpoints | `workers/fetchers/yc.ts` |
 | Work at a Startup | Companies that are actively hiring right now, plus remote role links | `workers/fetchers/workatastartup.ts` |
 | Wellfound and seed news | Funding RSS feeds (FinSMEs, EU Startups, TechCrunch Startups) filtered to rounds from the last 12 months and teams under 50 | `workers/fetchers/wellfound.ts` |
-| Product Hunt | The public Atom feed for the last 7 days, plus new GitHub products with their own domain | `workers/fetchers/producthunt.ts` |
-| Show HN | Hacker News Algolia API for `show_hn` posts from the last week | `workers/fetchers/indie.ts` |
+| Product Hunt | The public Atom feed for the last 7 days; retains platform publication time and listing permalink | `workers/fetchers/producthunt.ts` |
+| Show HN | Hacker News Algolia API for `show_hn` posts from the last week; source post time and permalink are retained | `workers/fetchers/indie.ts` |
+| GitHub projects | Newly created repositories (21-day search) with an explicitly linked project website; repository creation date and repo URL are retained | `workers/fetchers/indie.ts` |
+| TrustMRR | Optional bearer-key API; retains products only when MRR, last-30-day receipts, or lifetime revenue is positive. Newest page plus four rotating history pages are cached for six hours. | `workers/fetchers/trustmrr.ts` |
 | HN "Who is hiring?" | The newest monthly thread, parsed for remote roles and founder emails | `workers/fetchers/hnHiring.ts` |
+
+The **Indie launches** tab is separate from startup/funding leads. Its 1 day,
+1 week, 1 month, and 1 year filters use source publication/listing timestamps,
+not the company row's `updated_at`. The one-year view grows from the launch data
+collected by scheduled syncs; upstream feeds do not provide complete historical
+backfills. TrustMRR revenue metrics are displayed separately: zero MRR does not
+hide positive receipts or lifetime revenue.
+
+TrustMRR's API requires a bearer API key. Whether a key can be obtained without
+payment was not verified. The integration is optional and disabled without the
+secret; do not buy a plan for this feature. If you already have no-cost API-key
+access, configure it as a Cloudflare secret:
+
+```bash
+npx wrangler secret put TRUSTMRR_API_KEY
+```
 
 Wellfound itself sits behind Cloudflare Turnstile and returns a 403 to most
 serverless IPs. That fetcher therefore uses the funding RSS feeds as the primary

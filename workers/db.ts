@@ -143,6 +143,31 @@ export async function ensureSchema(db: D1Database): Promise<void> {
     }
   }
 
+  // Launch-event metadata and TrustMRR revenue evidence are additive. In
+  // particular, launch_date is source publication/listing time, never updated_at.
+  for (const [column, type] of [
+    ["launch_date", "TEXT"],
+    ["launch_source", "TEXT"],
+    ["launch_url", "TEXT"],
+    ["trustmrr_mrr", "REAL"],
+    ["trustmrr_last30", "REAL"],
+    ["trustmrr_total", "REAL"],
+  ] as const) {
+    try {
+      await db.prepare(`SELECT ${column} FROM companies LIMIT 0`).all();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!new RegExp(`no such column.*${column}`, "i").test(message)) throw error;
+      try {
+        await db.prepare(`ALTER TABLE companies ADD COLUMN ${column} ${type}`).run();
+      } catch (alterError) {
+        const alterMessage = alterError instanceof Error ? alterError.message : String(alterError);
+        if (!/duplicate column/i.test(alterMessage)) throw alterError;
+      }
+    }
+  }
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_companies_launch_date ON companies(launch_date DESC)").run();
+
   // Remove legacy generated roles and unsupported seed metadata once. Verified
   // ATS refreshes can repopulate actual postings without losing CRM status.
   const staleRoleMigration = "cleanup-unverified-seed-roles-v1";
@@ -413,6 +438,12 @@ interface RawCompanyRow {
   company_linkedin_url: string | null;
   company_email: string | null;
   contact_checked_at: string | null;
+  launch_date: string | null;
+  launch_source: string | null;
+  launch_url: string | null;
+  trustmrr_mrr: number | null;
+  trustmrr_last30: number | null;
+  trustmrr_total: number | null;
   sniper_score: number;
   outreach_status: OutreachStatus;
   outreach_notes: string;
@@ -531,6 +562,12 @@ export function mapCompanyRow(row: RawCompanyRow, jobs?: JobPosting[]): Company 
     company_linkedin_url: row.company_linkedin_url ?? null,
     company_email: row.company_email ?? null,
     contact_checked_at: row.contact_checked_at ?? null,
+    launch_date: row.launch_date ?? null,
+    launch_source: row.launch_source ?? null,
+    launch_url: row.launch_url ?? null,
+    trustmrr_mrr: row.trustmrr_mrr ?? null,
+    trustmrr_last30: row.trustmrr_last30 ?? null,
+    trustmrr_total: row.trustmrr_total ?? null,
     sniper_score: row.sniper_score || 50,
     outreach_status: row.outreach_status || "new",
     outreach_notes: row.outreach_notes || "",
@@ -659,6 +696,14 @@ export async function deduplicateAndUpsertCompanies(
         existing.company_email || item.company_email || null;
       existing.contact_checked_at =
         existing.contact_checked_at || item.contact_checked_at || null;
+      if (item.launch_date && (!existing.launch_date || item.launch_date > existing.launch_date)) {
+        existing.launch_date = item.launch_date;
+        existing.launch_source = item.launch_source || null;
+        existing.launch_url = item.launch_url || null;
+      }
+      existing.trustmrr_mrr = item.trustmrr_mrr ?? existing.trustmrr_mrr ?? null;
+      existing.trustmrr_last30 = item.trustmrr_last30 ?? existing.trustmrr_last30 ?? null;
+      existing.trustmrr_total = item.trustmrr_total ?? existing.trustmrr_total ?? null;
 
       existing.tags = Array.from(
         new Set([...(existing.tags || []), ...(item.tags || [])])
@@ -715,15 +760,11 @@ export async function deduplicateAndUpsertCompanies(
           tags_json, tech_stack_json,
           founder_name, founder_twitter, founder_linkedin, founder_email,
           company_linkedin_url, company_email, contact_checked_at,
+          launch_date, launch_source, launch_url,
+          trustmrr_mrr, trustmrr_last30, trustmrr_total,
           sniper_score, created_at, updated_at
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?,
-          ?, ?, ?,
-          ?, ?, ?,
-          ?, ?,
-          ?, ?, ?, ?,
-          ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         ON CONFLICT(domain) DO UPDATE SET
           name = excluded.name,
@@ -753,6 +794,12 @@ export async function deduplicateAndUpsertCompanies(
           company_linkedin_url = CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_linkedin_url ELSE COALESCE(excluded.company_linkedin_url, companies.company_linkedin_url) END,
           company_email = CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_email ELSE COALESCE(excluded.company_email, companies.company_email) END,
           contact_checked_at = CASE WHEN companies.website IS NOT excluded.website THEN excluded.contact_checked_at ELSE COALESCE(excluded.contact_checked_at, companies.contact_checked_at) END,
+          launch_date = CASE WHEN excluded.launch_date IS NOT NULL AND (companies.launch_date IS NULL OR excluded.launch_date >= companies.launch_date) THEN excluded.launch_date ELSE companies.launch_date END,
+          launch_source = CASE WHEN excluded.launch_date IS NOT NULL AND (companies.launch_date IS NULL OR excluded.launch_date >= companies.launch_date) THEN excluded.launch_source ELSE companies.launch_source END,
+          launch_url = CASE WHEN excluded.launch_date IS NOT NULL AND (companies.launch_date IS NULL OR excluded.launch_date >= companies.launch_date) THEN excluded.launch_url ELSE companies.launch_url END,
+          trustmrr_mrr = COALESCE(excluded.trustmrr_mrr, companies.trustmrr_mrr),
+          trustmrr_last30 = COALESCE(excluded.trustmrr_last30, companies.trustmrr_last30),
+          trustmrr_total = COALESCE(excluded.trustmrr_total, companies.trustmrr_total),
           sniper_score = MAX(companies.sniper_score, excluded.sniper_score),
           updated_at = excluded.updated_at
         WHERE companies.name IS NOT excluded.name
@@ -782,6 +829,12 @@ export async function deduplicateAndUpsertCompanies(
           OR companies.company_linkedin_url IS NOT (CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_linkedin_url ELSE COALESCE(excluded.company_linkedin_url, companies.company_linkedin_url) END)
           OR companies.company_email IS NOT (CASE WHEN companies.website IS NOT excluded.website THEN excluded.company_email ELSE COALESCE(excluded.company_email, companies.company_email) END)
           OR companies.contact_checked_at IS NOT (CASE WHEN companies.website IS NOT excluded.website THEN excluded.contact_checked_at ELSE COALESCE(excluded.contact_checked_at, companies.contact_checked_at) END)
+          OR companies.launch_date IS NOT (CASE WHEN excluded.launch_date IS NOT NULL AND (companies.launch_date IS NULL OR excluded.launch_date >= companies.launch_date) THEN excluded.launch_date ELSE companies.launch_date END)
+          OR companies.launch_source IS NOT (CASE WHEN excluded.launch_date IS NOT NULL AND (companies.launch_date IS NULL OR excluded.launch_date >= companies.launch_date) THEN excluded.launch_source ELSE companies.launch_source END)
+          OR companies.launch_url IS NOT (CASE WHEN excluded.launch_date IS NOT NULL AND (companies.launch_date IS NULL OR excluded.launch_date >= companies.launch_date) THEN excluded.launch_url ELSE companies.launch_url END)
+          OR companies.trustmrr_mrr IS NOT COALESCE(excluded.trustmrr_mrr, companies.trustmrr_mrr)
+          OR companies.trustmrr_last30 IS NOT COALESCE(excluded.trustmrr_last30, companies.trustmrr_last30)
+          OR companies.trustmrr_total IS NOT COALESCE(excluded.trustmrr_total, companies.trustmrr_total)
           OR companies.sniper_score IS NOT MAX(companies.sniper_score, excluded.sniper_score)`
       ).bind(
         companyId,
@@ -813,6 +866,12 @@ export async function deduplicateAndUpsertCompanies(
         record.company_linkedin_url ?? null,
         record.company_email ?? null,
         record.contact_checked_at ?? null,
+        record.launch_date ?? null,
+        record.launch_source ?? null,
+        record.launch_url ?? null,
+        record.trustmrr_mrr ?? null,
+        record.trustmrr_last30 ?? null,
+        record.trustmrr_total ?? null,
         score,
         nowIso,
         nowIso
@@ -899,6 +958,9 @@ export interface CompanyQueryFilters {
   hiring?: boolean;
   funded12mo?: boolean;
   fresh14d?: boolean;
+  launchOnly?: boolean;
+  launchWindow?: string;
+  earningOnly?: boolean;
   smallTeam?: boolean;
   search?: string;
   sort?: string;
@@ -947,6 +1009,23 @@ export async function queryCompanies(
     params.push(cutoff14d);
   }
 
+  if (filters.launchOnly) {
+    where.push("launch_date IS NOT NULL");
+  }
+
+  if (filters.launchOnly && filters.launchWindow && filters.launchWindow !== "all") {
+    const daysByWindow: Record<string, number> = { "1d": 1, "7d": 7, "30d": 30, "365d": 365 };
+    const days = daysByWindow[filters.launchWindow];
+    if (days) {
+      where.push("launch_date >= ?");
+      params.push(new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString());
+    }
+  }
+
+  if (filters.earningOnly) {
+    where.push("(COALESCE(trustmrr_mrr, 0) > 0 OR COALESCE(trustmrr_last30, 0) > 0 OR COALESCE(trustmrr_total, 0) > 0)");
+  }
+
   if (filters.remote) {
     where.push("is_remote = 1");
   }
@@ -987,14 +1066,15 @@ export async function queryCompanies(
 
   const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
 
-  let orderSql =
-    "ORDER BY sniper_score DESC, COALESCE(last_funding_date, '2000-01-01') DESC, open_roles_count DESC";
-  if (filters.sort === "newest") {
+  let orderSql = filters.launchOnly
+    ? "ORDER BY launch_date DESC, COALESCE(trustmrr_last30, 0) DESC, COALESCE(trustmrr_mrr, 0) DESC"
+    : "ORDER BY sniper_score DESC, COALESCE(last_funding_date, '2000-01-01') DESC, open_roles_count DESC";
+  if (!filters.launchOnly && filters.sort === "newest") {
     orderSql =
       "ORDER BY COALESCE(last_funding_date, '2000-01-01') DESC, sniper_score DESC";
-  } else if (filters.sort === "roles") {
+  } else if (!filters.launchOnly && filters.sort === "roles") {
     orderSql = "ORDER BY open_roles_count DESC, sniper_score DESC";
-  } else if (filters.sort === "smallest_team") {
+  } else if (!filters.launchOnly && filters.sort === "smallest_team") {
     orderSql =
       "ORDER BY CASE WHEN team_size IS NULL OR team_size = 0 THEN 9999 ELSE team_size END ASC, sniper_score DESC";
   }
