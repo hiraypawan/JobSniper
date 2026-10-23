@@ -30,7 +30,7 @@ const KPI_CONFIG: Array<{
     id: "funded12mo",
     label: "Funded < 12 Months",
     value: (s) => s.fundedLast12Mo.toLocaleString(),
-    sub: () => "W25–F26 + Seed rounds",
+    sub: () => "W25-F26 + Seed rounds",
     icon: Sparkles,
     variant: "lime",
   },
@@ -66,12 +66,12 @@ const KPI_CONFIG: Array<{
         (s.pipelineCounts.pitched || 0) +
         (s.pipelineCounts.demo_sent || 0) +
         (s.pipelineCounts.replied || 0);
-      return `${pitchedTotal} pitched · ${s.pipelineCounts.saved || 0} saved`;
+      return `${pitchedTotal} / ${s.pipelineCounts.saved || 0}`;
     },
     sub: (s) =>
       (s.followUpDueCount || 0) > 0
         ? `${s.followUpDueCount} follow-up due`
-        : "Copy pitch to track",
+        : "Pitched / saved",
     icon: Send,
     variant: "slate",
   },
@@ -111,7 +111,7 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
         const Icon = c.icon;
         const variant = VARIANT_CLASSES[c.variant];
         const active = activeQuickLens === c.id;
-        const value = stats ? c.value(stats) : (c.id === "all" ? "—" : "—");
+        const value = stats ? c.value(stats) : (c.id === "all" ? "-" : "-");
         const sub = stats ? c.sub(stats) : "";
         return (
           <button
@@ -133,7 +133,7 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
               </div>
             </div>
             <div className="mt-2">
-              <div className={`text-lg font-mono font-bold ${variant.text} truncate`}>
+              <div className={`text-base sm:text-lg font-mono font-bold ${variant.text} whitespace-nowrap`}>
                 {value}
               </div>
               <div className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">

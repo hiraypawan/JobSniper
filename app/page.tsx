@@ -530,7 +530,7 @@ export default function DashboardPage() {
       />
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="flex w-fit items-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-1">
+        <div className="flex w-fit items-center gap-1 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] p-1 shadow-sm">
           {([
             ["leads", "Startup & funding leads"],
             ["indie", "Indie launches"],
@@ -545,7 +545,7 @@ export default function DashboardPage() {
               }}
               className={`rounded-xl px-4 py-2.5 text-xs transition ${
                 activeSection === section
-                  ? "bg-pastel-peach/30 font-semibold text-[var(--pastel-amber)]"
+                  ? "bg-[var(--pastel-peach)]/35 font-semibold text-[var(--text-warm)]"
                   : "text-[var(--text-muted)] hover:text-[var(--text-warm)]"
               }`}
             >

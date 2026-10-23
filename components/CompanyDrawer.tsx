@@ -46,6 +46,18 @@ interface Props {
 
 type PitchTab = "classic" | "role" | "linkedin" | "email";
 
+function hasRevenue(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function formatRevenueUsd(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value >= 1000 ? 0 : 2,
+  }).format(value);
+}
+
 const STATUS_OPTIONS: { id: OutreachStatus; label: string }[] = [
   { id: "new", label: "Inbox" },
   { id: "saved", label: "Saved" },
@@ -483,6 +495,26 @@ export function CompanyDrawer({
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
             Company email and LinkedIn are extracted only from the source-listed website's homepage/contact pages. Founder contacts remain separately labeled source data; verify before contacting. Missing details are never guessed.
           </p>
+
+          {(hasRevenue(company.trustmrr_mrr) || hasRevenue(company.trustmrr_last30) || hasRevenue(company.trustmrr_total) || company.launch_date || company.launch_url) && (
+            <section className="rounded-2xl border border-[var(--pastel-mint)]/40 bg-[var(--pastel-mintSoft)] p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-bold text-[var(--text-warm)]">Revenue evidence & launch source</h3>
+                <p className="mt-1 text-[10px] leading-relaxed text-[var(--text-muted)]">Metrics below are reported by TrustMRR. Zero MRR does not mean zero earnings; receipts and lifetime revenue are separate.</p>
+              </div>
+              {(hasRevenue(company.trustmrr_mrr) || hasRevenue(company.trustmrr_last30) || hasRevenue(company.trustmrr_total)) && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {hasRevenue(company.trustmrr_mrr) && <div className="rounded-xl border border-[var(--pastel-mint)]/40 bg-[var(--surface-card)] p-3"><div className="text-[10px] text-[var(--text-muted)]">MRR</div><div className="mt-1 text-sm font-bold font-mono text-[var(--text-warm)]">{formatRevenueUsd(company.trustmrr_mrr)}</div></div>}
+                  {hasRevenue(company.trustmrr_last30) && <div className="rounded-xl border border-[var(--pastel-mint)]/40 bg-[var(--surface-card)] p-3"><div className="text-[10px] text-[var(--text-muted)]">Last 30 days</div><div className="mt-1 text-sm font-bold font-mono text-[var(--text-warm)]">{formatRevenueUsd(company.trustmrr_last30)}</div></div>}
+                  {hasRevenue(company.trustmrr_total) && <div className="rounded-xl border border-[var(--pastel-mint)]/40 bg-[var(--surface-card)] p-3"><div className="text-[10px] text-[var(--text-muted)]">Lifetime revenue</div><div className="mt-1 text-sm font-bold font-mono text-[var(--text-warm)]">{formatRevenueUsd(company.trustmrr_total)}</div></div>}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {company.launch_date && <span className="text-[var(--text-muted)]">Listed on {company.launch_source || "source platform"} · {new Date(company.launch_date).toLocaleDateString()}</span>}
+                {company.launch_url && <a href={company.launch_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-semibold text-[var(--text-warm)] underline underline-offset-2">Open source listing <ExternalLink className="w-3 h-3" /></a>}
+              </div>
+            </section>
+          )}
 
           {/* Pitch Studio */}
           <section className="rounded-3xl border border-lime-100 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 p-5 sm:p-6 space-y-4">

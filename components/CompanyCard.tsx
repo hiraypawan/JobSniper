@@ -24,6 +24,18 @@ const SOURCE_BADGES: Record<string, string> = {
   trustmrr: "TrustMRR",
 };
 
+function hasRevenue(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function formatRevenueUsd(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value >= 1000 ? 0 : 2,
+  }).format(value);
+}
+
 const STATUS_META: Record<OutreachStatus, { label: string; color: string }> = {
   new: { label: "New", color: "text-[var(--text-muted)]" },
   saved: { label: "Saved", color: "text-[var(--pastel-amber)]" },
@@ -70,7 +82,7 @@ export function CompanyCard({
   return (
     <article
       onClick={() => onSelect(company)}
-      className="group cursor-pointer rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.7)] backdrop-blur-sm hover:border-[var(--pastel-peach)]/60 hover:-translate-y-1 hover:shadow-[0_12px_30px_-10px_rgba(255,220,180,0.35)] transition-all duration-300 p-5 flex flex-col justify-between"
+      className="group cursor-pointer rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-sm hover:border-[var(--pastel-peach)]/60 hover:-translate-y-1 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.18)] transition-all duration-300 p-5 flex flex-col justify-between"
       style={{ fontFamily: "Quicksand, sans-serif" }}
     >
       <div>
@@ -148,6 +160,38 @@ export function CompanyCard({
             </span>
           )}
         </div>
+
+        {(company.launch_date || company.launch_url || hasRevenue(company.trustmrr_mrr) || hasRevenue(company.trustmrr_last30) || hasRevenue(company.trustmrr_total)) && (
+          <div className="mt-3 rounded-2xl border border-[var(--pastel-mint)]/40 bg-[var(--pastel-mintSoft)] p-3">
+            {(hasRevenue(company.trustmrr_mrr) || hasRevenue(company.trustmrr_last30) || hasRevenue(company.trustmrr_total)) && (
+              <>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-warm)]">TrustMRR revenue evidence</div>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {hasRevenue(company.trustmrr_mrr) && <span className="rounded-lg border border-[var(--pastel-mint)]/50 bg-[var(--surface-card)] px-2 py-1 text-[10px] text-[var(--text-warm)]">MRR <strong>{formatRevenueUsd(company.trustmrr_mrr)}</strong></span>}
+                  {hasRevenue(company.trustmrr_last30) && <span className="rounded-lg border border-[var(--pastel-mint)]/50 bg-[var(--surface-card)] px-2 py-1 text-[10px] text-[var(--text-warm)]">Last 30d <strong>{formatRevenueUsd(company.trustmrr_last30)}</strong></span>}
+                  {hasRevenue(company.trustmrr_total) && <span className="rounded-lg border border-[var(--pastel-mint)]/50 bg-[var(--surface-card)] px-2 py-1 text-[10px] text-[var(--text-warm)]">Lifetime <strong>{formatRevenueUsd(company.trustmrr_total)}</strong></span>}
+                </div>
+              </>
+            )}
+            {(company.launch_date || company.launch_url) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[var(--text-muted)]">
+                {company.launch_source && <span>{company.launch_source}{company.launch_date ? ` · ${new Date(company.launch_date).toLocaleDateString()}` : ""}</span>}
+                {company.launch_url && (
+                  <a
+                    href={company.launch_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(event) => event.stopPropagation()}
+                    className="inline-flex items-center gap-1 font-semibold text-[var(--text-warm)] underline underline-offset-2 hover:text-[var(--pastel-amber)]"
+                    title={`Open the source listing${company.launch_source ? ` on ${company.launch_source}` : ""}`}
+                  >
+                    Open source listing <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Footer */}

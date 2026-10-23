@@ -6,7 +6,11 @@
 
 @layer base {
   :root {
-    color-scheme: light dark;
+    color-scheme: light;
+  }
+
+  .dark {
+    color-scheme: dark;
   }
 
   html {
@@ -38,26 +42,44 @@
     --pastel-amber: #FDE8B8;
     --pastel-slate: #D8DCE4;
     --pastel-red: #F5C8C8;
+    --pastel-peach: #FFE4D6;
+    --pastel-mint: #E0F5E9;
+    --pastel-mintSoft: #EBF8F1;
+    --pastel-lavender: #EAE6FA;
+    --pastel-lavenderSoft: #F3F0FF;
+    --pastel-butter: #FFF5CC;
+    --pastel-butterSoft: #FFFBE6;
     --bg-cream: #FFF8F0;
     --surface-white: #FFFFFF;
+    --surface-card: rgba(255, 255, 255, 0.86);
+    --surface-header: rgba(255, 248, 240, 0.96);
     --border-soft: #F0EAE3;
     --text-warm: #5C4A42;
-    --text-muted: #A8988E;
+    --text-muted: #75635A;
     --font-body: "Quicksand", sans-serif;
   }
 
   .dark {
-    --pastel-lime: #D2F8D0;
-    --pastel-cyan: #D2F0F5;
-    --pastel-pink: #FCE0E8;
-    --pastel-amber: #FDF0C8;
-    --pastel-slate: #E2E6EC;
-    --pastel-red: #F8D6D6;
+    --pastel-lime: #9ACF91;
+    --pastel-cyan: #85C6D2;
+    --pastel-pink: #D993A5;
+    --pastel-amber: #D8B878;
+    --pastel-slate: #AEB6C5;
+    --pastel-red: #D58C8C;
+    --pastel-peach: #694B3E;
+    --pastel-mint: #53785F;
+    --pastel-mintSoft: #34483A;
+    --pastel-lavender: #63577F;
+    --pastel-lavenderSoft: #403851;
+    --pastel-butter: #796C45;
+    --pastel-butterSoft: #403A2D;
     --bg-cream: #2A2420;
     --surface-white: #3A3430;
+    --surface-card: rgba(58, 52, 48, 0.96);
+    --surface-header: rgba(42, 36, 32, 0.97);
     --border-soft: #4A4440;
     --text-warm: #F5EFE8;
-    --text-muted: #B8A898;
+    --text-muted: #C3B6AA;
   }
 
   /* ── Soothing base card ── */
