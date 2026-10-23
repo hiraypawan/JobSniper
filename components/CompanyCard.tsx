@@ -1,7 +1,13 @@
 "use client";
 
 import React from "react";
-import { Briefcase, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, Send, Sparkles, Users } from "lucide-react";
+import { Briefcase, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, Search, Send, Sparkles, Users } from "lucide-react";
+import {
+  businessEmailSearchUrl,
+  isUsableSourceWebsite,
+  linkedinSearchUrl,
+  officialWebsiteSearchUrl,
+} from "@/lib/companyLinks";
 import { Company, OutreachStatus } from "@/lib/types";
 
 interface Props {
@@ -44,9 +50,10 @@ export function CompanyCard({
     .toUpperCase();
 
   const statusInfo = STATUS_META[company.outreach_status] || STATUS_META.new;
-  const hasVerifiedWebsite = Boolean(company.website?.trim()) &&
-    !company.domain.toLowerCase().endsWith(".invalid") &&
-    !company.website.toLowerCase().includes(".invalid");
+  const hasSourceWebsite = isUsableSourceWebsite(company.website, company.domain);
+  const displayDomain = /\.(invalid|startup\.local)$/i.test(company.domain)
+    ? "Website not sourced"
+    : company.domain;
 
   const handleOpenAIPitch = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,7 +93,7 @@ export function CompanyCard({
                 )}
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-slate-500 truncate">
-                <span className="truncate">{company.domain}</span>
+                <span className="truncate">{displayDomain}</span>
                 <span className="mx-0.5">·</span>
                 <span className="text-[9px] font-medium text-slate-500">
                   {company.sources.map((s) => SOURCE_BADGES[s] || s).join(" + ")}
@@ -177,24 +184,27 @@ export function CompanyCard({
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          {hasVerifiedWebsite ? (
+        <div className="flex flex-wrap items-center justify-end gap-1 max-w-full" onClick={(e) => e.stopPropagation()}>
+          {hasSourceWebsite ? (
             <a
               href={company.website}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-slate-500 hover:text-emerald-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
-              title="Open verified company website"
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-500 hover:text-emerald-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
+              title="Open website listed by a source; not independently verified"
             >
-              <Globe className="w-3 h-3" /> Website
+              <Globe className="w-3 h-3" /> Source website
             </a>
           ) : (
-            <span
-              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-slate-400"
-              title="No verified company website is listed"
+            <a
+              href={officialWebsiteSearchUrl(company.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-emerald-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
+              title="Search the web for the company's official website; search results are not verified"
             >
-              <Globe className="w-3 h-3" /> Website unavailable
-            </span>
+              <Search className="w-3 h-3" /> Find website
+            </a>
           )}
 
           {(company.hiring_page_url || company.yc_url) && (
@@ -222,34 +232,46 @@ export function CompanyCard({
             </a>
           )}
 
-          {company.founder_linkedin && (
+          {company.founder_linkedin ? (
             <a
               href={company.founder_linkedin}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-xl text-sky-400 hover:bg-sky-500/10 transition-all"
-              title="LinkedIn"
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-sky-400 hover:bg-sky-500/10 transition-all"
+              title="Open LinkedIn profile listed by a source; verify identity before contacting"
             >
-              <Linkedin className="w-3 h-3" />
+              <Linkedin className="w-3 h-3" /> Source LinkedIn
+            </a>
+          ) : (
+            <a
+              href={linkedinSearchUrl(company.name, company.founder_name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 transition-all"
+              title="Search LinkedIn; this is not a verified founder profile"
+            >
+              <Linkedin className="w-3 h-3" /> Find LinkedIn
             </a>
           )}
 
-          {company.founder_email && (
+          {company.founder_email ? (
             <a
               href={`mailto:${company.founder_email}`}
-              className="p-2 rounded-xl text-violet-400 hover:bg-violet-500/10 transition-all"
-              title={`Email ${company.founder_email}`}
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-violet-400 hover:bg-violet-500/10 transition-all"
+              title={`Email listed in source data; verify before contacting: ${company.founder_email}`}
             >
-              <Mail className="w-3 h-3" />
+              <Mail className="w-3 h-3" /> Source email
             </a>
-          )}
-          {!company.founder_email && !company.founder_linkedin && (
-            <span
-              className="px-2 py-1 text-[9px] text-slate-400"
-              title="No source-verified founder email or LinkedIn profile is listed"
+          ) : (
+            <a
+              href={businessEmailSearchUrl(company.name, company.domain, company.website)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 transition-all"
+              title="Search the web for a company email; search results are not verified"
             >
-              No verified contact
-            </span>
+              <Mail className="w-3 h-3" /> Find email
+            </a>
           )}
         </div>
       </div>

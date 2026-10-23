@@ -639,7 +639,9 @@ export async function deduplicateAndUpsertCompanies(
   }
 
   const statements: D1PreparedStatement[] = [];
-  let jobsCount = 0;
+  const companyStatementIndexes = new Set<number>();
+  let upsertedCount = 0;
+  let jobsUpsertedCount = 0;
 
   for (const [, record] of mergedByDomain) {
     const companyId = record.id!;
@@ -666,6 +668,7 @@ export async function deduplicateAndUpsertCompanies(
       sources: sourcesArr,
     });
 
+    companyStatementIndexes.add(statements.length);
     statements.push(
       env.DB.prepare(
         `INSERT INTO companies (
@@ -771,7 +774,6 @@ export async function deduplicateAndUpsertCompanies(
     );
 
     for (const job of jobsList) {
-      jobsCount++;
       statements.push(
         env.DB.prepare(
           `INSERT INTO jobs (id, company_id, title, url, location, remote, department, description, posted_at, created_at)
@@ -807,10 +809,16 @@ export async function deduplicateAndUpsertCompanies(
     }
   }
 
-  // Execute in safe D1 chunks of 80 statements per batch
+  // Execute in safe D1 chunks of 80 statements per batch and count actual row
+  // changes (not the number of upsert attempts) for truthful quota reporting.
   const CHUNK = 80;
   for (let i = 0; i < statements.length; i += CHUNK) {
-    await env.DB.batch(statements.slice(i, i + CHUNK));
+    const results = await env.DB.batch(statements.slice(i, i + CHUNK));
+    results.forEach((result, offset) => {
+      const changedRows = Number(result.meta?.changes || 0);
+      if (companyStatementIndexes.has(i + offset)) upsertedCount += changedRows;
+      else jobsUpsertedCount += changedRows;
+    });
   }
 
   // Daily rolling aging sweep: automatically sunset `is_funded_last_12mo` when older than 380 days
@@ -824,14 +832,15 @@ export async function deduplicateAndUpsertCompanies(
      SET is_funded_last_12mo = 0
      WHERE last_funding_date IS NOT NULL
        AND last_funding_date < ?
+       AND is_funded_last_12mo != 0
        AND COALESCE(batch, '') NOT IN ('W25', 'S25')`
   )
     .bind(cutoffIso)
     .run();
 
   return {
-    upsertedCount: mergedByDomain.size,
-    jobsUpsertedCount: jobsCount,
+    upsertedCount,
+    jobsUpsertedCount,
   };
 }
 
@@ -1154,7 +1163,20 @@ export async function getDashboardStats(
     .first<{ cnt: number }>();
 
   const sourceRows = await env.DB.prepare(
-    "SELECT source, COUNT(*) AS cnt FROM companies WHERE outreach_status != 'archived' GROUP BY source"
+    `SELECT source_json.value AS source, COUNT(DISTINCT companies.id) AS cnt
+     FROM companies,
+          json_each(
+            CASE
+              WHEN json_valid(companies.sources_json) THEN
+                CASE
+                  WHEN json_array_length(companies.sources_json) > 0 THEN companies.sources_json
+                  ELSE json_array(companies.source)
+                END
+              ELSE json_array(companies.source)
+            END
+          ) AS source_json
+     WHERE companies.outreach_status != 'archived'
+     GROUP BY source_json.value`
   ).all<{ source: string; cnt: number }>();
   const bySource: Record<string, number> = {};
   for (const r of sourceRows.results || []) {
