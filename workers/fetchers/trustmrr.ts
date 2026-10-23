@@ -2,6 +2,7 @@ import { WorkerEnv } from "@/lib/cf-types";
 import { cleanWebsiteUrl, makeCompanyId, normalizeDomain } from "@/lib/domain";
 import { FetcherResult, NormalizedCompanyInput } from "@/lib/types";
 import { cachedFetchJson, readD1Cache, writeD1Cache } from "@/workers/httpCache";
+import { fetchTrustMrrPublicPages } from "@/workers/fetchers/trustmrrPublic";
 
 interface TrustMrrStartup {
   name?: unknown;
@@ -152,12 +153,10 @@ export async function fetchTrustMrrStartups(
   const started = Date.now();
   const apiKey = env.TRUSTMRR_API_KEY?.trim();
   if (!apiKey) {
+    const fallback = await fetchTrustMrrPublicPages(env, options);
     return {
-      source: "trustmrr",
-      companies: [],
-      durationMs: Date.now() - started,
-      mode: "unavailable",
-      note: "Optional source not configured: set TRUSTMRR_API_KEY. API-key access/pricing has not been verified; do not purchase a plan for this integration.",
+      ...fallback,
+      note: `No API key configured; ${fallback.note || ""}`.trim(),
     };
   }
 
@@ -195,22 +194,31 @@ export async function fetchTrustMrrStartups(
       .flatMap((page) => rowsFromResponse(page.data))
       .map(normalizeTrustMrrStartup)
       .filter((company): company is NormalizedCompanyInput => company !== null);
-    const anyLive = pages.some((page) => !page.fromCache);
+    if (companies.length > 0) {
+      const anyLive = pages.some((page) => !page.fromCache);
+      return {
+        source: "trustmrr",
+        companies,
+        durationMs: Date.now() - started,
+        mode: anyLive ? "live" : "cached",
+        note: `Checked the newest page and ${BACKFILL_PAGES_PER_SYNC} rotating history pages (${PAGE_SIZE} listings per page); retained products with positive source-reported MRR, last-30-day receipts, or lifetime revenue.`,
+      };
+    }
+    const fallback = await fetchTrustMrrPublicPages(env, options);
     return {
-      source: "trustmrr",
-      companies,
+      ...fallback,
       durationMs: Date.now() - started,
-      mode: anyLive ? "live" : "cached",
-      note: `Checked the newest page and ${BACKFILL_PAGES_PER_SYNC} rotating history pages (${PAGE_SIZE} listings per page); retained products with positive source-reported MRR, last-30-day receipts, or lifetime revenue.`,
+      note: `TrustMRR API returned no revenue-evidence rows; ${fallback.note || "public-page fallback returned no note"}`,
     };
   } catch (error) {
+    const fallback = await fetchTrustMrrPublicPages(env, options);
     return {
-      source: "trustmrr",
-      companies: [],
+      ...fallback,
       durationMs: Date.now() - started,
-      mode: "unavailable",
-      note: "TrustMRR returned no usable result. Existing D1 records were kept.",
-      error: error instanceof Error ? error.message : String(error),
+      note: `TrustMRR API request failed; ${fallback.note || "public-page fallback returned no note"}`,
+      error: fallback.mode === "unavailable"
+        ? fallback.error || (error instanceof Error ? error.message : String(error))
+        : undefined,
     };
   }
 }

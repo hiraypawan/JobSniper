@@ -30,7 +30,7 @@ that loop in one page.
 | Product Hunt | The public Atom feed for the last 7 days; retains platform publication time and listing permalink | `workers/fetchers/producthunt.ts` |
 | Show HN | Hacker News Algolia API for `show_hn` posts from the last week; source post time and permalink are retained | `workers/fetchers/indie.ts` |
 | GitHub projects | Newly created repositories (21-day search) with an explicitly linked project website; repository creation date and repo URL are retained | `workers/fetchers/indie.ts` |
-| TrustMRR | Optional bearer-key API; retains products only when MRR, last-30-day receipts, or lifetime revenue is positive. Newest page plus four rotating history pages are cached for six hours. | `workers/fetchers/trustmrr.ts` |
+| TrustMRR | Uses the bearer-key API when configured; otherwise tries a robots-checked public-page scrape. Only explicit positive MRR, last-30-day receipts, or lifetime revenue is retained. API pages cache for 6h; public listing pages for 6h and profile pages for 24h, with three profiles checked per sync. | `workers/fetchers/trustmrr.ts` |
 | HN "Who is hiring?" | The newest monthly thread, parsed for remote roles and founder emails | `workers/fetchers/hnHiring.ts` |
 
 The **Indie launches** tab is separate from startup/funding leads. Its 1 day,
@@ -40,10 +40,13 @@ collected by scheduled syncs; upstream feeds do not provide complete historical
 backfills. TrustMRR revenue metrics are displayed separately: zero MRR does not
 hide positive receipts or lifetime revenue.
 
-TrustMRR's API requires a bearer API key. Whether a key can be obtained without
-payment was not verified. The integration is optional and disabled without the
-secret; do not buy a plan for this feature. If you already have no-cost API-key
-access, configure it as a Cloudflare secret:
+TrustMRR's API requires a bearer API key; whether a key can be obtained without
+payment was not verified, and this feature must not prompt a paid purchase. With
+no key, the worker attempts a low-volume public-page scrape only where
+`robots.txt` permits it. If TrustMRR blocks public pages, renders only client-side,
+or no source-published revenue fields can be parsed, the source reports that
+status and does not fabricate evidence. If you independently have no-cost API
+access, configure it as a Cloudflare secret for the more complete API path:
 
 ```bash
 npx wrangler secret put TRUSTMRR_API_KEY

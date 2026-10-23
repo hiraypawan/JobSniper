@@ -513,6 +513,7 @@ export default function DashboardPage() {
       ]
     : getActiveFilterLabels(filters);
   const hasFilteredEmptyState = total === 0 && activeFilterLabels.length > 0;
+  const trustMrrSummary = stats?.lastSyncSummary.find((summary) => summary.source === "trustmrr");
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-emerald-500/25 ${darkMode ? "bg-obsidian-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
@@ -641,9 +642,11 @@ export default function DashboardPage() {
               ) : hasFilteredEmptyState ? (
                 <>
                   <p className="text-sm text-slate-400 max-w-xl mx-auto">
-                    {(stats?.totalCompanies || 0) > 0
-                      ? `D1 has ${stats!.totalCompanies.toLocaleString()} tracked startups, but none match this filter combination. This filtered zero does not by itself mean the API is down.`
-                      : "D1 currently has no active startup records. These filters also narrow the view; clear them, then check feed status before forcing another sync."}
+                    {activeSection === "indie" && earningOnly
+                      ? `No matching product with positive TrustMRR-reported MRR, last-30-day receipts, or lifetime revenue is currently stored for this time window. Revenue is never estimated. ${trustMrrSummary?.note || "Run Sync launch feeds and check TrustMRR source status for API or public-scrape availability."}`
+                      : (stats?.totalCompanies || 0) > 0
+                        ? `D1 has ${stats!.totalCompanies.toLocaleString()} tracked startups, but none match this filter combination. This filtered zero does not by itself mean the API is down.`
+                        : "D1 currently has no active startup records. These filters also narrow the view; clear them, then check feed status before forcing another sync."}
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto">
                     {activeFilterLabels.map((label) => (
