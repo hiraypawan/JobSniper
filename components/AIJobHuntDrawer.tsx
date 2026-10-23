@@ -428,8 +428,6 @@ export function AIJobHuntDrawer({
                         {c.linkedin && (
                           <a
                             href={c.linkedin}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             className="p-1.5 rounded-lg text-sky-600 dark:text-sky-500 hover:bg-sky-500/10 transition-all"
                             title="LinkedIn"
                           >
@@ -715,8 +713,8 @@ export function AIJobHuntDrawer({
                     <a
                       key={ch.id}
                       href={ch.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      target={ch.id === "linkedin" ? undefined : "_blank"}
+                      rel={ch.id === "linkedin" ? undefined : "noopener noreferrer"}
                       className={`flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all border ${
                         ch.color === "text-violet-500"
                           ? "border-violet-500/20 bg-violet-500/5 text-violet-700 dark:text-violet-400 hover:bg-violet-500/15"
