@@ -14,8 +14,8 @@ interface Props {
 
 const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   yc: {
-    name: "Y Combinator (W25–F26)",
-    desc: "Live 2025–2026 YC cohorts via yc-oss JSON API",
+    name: "Y Combinator (W25-F26)",
+    desc: "Live 2025-2026 YC cohorts via yc-oss JSON API",
   },
   workatastartup: {
     name: "Work at a Startup",
@@ -27,7 +27,7 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   },
   producthunt: {
     name: "Product Hunt / Launches",
-    desc: "Fresh 7–14 day product launches with external sites",
+    desc: "Fresh 7-14 day product launches with external sites",
   },
   indie: {
     name: "Show HN / Indie Builders",
