@@ -70,13 +70,13 @@ export function validateApiKey(
 
 /** OpenRouter model catalog (current). First 404 triggers fallback to the next. */
 export const OPENROUTER_MODELS: string[] = [
-  "google/gemini-1.5-flash-latest",
-  "google/gemini-pro-1.5",
+  "google/gemini-3.8-flash",
   "openai/gpt-4o-mini",
 ];
 
-export const GEMINI_MODEL = "gemini-1.5-flash";
-export const AI_REQUEST_TIMEOUT_MS = 8000;
+// Gemini 1.5 Flash was shut down; use the current stable Gemini API model.
+export const GEMINI_MODEL = "gemini-3.8-flash";
+export const AI_REQUEST_TIMEOUT_MS = 30000;
 const MAX_429_RETRIES = 2;
 
 export function sleep(ms: number): Promise<void> {
@@ -407,7 +407,23 @@ export async function testApiKey(
           message: `Gemini test failed: ${res.status} ${text}`,
         };
       }
-      return { ok: true, message: "Gemini key is valid ✓" };
+      const data = (await res.json()) as {
+        models?: Array<{
+          name?: string;
+          supportedGenerationMethods?: string[];
+        }>;
+      };
+      const modelIsAvailable = (data.models || []).some((model) =>
+        model.name?.replace(/^models\//, "") === GEMINI_MODEL &&
+        model.supportedGenerationMethods?.includes("generateContent")
+      );
+      if (!modelIsAvailable) {
+        return {
+          ok: false,
+          message: `Gemini key is valid, but ${GEMINI_MODEL} is not available for generation. Check model access or choose OpenRouter.`,
+        };
+      }
+      return { ok: true, message: `Gemini key and ${GEMINI_MODEL} are available ✓` };
     } else {
       const res = await fetchWithTimeout(
         "https://openrouter.ai/api/v1/auth/key",
@@ -601,7 +617,7 @@ Preferred call to action, if any: ${settings.demoOffer || "None. Choose a low-fr
 REASONING AND PERSONALIZATION RULES:
 - Read the actual product description and the role requirements. Identify a concrete business objective, customer need, technical constraint, or responsibility that the company explicitly describes. Connect the proposal to that evidence, not to the company's broad industry label.
 - Do not invent company priorities, internal pain, customer problems, performance results, product gaps, role requirements, or buyer needs. A role title alone is not a job description. If the evidence only supports a hypothesis, phrase it as a question or hypothesis rather than a fact.
-- Do not default to a sandbox, playground, onboarding flow, workflow tool, dashboard, chatbot, copilot, ROI calculator, or another stock deliverable. Use one only when the supplied requirements specifically call for that exact kind of solution. Do not simply repackage the company's own product description as the proposed build.
+- Never default to a stock deliverable or implementation. Recommend a specific build only when the supplied company and role evidence directly supports it; do not simply repackage the company's own product description as the proposal.
 - Select a genuinely company-specific piece of work. It may be product engineering, integration, automation, data work, internal tooling, documentation, migration, research, or another suitable deliverable, but only when the evidence supports it. If no credible build idea follows from the data, say so in angleRationale and write a concise, curious message asking about the real priority instead of fabricating a solution.
 - Use hiring requirements as a clue to what the team needs done, not as an opening to replace or undermine the role. Address the likely relevant person or team; use the known contact's name when available.
 - Do not use the funding round, cohort, or startup stage as generic flattery. Mention it only if it helps explain why this proposal is timely.

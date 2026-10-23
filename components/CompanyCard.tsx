@@ -44,6 +44,9 @@ export function CompanyCard({
     .toUpperCase();
 
   const statusInfo = STATUS_META[company.outreach_status] || STATUS_META.new;
+  const hasVerifiedWebsite = Boolean(company.website?.trim()) &&
+    !company.domain.toLowerCase().endsWith(".invalid") &&
+    !company.website.toLowerCase().includes(".invalid");
 
   const handleOpenAIPitch = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -175,15 +178,24 @@ export function CompanyCard({
         </div>
 
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <a
-            href={company.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-slate-500 hover:text-emerald-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
-            title="Open website"
-          >
-            <Globe className="w-3 h-3" /> Site
-          </a>
+          {hasVerifiedWebsite ? (
+            <a
+              href={company.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-slate-500 hover:text-emerald-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all"
+              title="Open verified company website"
+            >
+              <Globe className="w-3 h-3" /> Website
+            </a>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-slate-400"
+              title="No verified company website is listed"
+            >
+              <Globe className="w-3 h-3" /> Website unavailable
+            </span>
+          )}
 
           {(company.hiring_page_url || company.yc_url) && (
             <a
@@ -230,6 +242,14 @@ export function CompanyCard({
             >
               <Mail className="w-3 h-3" />
             </a>
+          )}
+          {!company.founder_email && !company.founder_linkedin && (
+            <span
+              className="px-2 py-1 text-[9px] text-slate-400"
+              title="No source-verified founder email or LinkedIn profile is listed"
+            >
+              No verified contact
+            </span>
           )}
         </div>
       </div>
