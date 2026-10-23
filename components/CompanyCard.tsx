@@ -1,17 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { Briefcase, Check, Copy, ExternalLink, Globe, Linkedin, Mail, Users } from "lucide-react";
+import { Briefcase, Check, Copy, ExternalLink, Users } from "lucide-react";
 import { copyTextSafe } from "@/lib/clipboard";
 import { buildOutreachPitches } from "@/lib/pitchTemplates";
 import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
+import { ContactChannels, ContactCheckResult } from "@/components/ContactChannels";
 
 interface Props {
   company: Company;
   pitchSettings?: PitchSettings;
   onSelect: (company: Company) => void;
   onUpdateStatus: (companyId: string, status: OutreachStatus) => void;
-  onCheckCompanyContacts?: (companyId: string) => Promise<any>;
+  onCheckCompanyContacts?: (companyId: string) => Promise<ContactCheckResult>;
 }
 
 const SOURCE_BADGES: Record<string, string> = {
@@ -51,6 +52,7 @@ export function CompanyCard({
   pitchSettings,
   onSelect,
   onUpdateStatus,
+  onCheckCompanyContacts,
 }: Props) {
   const [copied, setCopied] = useState(false);
 
@@ -88,7 +90,7 @@ export function CompanyCard({
         {/* Top Row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--pastel-peach)] to-[var(--pastel-butter)] flex items-center justify-center font-mono text-xs font-bold text-[var(--text-warm)] shadow-[0_4px_10px_-4px_rgba(42,83,59,0.12)] shrink-0">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[var(--border-soft)] bg-[var(--accent-soft)] font-mono text-xs font-bold text-[var(--accent)]">
               {initials || "ST"}
             </div>
             <div className="min-w-0">
@@ -132,6 +134,12 @@ export function CompanyCard({
           company.description ||
           `${company.name} is a startup.`}
         </p>
+
+        <ContactChannels
+          company={company}
+          onCheckCompanyContacts={onCheckCompanyContacts}
+          compact
+        />
 
         {/* Badges */}
         <div className="mt-4 flex flex-wrap gap-2">
@@ -236,60 +244,16 @@ export function CompanyCard({
         </div>
 
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          <a
-            href={company.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-[var(--text-muted)] hover:text-[var(--text-warm)] hover:bg-[var(--pastel-butterSoft)] transition-all"
-            title="Open website"
-          >
-            <Globe className="w-3 h-3" /> Site
-          </a>
-
           {(company.hiring_page_url || company.yc_url) && (
             <a
               href={company.hiring_page_url || `${company.yc_url}/jobs`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-2xl text-[10px] font-medium text-[var(--pastel-amber)] hover:bg-[var(--pastel-butterSoft)] transition-all"
-              title="Open jobs"
+              className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[10px] font-semibold text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-all"
+              title="Open the source-listed careers page"
             >
-              <span>Jobs</span>
+              <Briefcase className="w-3 h-3" /> Jobs
               <ExternalLink className="w-3 h-3" />
-            </a>
-          )}
-
-          {company.founder_twitter && (
-            <a
-              href={company.founder_twitter}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-xl text-[var(--text-muted)] hover:text-[var(--text-warm)] hover:bg-[var(--pastel-butterSoft)] transition-all"
-              title={`Founder X: ${company.founder_name || company.name}`}
-            >
-              𝕏
-            </a>
-          )}
-
-          {company.founder_linkedin && (
-            <a
-              href={company.founder_linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-xl text-[var(--pastel-cyan)] hover:bg-[var(--pastel-cyan)]/10 transition-all"
-              title="Founder / Company LinkedIn"
-            >
-              <Linkedin className="w-3 h-3" />
-            </a>
-          )}
-
-          {company.founder_email && (
-            <a
-              href={`mailto:${company.founder_email}`}
-              className="p-2 rounded-xl text-[var(--pastel-pink)] hover:bg-[var(--pastel-pink)]/20 transition-all"
-              title={`Email ${company.founder_email}`}
-            >
-              <Mail className="w-3 h-3" />
             </a>
           )}
         </div>

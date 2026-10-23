@@ -9,13 +9,9 @@ import {
   Copy,
   ExternalLink,
   Flame,
-  Globe,
-  Linkedin,
-  Mail,
   MapPin,
   RefreshCw,
   Send,
-  Search,
   Sparkles,
   Users,
   X,
@@ -30,10 +26,7 @@ import {
   AIError,
 } from "@/lib/aiPitches";
 import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
-import {
-  isUsableSourceWebsite,
-  officialWebsiteSearchUrl,
-} from "@/lib/companyLinks";
+import { ContactChannels, ContactCheckResult } from "@/components/ContactChannels";
 
 interface Props {
   company: Company | null;
@@ -42,6 +35,7 @@ interface Props {
   onCompanyUpdated: (updated: Company) => void;
   onOpenAIJobHunt?: () => void;
   onOpenPitchSettings?: () => void;
+  onCheckCompanyContacts?: (companyId: string) => Promise<ContactCheckResult>;
 }
 
 type PitchTab = "classic" | "role" | "linkedin" | "email";
@@ -75,9 +69,8 @@ export function CompanyDrawer({
   onCompanyUpdated,
   onOpenAIJobHunt,
   onOpenPitchSettings,
+  onCheckCompanyContacts,
 }: Props) {
-  const [liveChecking, setLiveChecking] = useState(false);
-  const [liveBadge, setLiveBadge] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<PitchTab>("classic");
   const [customPitchText, setCustomPitchText] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -166,40 +159,6 @@ export function CompanyDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [company, onClose]);
 
-  const runLiveCheck = async () => {
-    if (!company?.id || liveChecking) return;
-    setLiveChecking(true);
-    setLiveBadge(null);
-    try {
-      const response = await fetch(
-        `/api/companies/${encodeURIComponent(company.id)}/enrich`,
-        { method: "POST" }
-      );
-      const data = await response.json().catch(() => null);
-      if (!response.ok || !data?.company) {
-        throw new Error(data?.error || `Live check failed (${response.status})`);
-      }
-      onCompanyUpdated(data.company);
-      setLiveBadge(
-        data.skipped
-          ? "Website details checked recently; skipped another fetch"
-          : data.contactPageChecked
-            ? data.contactDetailsFound
-              ? "Website check complete; published company contact details are available"
-              : "Scanned the public site; no company email or LinkedIn page was published there"
-            : data.contactDetailsFound
-              ? "Site was unavailable; previously found company details were kept"
-              : "Could not reach the listed website to check contact details"
-      );
-    } catch (error) {
-      setLiveBadge(
-        error instanceof Error ? `Check failed: ${error.message}` : "Live check failed"
-      );
-    } finally {
-      setLiveChecking(false);
-    }
-  };
-
   const runAiGeneration = useCallback(async () => {
     if (!company?.id) return;
     const requestId = ++aiRequestId.current;
@@ -239,7 +198,6 @@ export function CompanyDrawer({
   }, [company?.id, runAiGeneration]);
 
   if (!company || !generated) return null;
-  const hasSourceWebsite = isUsableSourceWebsite(company.website, company.domain);
 
   const patchOutreach = async (patch: {
     outreach_status?: OutreachStatus;
@@ -337,27 +295,6 @@ export function CompanyDrawer({
             </div>
 
             <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
-              <button
-                type="button"
-                onClick={runLiveCheck}
-                disabled={liveChecking}
-                title="Scans the source-listed company homepage and at most one same-site contact page for published company email and LinkedIn, plus ATS jobs"
-                className="inline-flex items-center gap-1.5 text-lime-600 dark:text-lime-400 hover:underline disabled:opacity-60"
-              >
-                <RefreshCw className={`w-3 h-3 ${liveChecking ? "animate-spin" : ""}`} />
-                {liveChecking ? "Checking company site & jobs…" : "Check company website & jobs"}
-              </button>
-              {liveBadge && (
-                <span className={`inline-flex items-center gap-1 font-mono ${
-                  liveBadge.startsWith("Check failed") ||
-                  liveBadge.startsWith("Could not reach") ||
-                  liveBadge.startsWith("Site was unavailable")
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-lime-600 dark:text-lime-400"
-                }`}>
-                  {liveBadge.startsWith("Check failed") ? "!" : "✓"} {liveBadge}
-                </span>
-              )}
               {company.location && (
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {company.location}
@@ -383,118 +320,40 @@ export function CompanyDrawer({
         </div>
 
         <div className="p-6 sm:p-8 space-y-6">
-          {/* Quick Links */}
-          <div className="flex flex-wrap items-center gap-2">
-            {hasSourceWebsite ? (
-              <a
-                href={company.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                title="Website URL listed by a data source; not independently verified"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/30 text-slate-900 dark:text-white hover:opacity-90 transition-all"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                Source website · {company.domain}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : (
-              <a
-                href={officialWebsiteSearchUrl(company.name)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
-                title="Search the web for the official website; results are not verified"
-              >
-                <Search className="w-3.5 h-3.5" /> Search official website
-              </a>
-            )}
+          <ContactChannels
+            company={company}
+            onCheckCompanyContacts={onCheckCompanyContacts}
+          />
 
-            {(company.hiring_page_url || company.yc_url) && (
-              <a
-                href={company.hiring_page_url || `${company.yc_url}/jobs`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold bg-lime-50 dark:bg-lime-900/10 text-lime-600 dark:text-lime-400 border border-lime-200 dark:border-lime-800/30 hover:bg-lime-100 dark:hover:bg-lime-800/20 transition-all"
-              >
-                <Briefcase className="w-3.5 h-3.5" />
-                Careers ({company.open_roles_count})
-                {company.hiring_provider && (
-                  <span className="uppercase font-mono text-[9px]">
-                    · {company.hiring_provider}
-                  </span>
+          {(company.hiring_page_url || company.yc_url) && (
+            <section className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] p-4">
+              <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Company links</h3>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={company.hiring_page_url || `${company.yc_url}/jobs`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2.5 text-xs font-semibold text-[var(--text-warm)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent-soft)]"
+                >
+                  <Briefcase className="h-3.5 w-3.5 text-[var(--accent)]" />
+                  Careers{company.open_roles_count > 0 ? ` · ${company.open_roles_count} roles` : ""}
+                  {company.hiring_provider && <span className="text-[10px] text-[var(--text-muted)]">{company.hiring_provider}</span>}
+                  <ExternalLink className="h-3 w-3 opacity-60" />
+                </a>
+                {company.yc_url && (
+                  <a
+                    href={company.yc_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2.5 text-xs font-semibold text-[var(--text-warm)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent-soft)]"
+                  >
+                    <Building2 className="h-3.5 w-3.5 text-[var(--accent)]" /> YC profile
+                    <ExternalLink className="h-3 w-3 opacity-60" />
+                  </a>
                 )}
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-
-            {company.yc_url && (
-              <a
-                href={company.yc_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-orange-200 dark:border-orange-800/30 bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-800/20 transition-all"
-              >
-                <Building2 className="w-3.5 h-3.5" /> YC Profile
-              </a>
-            )}
-
-            {company.company_email ? (
-              <a
-                href={`mailto:${company.company_email}`}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-pink-200 dark:border-pink-800/30 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/10 transition-all"
-                title="Company email published on the company's own website"
-              >
-                <Mail className="w-3 h-3" /> Company email: {company.company_email}
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs text-slate-500 border border-slate-200 dark:border-slate-700/40">
-                <Mail className="w-3 h-3" />
-                {company.contact_checked_at ? "No company email found on scanned pages" : "Company email not fetched yet"}
-              </span>
-            )}
-
-            {company.founder_email && (
-              <a
-                href={aiPitches
-                  ? `mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`
-                  : `mailto:${company.founder_email}`}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-pink-200 dark:border-pink-800/30 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/10 transition-all"
-                title="Founder email listed in source data; verify before contacting"
-              >
-                <Mail className="w-3 h-3" /> Founder email: {company.founder_email}
-              </a>
-            )}
-
-            {company.company_linkedin_url ? (
-              <a
-                href={company.company_linkedin_url}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-cyan-200 dark:border-cyan-800/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
-                title="Company LinkedIn page found on the official website; your phone may open the LinkedIn app"
-              >
-                <Linkedin className="w-3.5 h-3.5" /> Company LinkedIn page
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs text-slate-500 border border-slate-200 dark:border-slate-700/40">
-                <Linkedin className="w-3.5 h-3.5" />
-                {company.contact_checked_at ? "No company LinkedIn link found on scanned pages" : "Company LinkedIn not fetched yet"}
-              </span>
-            )}
-
-            {company.founder_linkedin && (
-              <a
-                href={company.founder_linkedin}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-cyan-200 dark:border-cyan-800/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
-                title="Open the source-listed founder profile; your phone may open the LinkedIn app"
-              >
-                <Linkedin className="w-3 h-3" /> Founder profile
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            )}
-          </div>
-          <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            Company email and LinkedIn are extracted only from the source-listed website's homepage/contact pages. Founder contacts remain separately labeled source data; verify before contacting. Missing details are never guessed.
-          </p>
+              </div>
+            </section>
+          )}
 
           {(hasRevenue(company.trustmrr_mrr) || hasRevenue(company.trustmrr_last30) || hasRevenue(company.trustmrr_total) || company.launch_date || company.launch_url) && (
             <section className="rounded-2xl border border-[var(--pastel-mint)]/40 bg-[var(--pastel-mintSoft)] p-4 space-y-3">
@@ -794,7 +653,7 @@ export function CompanyDrawer({
               <button
                 type="button"
                 onClick={() => patchOutreach({ outreach_notes: notes })}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition-all"
               >
                 Save Notes
               </button>

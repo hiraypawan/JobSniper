@@ -72,7 +72,7 @@ export function HeaderBar({
               type="button"
               disabled={syncing}
               onClick={() => onSyncLive(false)}
-              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-l-2xl text-[11px] sm:text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] disabled:opacity-50 transition-all"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-l-2xl text-[11px] sm:text-xs font-semibold bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-all"
               title="Sync live feeds on demand"
             >
               <Zap className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
