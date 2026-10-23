@@ -109,7 +109,7 @@ export default function DashboardPage() {
       // can leave malformed values that would otherwise break the settings UI.
       const normalized: PitchSettings = {
         ...DEFAULT_PITCH_SETTINGS,
-        aiProvider: parsed.aiProvider === "openrouter" ? "openrouter" : "gemini",
+        aiProvider: parsed.aiProvider === "gemini" ? "gemini" : "openrouter",
         senderName: typeof parsed.senderName === "string" ? parsed.senderName : DEFAULT_PITCH_SETTINGS.senderName,
         customToolIdea: typeof parsed.customToolIdea === "string" ? parsed.customToolIdea : DEFAULT_PITCH_SETTINGS.customToolIdea,
         similarCompanyProof: typeof parsed.similarCompanyProof === "string" ? parsed.similarCompanyProof : DEFAULT_PITCH_SETTINGS.similarCompanyProof,

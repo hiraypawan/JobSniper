@@ -54,7 +54,9 @@ export function AIJobHuntDrawer({
   onOpenPitchSettings,
 }: Props) {
   const [activeTab, setActiveTab] = useState<JobTab>("contacts");
-  const [aiProvider, setAiProvider] = useState<AIProvider>("gemini");
+  const [aiProvider, setAiProvider] = useState<AIProvider>(
+    pitchSettings.aiProvider === "openrouter" ? "openrouter" : "gemini"
+  );
   const [contacts, setContacts] = useState<ContactInfo[]>([]);
   const [resume, setResume] = useState<AITailoredResume | null>(null);
   const [interview, setInterview] = useState<AIInterviewPrep | null>(null);
@@ -87,6 +89,11 @@ export function AIJobHuntDrawer({
   }, [aiProvider, pitchSettings.geminiApiKey, pitchSettings.openrouterApiKey]);
 
   const hasApiKey = Boolean(resolvedApiKey);
+
+  // Keep this drawer aligned with the provider selected in Pitch Settings.
+  useEffect(() => {
+    setAiProvider(pitchSettings.aiProvider === "openrouter" ? "openrouter" : "gemini");
+  }, [pitchSettings.aiProvider]);
 
   // Reset state when company changes
   useEffect(() => {
@@ -273,7 +280,7 @@ export function AIJobHuntDrawer({
               onClick={() => setAiProvider("openrouter")}
               className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "openrouter" ? "bg-emerald-500 text-slate-950" : "bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-obsidian-800"}`}
             >
-              OpenRouter
+              OpenRouter (free)
             </button>
           </div>
           {hasApiKey ? (
