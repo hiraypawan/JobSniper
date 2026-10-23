@@ -38,7 +38,7 @@ export function IndieLaunchControls({
         <div>
           <h2 className="text-base font-semibold text-white">Indie product launches</h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-            A separate discovery feed for solo-builder products from Product Hunt, Show HN, GitHub, and TrustMRR. Dates use each platform’s publication or listing time; revenue is shown only when TrustMRR explicitly reports it.
+            A separate discovery feed for solo-builder products from Product Hunt, Show HN, GitHub, and TrustMRR. Dates use each platform’s publication or listing time; revenue is shown only when TrustMRR explicitly reports it. TrustMRR uses its API when configured and otherwise tries a robots-permitted public-page scrape.
           </p>
         </div>
         <button

@@ -35,7 +35,7 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   },
   trustmrr: {
     name: "TrustMRR · Revenue Evidence",
-    desc: "Optional bearer-key API; shows MRR, last-30-day receipts, and lifetime revenue separately",
+    desc: "Official API when keyed; otherwise a robots-checked, cached public-page fallback for explicit revenue metrics",
   },
   hn_hiring: {
     name: "HN Who is Hiring?",
