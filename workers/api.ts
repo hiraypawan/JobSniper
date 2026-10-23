@@ -1,5 +1,5 @@
 import { WorkerEnv, WorkerExecutionContext } from "@/lib/cf-types";
-import { CompaniesApiResponse, OutreachStatus } from "@/lib/types";
+import { CompaniesApiResponse, DashboardStats, OutreachStatus } from "@/lib/types";
 import {
   getCompanyById,
   getDashboardStats,
@@ -34,6 +34,33 @@ function parseBoolParam(
   return val === "true" || val === "1";
 }
 
+let dashboardStatsCache: {
+  db: WorkerEnv["DB"];
+  expiresAt: number;
+  value: DashboardStats;
+} | null = null;
+const DASHBOARD_STATS_CACHE_MS = 10_000;
+
+async function getCachedDashboardStats(env: WorkerEnv): Promise<DashboardStats> {
+  if (
+    dashboardStatsCache?.db === env.DB &&
+    dashboardStatsCache.expiresAt > Date.now()
+  ) {
+    return dashboardStatsCache.value;
+  }
+  const value = await getDashboardStats(env);
+  dashboardStatsCache = {
+    db: env.DB,
+    expiresAt: Date.now() + DASHBOARD_STATS_CACHE_MS,
+    value,
+  };
+  return value;
+}
+
+function invalidateDashboardStatsCache(): void {
+  dashboardStatsCache = null;
+}
+
 export async function handleApiRequest(
   request: Request,
   env: WorkerEnv,
@@ -49,7 +76,8 @@ export async function handleApiRequest(
   try {
     // 1. GET /api/stats: dashboard counts and per source sync health
     if (pathname === "/api/stats" && request.method === "GET") {
-      const stats = await getDashboardStats(env);
+      invalidateDashboardStatsCache();
+      const stats = await getCachedDashboardStats(env);
       return jsonResponse(stats);
     }
 
@@ -61,7 +89,8 @@ export async function handleApiRequest(
       if (mode === "enrich") {
         const batchSize = Number(url.searchParams.get("batchSize") || 12);
         const enrichRes = await enrichCompanyBatch(env, batchSize);
-        const stats = await getDashboardStats(env);
+        invalidateDashboardStatsCache();
+        const stats = await getCachedDashboardStats(env);
         return jsonResponse({
           ok: true,
           mode: "enrich",
@@ -72,10 +101,11 @@ export async function handleApiRequest(
 
       const syncRes = await syncAllSources(env, { forceLive });
       let enrichRes = { enriched: 0, remaining: 0 };
-      if (mode === "full") {
+      if (mode === "full" && !syncRes.skipped) {
         enrichRes = await enrichCompanyBatch(env, 10);
       }
-      const stats = await getDashboardStats(env);
+      invalidateDashboardStatsCache();
+      const stats = await getCachedDashboardStats(env);
 
       return jsonResponse({
         ok: true,
@@ -90,7 +120,7 @@ export async function handleApiRequest(
     if (pathname === "/api/companies" && request.method === "GET") {
       // Keep dashboard reads read-only. D1 charges row writes on every upsert,
       // so source syncs run only from explicit POST /api/sync requests.
-      const stats = await getDashboardStats(env);
+      const stats = await getCachedDashboardStats(env);
       const queryResult = await queryCompanies(env, {
         source: url.searchParams.get("source") || "all",
         batch: url.searchParams.get("batch") || "all",
@@ -119,10 +149,11 @@ export async function handleApiRequest(
     const enrichMatch = pathname.match(/^\/api\/companies\/([^/]+)\/enrich$/);
     if (enrichMatch && request.method === "POST") {
       const id = decodeURIComponent(enrichMatch[1]);
-      const result = await enrichSingleCompany(env, id);
+      const result = await enrichSingleCompany(env, id, { cooldownMs: 30 * 60 * 1000 });
       if (!result.company) {
         return jsonResponse({ error: "Company not found" }, 404);
       }
+      invalidateDashboardStatsCache();
       return jsonResponse(result);
     }
 
@@ -147,6 +178,7 @@ export async function handleApiRequest(
         if (!updated) {
           return jsonResponse({ error: "Company not found" }, 404);
         }
+        invalidateDashboardStatsCache();
         return jsonResponse({ company: updated });
       }
     }

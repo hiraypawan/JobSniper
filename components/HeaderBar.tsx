@@ -37,7 +37,7 @@ export function HeaderBar({
   onOpenPitchSettings,
   onExportCsv,
 }: Props) {
-  const statusIsWarning = /^(Dashboard data error|Live sync failed|No startup|No startups|Sync finished)/.test(
+  const statusIsWarning = /^(Dashboard data error|Live sync failed|No startup|No startups|Sync finished|Sync skipped|Sync checked)/.test(
     syncStatusText ?? ""
   );
 
@@ -61,7 +61,7 @@ export function HeaderBar({
               )}
             </div>
             <p className="text-[10px] text-slate-500">
-              Funded in the last 12 months &middot; Remote and ATS hiring &middot; Updated{" "}
+              Startup leads &middot; Filter by funding, remote work &amp; hiring &middot; Last checked{" "}
               <span className="font-mono text-slate-400">
                 {formatTimeAgo(stats?.lastSyncedAt ?? null)}
               </span>
@@ -87,7 +87,7 @@ export function HeaderBar({
               disabled={syncing}
               onClick={() => onSyncLive(true)}
               className="inline-flex items-center gap-1 px-3 py-2.5 rounded-r-2xl text-xs font-mono font-semibold bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-60 disabled:pointer-events-none border-l border-emerald-700/40 transition-all"
-              title="Force uncached upstream fetch"
+              title="Bypass source cache for a fresh upstream check. A global cooldown protects D1 and provider limits."
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
               Force
@@ -97,10 +97,13 @@ export function HeaderBar({
           <button
             type="button"
             onClick={onOpenSources}
+            aria-label="Open data source health"
+            title="View source API health, last results, and D1 counts"
             className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-500" />
             <span className="hidden sm:inline">6 Sources</span>
+            <span className="sm:hidden">Feeds</span>
           </button>
 
           <button

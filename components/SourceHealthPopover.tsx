@@ -99,7 +99,7 @@ export function SourceHealthPopover({
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-obsidian-850 px-3 py-2 rounded-xl border border-slate-200/70 dark:border-slate-800">
             <span className="flex items-center gap-1.5">
               <Database className="w-3.5 h-3.5 text-emerald-500" />
-              Worker with a D1 cache, no cron needed
+              D1-backed cache · manual sync cooldown: 5 minutes
             </span>
             {lastSyncedAt && (
               <span className="font-mono flex items-center gap-1">
@@ -115,7 +115,8 @@ export function SourceHealthPopover({
           {keys.map((key) => {
             const meta = SOURCE_LABELS[key];
             const sum = summaryMap.get(key as SyncSourceSummary["source"]);
-            const dbCount = bySource[key] ?? sum?.count ?? 0;
+            const dbCount = bySource[key] ?? 0;
+            const sourceUnavailable = sum?.mode === "unavailable" || Boolean(sum?.error);
 
             return (
               <div
@@ -124,7 +125,7 @@ export function SourceHealthPopover({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    {sum?.mode === "unavailable" ? (
+                    {sourceUnavailable ? (
                       <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     ) : (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -133,20 +134,23 @@ export function SourceHealthPopover({
                       {meta.name}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    {sum?.note || meta.desc}
+                  <p className={`text-[11px] mt-0.5 ${sourceUnavailable ? "text-amber-600 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"}`}>
+                    {sum?.error || sum?.note || meta.desc}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
-                    {sum?.count ?? dbCount} leads
+                    {sum ? `${sum.count} last result` : "No sync result"}
+                  </div>
+                  <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                    {dbCount.toLocaleString()} in D1
                   </div>
                   <div className={`font-mono text-[10px] ${
-                    sum?.mode === "unavailable"
+                    sourceUnavailable
                       ? "text-amber-600 dark:text-amber-400"
                       : "text-emerald-600 dark:text-emerald-400"
                   }`}>
-                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "synced"}
+                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "not checked"}
                   </div>
                 </div>
               </div>

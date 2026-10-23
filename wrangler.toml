@@ -11,8 +11,8 @@ directory = "./out"
 binding = "ASSETS"
 run_worker_first = true
 
-# OPTIONAL backup pre-warm schedule (30 0 * * * UTC = 6:00 AM IST).
-# Not required: the app syncs live on demand (`POST /api/sync` + SWR background refresh) unlimited times!
+# Optional daily source refresh (30 0 * * * UTC = 6:00 AM IST).
+# Manual syncs are cooldown-limited; D1 and upstream free-tier quotas still apply.
 [triggers]
 crons = ["30 0 * * *"]
 

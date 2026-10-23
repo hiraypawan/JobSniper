@@ -6,6 +6,7 @@ import {
 import { computeSniperScore } from "@/lib/scoring";
 import {
   Company,
+  CompanySource,
   FetcherResult,
   NormalizedCompanyInput,
   SyncSourceSummary,
@@ -24,45 +25,87 @@ import { fetchWellfoundFunded } from "@/workers/fetchers/wellfound";
 import { fetchWorkAtAStartup } from "@/workers/fetchers/workatastartup";
 import { fetchYcCompanies } from "@/workers/fetchers/yc";
 
-let activeSyncPromise: Promise<{
+const SYNC_COOLDOWN_KEY = "api-source-sync-cooldown";
+const SYNC_COOLDOWN_MS = 5 * 60 * 1000;
+
+type SyncResult = {
   upsertedCount: number;
   jobsUpsertedCount: number;
   durationMs: number;
   sources: SyncSourceSummary[];
-}> | null = null;
+  skipped?: boolean;
+  retryAfterMs?: number;
+};
+
+let activeSyncPromise: Promise<SyncResult> | null = null;
+
+async function reserveSyncCooldown(
+  env: WorkerEnv
+): Promise<{ acquired: boolean; retryAfterMs: number }> {
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const expiresAt = now + SYNC_COOLDOWN_MS;
+  const result = await env.DB.prepare(
+    `INSERT INTO http_cache (cache_key, payload, content_type, expires_at, updated_at)
+     VALUES (?, 'reserved', 'text/plain', ?, ?)
+     ON CONFLICT(cache_key) DO UPDATE SET
+       payload = excluded.payload, expires_at = excluded.expires_at, updated_at = excluded.updated_at
+     WHERE http_cache.expires_at <= ?`
+  )
+    .bind(SYNC_COOLDOWN_KEY, expiresAt, nowIso, now)
+    .run();
+  if ((result.meta?.changes || 0) > 0) {
+    return { acquired: true, retryAfterMs: 0 };
+  }
+  const lock = await env.DB.prepare(
+    "SELECT expires_at FROM http_cache WHERE cache_key = ?"
+  )
+    .bind(SYNC_COOLDOWN_KEY)
+    .first<{ expires_at: number }>();
+  return {
+    acquired: false,
+    retryAfterMs: Math.max(0, Number(lock?.expires_at || now) - now),
+  };
+}
 
 export async function syncAllSources(
   env: WorkerEnv,
   options: { forceLive?: boolean } = {}
-): Promise<{
-  upsertedCount: number;
-  jobsUpsertedCount: number;
-  durationMs: number;
-  sources: SyncSourceSummary[];
-}> {
-  if (activeSyncPromise && !options.forceLive) {
-    return activeSyncPromise;
-  }
+): Promise<SyncResult> {
+  // Join any in-flight run, including Force, instead of launching duplicate work.
+  if (activeSyncPromise) return activeSyncPromise;
 
-  const runPromise = (async () => {
+  const runPromise = (async (): Promise<SyncResult> => {
     const startedMs = Date.now();
     const startedAt = new Date(startedMs).toISOString();
     await ensureSchema(env.DB);
+    const reservation = await reserveSyncCooldown(env);
+    if (!reservation.acquired) {
+      return {
+        upsertedCount: 0,
+        jobsUpsertedCount: 0,
+        durationMs: Date.now() - startedMs,
+        sources: [],
+        skipped: true,
+        retryAfterMs: reservation.retryAfterMs,
+      };
+    }
 
-    const fetcherTasks: Promise<FetcherResult>[] = [
-      fetchYcCompanies(env, options),
-      fetchWorkAtAStartup(env, options),
-      fetchWellfoundFunded(env, options),
-      fetchProductHuntLaunches(env, options),
-      fetchIndieShowHn(env, options),
-      fetchHnWhoIsHiring(env, options),
+    const fetcherTasks: Array<{ source: CompanySource; run: Promise<FetcherResult> }> = [
+      { source: "yc", run: fetchYcCompanies(env, options) },
+      { source: "workatastartup", run: fetchWorkAtAStartup(env, options) },
+      { source: "wellfound", run: fetchWellfoundFunded(env, options) },
+      { source: "producthunt", run: fetchProductHuntLaunches(env, options) },
+      { source: "indie", run: fetchIndieShowHn(env, options) },
+      { source: "hn_hiring", run: fetchHnWhoIsHiring(env, options) },
     ];
 
-    const settled = await Promise.allSettled(fetcherTasks);
+    const settled = await Promise.allSettled(fetcherTasks.map((task) => task.run));
     const allCompanies: NormalizedCompanyInput[] = [];
     const summaries: SyncSourceSummary[] = [];
 
-    for (const item of settled) {
+    settled.forEach((item, index) => {
+      const expectedSource = fetcherTasks[index].source;
       if (item.status === "fulfilled") {
         const res = item.value;
         allCompanies.push(...res.companies);
@@ -79,8 +122,18 @@ export async function syncAllSources(
           note: res.note,
           error: res.error,
         });
+      } else {
+        summaries.push({
+          source: expectedSource,
+          count: 0,
+          jobsCount: 0,
+          durationMs: Date.now() - startedMs,
+          mode: "unavailable",
+          note: "Fetch failed; existing D1 records were kept.",
+          error: item.reason instanceof Error ? item.reason.message : String(item.reason),
+        });
       }
-    }
+    });
 
     const { upsertedCount, jobsUpsertedCount } =
       await deduplicateAndUpsertCompanies(env, allCompanies);
@@ -117,12 +170,24 @@ export async function syncAllSources(
 
 export async function enrichSingleCompany(
   env: WorkerEnv,
-  companyId: string
-): Promise<{ company: Company | null; checkedLive: boolean }> {
+  companyId: string,
+  options: { cooldownMs?: number } = {}
+): Promise<{ company: Company | null; checkedLive: boolean; skipped?: boolean }> {
   await ensureSchema(env.DB);
   const existing = await getCompanyById(env, companyId);
   if (!existing) {
     return { company: null, checkedLive: false };
+  }
+  if (options.cooldownMs && existing.enriched_at) {
+    const lastCheck = Date.parse(existing.enriched_at);
+    const elapsed = Date.now() - lastCheck;
+    if (Number.isFinite(lastCheck) && elapsed < options.cooldownMs) {
+      return {
+        company: existing,
+        checkedLive: false,
+        skipped: true,
+      };
+    }
   }
 
   const outcome = await detectCompanyHiringAndSignals(env, {
@@ -309,6 +374,6 @@ export async function runScheduledCron(
   env: WorkerEnv,
   _ctx: WorkerExecutionContext
 ): Promise<void> {
-  await syncAllSources(env, { forceLive: true });
-  await enrichCompanyBatch(env, 12);
+  const syncResult = await syncAllSources(env, { forceLive: true });
+  if (!syncResult.skipped) await enrichCompanyBatch(env, 12);
 }

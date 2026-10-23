@@ -21,7 +21,7 @@ import {
 } from "@/lib/types";
 
 const DEFAULT_FILTERS: FilterState = {
-  funded12mo: true,
+  funded12mo: false,
   fresh14d: false,
   remote: false,
   hiring: false,
@@ -33,6 +33,21 @@ const DEFAULT_FILTERS: FilterState = {
   sort: "score",
   search: "",
 };
+
+function getActiveFilterLabels(filters: FilterState): string[] {
+  const labels: string[] = [];
+  if (filters.funded12mo) labels.push("Funded in the last 12 months");
+  if (filters.fresh14d) labels.push("Funding date within 14 days");
+  if (filters.remote) labels.push("Remote");
+  if (filters.hiring) labels.push("Hiring");
+  if (filters.smallTeam) labels.push("Team size up to 15");
+  if (filters.source !== "all") labels.push(`Source: ${filters.source}`);
+  if (filters.batch !== "all") labels.push(`Batch: ${filters.batch}`);
+  if (filters.ats !== "all") labels.push(`ATS: ${filters.ats}`);
+  if (filters.pipeline !== "all") labels.push(`Pipeline: ${filters.pipeline}`);
+  if (filters.search.trim()) labels.push(`Search: “${filters.search.trim()}”`);
+  return labels;
+}
 
 const STORAGE_PITCH_KEY = "startupsniper_pitch_settings_v1";
 
@@ -84,7 +99,7 @@ export default function DashboardPage() {
     DEFAULT_PITCH_SETTINGS
   );
   const [darkMode, setDarkMode] = useState(true);
-  const [activeLens, setActiveLens] = useState("funded12mo");
+  const [activeLens, setActiveLens] = useState("all");
   const latestCompaniesRequest = useRef(0);
 
   useEffect(() => {
@@ -289,34 +304,40 @@ export default function DashboardPage() {
         );
       }
       const syncJson = await syncRes.json();
+      if (syncJson.skipped) {
+        const seconds = Math.ceil(Number(syncJson.retryAfterMs || 0) / 1000);
+        setSyncStatusText(
+          `Sync skipped to protect D1 and upstream rate limits. Try again in about ${seconds}s; no feeds were requested.`
+        );
+        await fetchCompaniesPage(1, false);
+        return;
+      }
+
       const upserted = Number(syncJson.upsertedCount ?? 0).toLocaleString();
       const totalAfterSync = Number(syncJson.stats?.totalCompanies ?? -1);
+      const failedSources = (syncJson.sources || [])
+        .filter((source: { mode?: string; error?: string }) =>
+          source.mode === "unavailable" || Boolean(source.error)
+        )
+        .map((source: { source?: string }) => source.source)
+        .filter(Boolean);
       setSyncStatusText(
-        `Saved ${upserted} companies in ${syncJson.durationMs}ms. Checking job boards next.`
+        `Sync wrote ${upserted} changed companies in ${syncJson.durationMs}ms.`
       );
-
-      await fetchCompaniesPage(1, false);
-
-      for (let step = 1; step <= 2; step++) {
-        const enr = await fetch("/api/sync?mode=enrich&batchSize=12", {
-          method: "POST",
-        });
-        if (!enr.ok) break;
-        const enrJson = await enr.json();
-        if (enrJson.stats) setStats(enrJson.stats);
-        if (!enrJson.enriched || enrJson.remaining === 0) break;
-        setSyncStatusText(`Job board check ${step} of 2 done.`);
-      }
 
       const refreshedSuccessfully = await fetchCompaniesPage(1, false);
       if (!refreshedSuccessfully) return;
       if (totalAfterSync === 0) {
         setSyncStatusText(
-          "Sync finished, but the database still has 0 startups. Open Sources for feed errors."
+          "Sync checked the feeds, but D1 has no startup records. Open Sources for feed errors."
+        );
+      } else if (failedSources.length > 0) {
+        setSyncStatusText(
+          `Sync finished with unavailable feeds: ${failedSources.join(", ")}. Existing D1 records were kept; open Sources for details.`
         );
       } else {
-        setSyncStatusText("All sources checked.");
-        setTimeout(() => setSyncStatusText(null), 3000);
+        setSyncStatusText("All sources checked; hiring-board checks are manual.");
+        setTimeout(() => setSyncStatusText(null), 4000);
       }
     } catch (err) {
       console.error("Live sync failed:", err);
@@ -443,6 +464,9 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
+  const activeFilterLabels = getActiveFilterLabels(filters);
+  const hasFilteredEmptyState = total === 0 && activeFilterLabels.length > 0;
+
   return (
     <div className={`min-h-screen flex flex-col selection:bg-emerald-500/25 ${darkMode ? "bg-obsidian-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
       <HeaderBar
@@ -470,7 +494,7 @@ export default function DashboardPage() {
           totalResults={total}
           onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
           onReset={() => {
-            setActiveLens("funded12mo");
+            setActiveLens("all");
             setFilters(DEFAULT_FILTERS);
           }}
         />
@@ -515,26 +539,74 @@ export default function DashboardPage() {
             >
               <Crosshair className="w-10 h-10 text-emerald-500 mx-auto" />
               <h3 className="text-lg font-semibold text-slate-100">
-                Nothing matched those filters
+                {syncStatusText?.startsWith("Dashboard data error:")
+                  ? "Could not load the company list"
+                  : hasFilteredEmptyState
+                    ? "No leads match the active filters"
+                    : stats && stats.totalCompanies > 0
+                      ? "No leads in this view"
+                      : "No startup records loaded"}
               </h3>
-              <p className="text-sm text-slate-500 max-w-md mx-auto">
-                Clear the search box, turn off a filter, or pull the feeds again.
-                Some weeks are just quiet.
-              </p>
-              <div className="flex items-center justify-center gap-2">
+              {syncStatusText?.startsWith("Dashboard data error:") ? (
+                <p className="text-sm text-amber-400 max-w-md mx-auto">
+                  {syncStatusText.replace("Dashboard data error: ", "")}. Retry the dashboard request or inspect source status.
+                </p>
+              ) : hasFilteredEmptyState ? (
+                <>
+                  <p className="text-sm text-slate-400 max-w-xl mx-auto">
+                    {(stats?.totalCompanies || 0) > 0
+                      ? `D1 has ${stats!.totalCompanies.toLocaleString()} tracked startups, but none match this filter combination. This filtered zero does not by itself mean the API is down.`
+                      : "D1 currently has no active startup records. These filters also narrow the view; clear them, then check feed status before forcing another sync."}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto">
+                    {activeFilterLabels.map((label) => (
+                      <span key={label} className="px-2.5 py-1 rounded-full text-[10px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  No company records are currently available. Check the feed status before forcing another upstream request.
+                </p>
+              )}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {hasFilteredEmptyState ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilters({ ...DEFAULT_FILTERS, funded12mo: false });
+                      setActiveLens("all");
+                    }}
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                  >
+                    Clear filters
+                  </button>
+                ) : syncStatusText?.startsWith("Dashboard data error:") ? (
+                  <button
+                    type="button"
+                    onClick={() => fetchCompaniesPage(1, false)}
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                  >
+                    Retry dashboard
+                  </button>
+                ) : stats?.totalCompanies === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSyncLive(false)}
+                    disabled={syncing}
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
+                  >
+                    Sync live feeds
+                  </button>
+                ) : null}
                 <button
                   type="button"
-                  onClick={() => setFilters(DEFAULT_FILTERS)}
-                  className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                  onClick={() => setSourcesOpen(true)}
+                  className="px-5 py-2.5 rounded-2xl text-xs font-medium border border-emerald-500/30 bg-white/5 text-emerald-400 hover:bg-emerald-500/10 transition"
                 >
-                  Reset Filters
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSyncLive(true)}
-                  className="ml-2 px-5 py-2.5 rounded-2xl text-xs font-medium border border-emerald-500/30 bg-white/5 text-emerald-400 hover:bg-emerald-500/10 transition"
-                >
-                  Sync again
+                  Check feed status
                 </button>
               </div>
             </motion.div>

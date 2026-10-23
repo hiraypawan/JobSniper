@@ -128,7 +128,8 @@ export function FilterBar({
                 sort: !filters.fresh14d ? "newest" : filters.sort,
               })
             }
-            label="Fresh 14d"
+            label="Funded 14d"
+            title="Companies whose recorded funding date is within the last 14 days"
           />
           <ToggleChip
             active={filters.remote}
@@ -228,15 +229,18 @@ function ToggleChip({
   active,
   onClick,
   label,
+  title,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${
         active
           ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 font-semibold"
