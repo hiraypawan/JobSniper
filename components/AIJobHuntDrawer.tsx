@@ -27,9 +27,15 @@ import {
   getApiKey,
   AIProvider,
 } from "@/lib/aiPitches";
-import { findAIContacts, tailorResumeAndCoverLetter, generateInterviewPrep } from "@/lib/aiJobs";
+import {
+  findAIContacts,
+  tailorResumeAndCoverLetter,
+  generateInterviewPrep,
+  generateSalaryNegotiation,
+} from "@/lib/aiJobs";
 import { OUTREACH_CHANNELS, ContactInfo } from "@/lib/outreach";
 import { Company, PitchSettings } from "@/lib/types";
+import { AISalaryNegotiation } from "@/lib/aiJobs";
 
 interface Props {
   company: Company | null;
@@ -38,12 +44,13 @@ interface Props {
   onOpenPitchSettings?: () => void;
 }
 
-type JobTab = "contacts" | "resume" | "interview" | "outreach";
+type JobTab = "contacts" | "resume" | "interview" | "salary" | "outreach";
 
 const TAB_LABELS: Record<JobTab, { label: string; icon: any }> = {
   contacts: { label: "Founder & HR Contacts", icon: User },
   resume: { label: "AI Resume & Cover Letter", icon: FileText },
   interview: { label: "AI Interview Prep", icon: Clock },
+  salary: { label: "AI Salary Negotiation", icon: TargetIcon },
   outreach: { label: "Multi-Platform Outreach", icon: Briefcase },
 };
 
@@ -60,14 +67,17 @@ export function AIJobHuntDrawer({
   const [contacts, setContacts] = useState<ContactInfo[]>([]);
   const [resume, setResume] = useState<AITailoredResume | null>(null);
   const [interview, setInterview] = useState<AIInterviewPrep | null>(null);
+  const [salary, setSalary] = useState<AISalaryNegotiation | null>(null);
   const [userResume, setUserResume] = useState("");
   const [roleTitle, setRoleTitle] = useState("");
+  const [currentOffer, setCurrentOffer] = useState("");
   const [loading, setLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [tabErrors, setTabErrors] = useState<Record<JobTab, string | null>>({
     contacts: null,
     resume: null,
     interview: null,
+    salary: null,
     outreach: null,
   });
 
@@ -101,15 +111,16 @@ export function AIJobHuntDrawer({
       setContacts([]);
       setResume(null);
       setInterview(null);
+      setSalary(null);
       setError(null);
-      setTabErrors({ contacts: null, resume: null, interview: null, outreach: null });
+      setTabErrors({ contacts: null, resume: null, interview: null, salary: null, outreach: null });
       setActiveTab("contacts");
     }
   }, [company?.id]);
 
   // Clear stale tab errors when the provider is switched (key status recomputes)
   useEffect(() => {
-    setTabErrors({ contacts: null, resume: null, interview: null, outreach: null });
+    setTabErrors({ contacts: null, resume: null, interview: null, salary: null, outreach: null });
     setError(null);
   }, [aiProvider]);
 
@@ -202,10 +213,35 @@ export function AIJobHuntDrawer({
     }
   };
 
+  const generateSalary = async () => {
+    if (!company || !hasApiKey || !roleTitle) return;
+    setLoading((p) => ({ ...p, salary: true }));
+    setTabErrors((p) => ({ ...p, salary: null }));
+    setError(null);
+    try {
+      const result = await generateSalaryNegotiation(
+        company,
+        roleTitle,
+        currentOffer,
+        aiProvider,
+        resolvedApiKey
+      );
+      setSalary(result);
+    } catch (err) {
+      setTabErrors((p) => ({
+        ...p,
+        salary: err instanceof Error ? err.message : "Salary prep failed.",
+      }));
+    } finally {
+      setLoading((p) => ({ ...p, salary: false }));
+    }
+  };
+
   const retryTab = (tab: JobTab) => {
     setTabErrors((p) => ({ ...p, [tab]: null }));
     if (tab === "contacts") findContacts();
     else if (tab === "resume") generateResume();
+    else if (tab === "salary") generateSalary();
     else generateInterview();
   };
 
@@ -616,6 +652,19 @@ export function AIJobHuntDrawer({
                 />
               </div>
 
+              <div className="space-y-3">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Current Offer (optional)
+                </label>
+                <input
+                  type="text"
+                  value={currentOffer}
+                  onChange={(e) => setCurrentOffer(e.target.value)}
+                  placeholder="e.g. 95k, 100k-120k, not stated yet"
+                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                />
+              </div>
+
               <button
                 type="button"
                 onClick={generateInterview}
@@ -628,6 +677,20 @@ export function AIJobHuntDrawer({
                     Generating...
                   </span>
                 ) : "Generate Interview Prep"}
+              </button>
+
+              <button
+                type="button"
+                onClick={generateSalary}
+                disabled={loading.salary || !hasApiKey || !roleTitle.trim()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {loading.salary ? (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
+                    Generating...
+                  </span>
+                ) : "Generate Salary Negotiation"}
               </button>
 
               {tabErrors.interview && (
@@ -701,6 +764,146 @@ export function AIJobHuntDrawer({
                       ))}
                     </ul>
                   </section>
+                </section>
+              )}
+            </section>
+          )}
+
+          {/* SALARY TAB */}
+          {activeTab === "salary" && (
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    AI Salary Negotiation
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Target range, opener script, and walk-away number for this role
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Target Role Title
+                </label>
+                <input
+                  type="text"
+                  value={roleTitle}
+                  onChange={(e) => setRoleTitle(e.target.value)}
+                  placeholder="e.g. Founding Engineer, Product Manager"
+                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Current Offer (optional)
+                </label>
+                <input
+                  type="text"
+                  value={currentOffer}
+                  onChange={(e) => setCurrentOffer(e.target.value)}
+                  placeholder="e.g. 95k, 100k-120k, not stated yet"
+                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={generateSalary}
+                disabled={loading.salary || !hasApiKey || !roleTitle.trim()}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {loading.salary ? (
+                  <span className="flex items-center gap-1.5">
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
+                    Generating...
+                  </span>
+                ) : "Generate Salary Negotiation"}
+              </button>
+
+              {tabErrors.salary && (
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                  <div className="flex items-start gap-2 text-sm">
+                    <span className="text-red-600 dark:text-red-400 font-semibold">
+                      Salary error:
+                    </span>{" "}
+                    <span className="text-red-600 dark:text-red-400">
+                      {tabErrors.salary}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => retryTab("salary")}
+                    disabled={loading.salary}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {salary && (
+                <section className="space-y-4 pt-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                      Target Range
+                    </h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {salary.target_range}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                      Justification
+                    </h4>
+                    <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                      {salary.justification.map((j, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="mt-0.5 text-emerald-500">▹</span>
+                          {j}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2">
+                      Opener Script
+                    </h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
+                      {salary.opener_script}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                    <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2">
+                      Response to Low Offer
+                    </h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
+                      {salary.response_to_low_offer}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                      Benefits to Ask
+                    </h4>
+                    <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                      {salary.benefits_to_ask.map((b, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="mt-0.5 text-sky-500">▹</span>
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border border-slate-700/30 bg-slate-700/10 dark:bg-slate-800/50 p-4">
+                    <h4 className="text-xs font-bold text-slate-400 dark:text-slate-300 uppercase tracking-wider mb-2">
+                      Walk-Away Number
+                    </h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
+                      {salary.walk_away_number}
+                    </p>
+                  </div>
                 </section>
               )}
             </section>

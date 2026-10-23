@@ -25,6 +25,7 @@ export type OutreachStatus =
   | "pitched"
   | "demo_sent"
   | "replied"
+  | "applied"
   | "archived";
 
 export interface JobPosting {
@@ -106,6 +107,7 @@ export interface Company {
   company_linkedin_url: string | null;
   company_email: string | null;
   contact_checked_at: string | null;
+  follow_up_at: string | null;
   launch_date: string | null;
   launch_source: string | null;
   launch_url: string | null;

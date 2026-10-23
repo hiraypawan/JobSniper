@@ -46,6 +46,7 @@ const STATUS_META: Record<
   pitched: { label: "Pitched", color: "text-sky-500" },
   demo_sent: { label: "Demo Sent", color: "text-violet-500" },
   replied: { label: "Replied", color: "text-emerald-500" },
+  applied: { label: "Applied", color: "text-orange-500" },
   archived: { label: "Archived", color: "text-slate-500" },
 };
 

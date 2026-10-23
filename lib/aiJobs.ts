@@ -30,6 +30,15 @@ export interface AIInterviewPrep {
   key_talking_points: string[];
 }
 
+export interface AISalaryNegotiation {
+  target_range: string;
+  justification: string[];
+  opener_script: string;
+  response_to_low_offer: string;
+  benefits_to_ask: string[];
+  walk_away_number: string;
+}
+
 /**
  * Return only contacts explicitly stored on the source record. AI cannot verify
  * identity or live email/profile details from a company domain, so never guess.
@@ -153,6 +162,52 @@ Return ONLY raw JSON (no markdown) with:
     if (err instanceof AIError) throw err;
     throw new AIError(
       `Could not build interview prep: ${err instanceof Error ? err.message : String(err)}`,
+      { provider }
+    );
+  }
+}
+
+/**
+ * AI salary negotiation prep for one startup offer.
+ */
+export async function generateSalaryNegotiation(
+  company: Company,
+  roleTitle: string,
+  currentOffer: string,
+  provider: AIProvider,
+  apiKey: string
+): Promise<AISalaryNegotiation> {
+  const prompt = `You are helping a candidate negotiate salary with one startup. Be direct, specific, and practical. No corporate speak.
+
+${HUMAN_VOICE_RULES}
+
+COMPANY: ${company.name}
+${company.description}
+Role: ${roleTitle}
+Team Size: ${company.team_size || "Unknown"}
+Funding Stage: ${company.batch || company.funding_amount || "Unknown"}
+Current Offer: ${currentOffer || "Not stated yet"}
+
+Return ONLY raw JSON (no markdown) with:
+- "target_range": realistic salary range for this role at this stage (e.g. "95k-125k")
+- "justification": 3-4 specific reasons why this range fits this company's stage and the role
+- "opener_script": exact words to say when opening the salary conversation (under 100 words)
+- "response_to_low_offer": exact words to respond if they offer below range (under 100 words)
+- "benefits_to_ask": 4 non-salary benefits worth negotiating (equity, remote budget, etc.)
+- "walk_away_number": the absolute minimum number to accept, with reasoning
+
+Base ranges on the company's actual stage and funding, not generic market rates.`; 
+
+  try {
+    const response = await fetchAIText(provider, prompt, apiKey);
+    const parsed = extractJson(response) as AISalaryNegotiation;
+    recordAIGeneration(provider, true);
+    return humanizeDeep<AISalaryNegotiation>(parsed);
+  } catch (err) {
+    recordAIGeneration(provider, false);
+    if (err instanceof AIError) throw err;
+    throw new AIError(
+      `Could not build salary negotiation prep: ${err instanceof Error ? err.message : String(err)}`,
       { provider }
     );
   }

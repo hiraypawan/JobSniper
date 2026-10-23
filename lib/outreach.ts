@@ -21,7 +21,7 @@ export interface OutreachChannel {
 export const OUTREACH_CHANNELS: OutreachChannel[] = [
   {
     id: "email",
-    label: "Email",
+    label: "Company Email",
     icon: "Mail",
     color: "text-violet-500",
     url: (c, contact) => {
@@ -30,20 +30,35 @@ export const OUTREACH_CHANNELS: OutreachChannel[] = [
     },
   },
   {
+    id: "twitter_dm",
+    label: "Twitter DM",
+    icon: "X",
+    color: "text-slate-500",
+    url: (c, contact) => {
+      const twitter = contact?.twitter || c.founder_twitter;
+      if (twitter) {
+        const username = twitter.replace(/^https?:\/\/(www\.)?(x|twitter)\.com\//, "");
+        return `https://twitter.com/message/compose?to=${username}`;
+      }
+      return undefined;
+    },
+  },
+  {
+    id: "twitter_profile",
+    label: "Twitter / X Profile",
+    icon: "X",
+    color: "text-slate-400",
+    url: (c, contact) =>
+      contact?.twitter ||
+      c.founder_twitter ||
+      `https://twitter.com/search?q=${encodeURIComponent(c.name)}`,
+  },
+  {
     id: "linkedin",
     label: "LinkedIn",
     icon: "Linkedin",
     color: "text-sky-500",
     url: (c, contact) => contact?.linkedin || c.company_linkedin_url || undefined,
-  },
-  {
-    id: "twitter",
-    label: "Twitter / X",
-    icon: "X",
-    color: "text-slate-500",
-    url: (c, contact) =>
-      contact?.twitter ||
-      `https://twitter.com/search?q=${encodeURIComponent(c.name)}`,
   },
   {
     id: "wellfound",
@@ -66,6 +81,30 @@ export const OUTREACH_CHANNELS: OutreachChannel[] = [
     icon: "Building2",
     color: "text-slate-600",
     url: (c) => `https://builtin.com/companies/${slugify(c.name)}`,
+  },
+  {
+    id: "company_contact",
+    label: "Contact Form",
+    icon: "Send",
+    color: "text-emerald-600",
+    url: (c) => {
+      if (c.website && c.website.includes("http")) {
+        try {
+          const url = new URL(c.website);
+          return `${url.origin}/contact`;
+        } catch {
+          return undefined;
+        }
+      }
+      return undefined;
+    },
+  },
+  {
+    id: "indiehackers",
+    label: "Indie Hackers",
+    icon: "Sparkles",
+    color: "text-purple-500",
+    url: (c) => `https://www.indiehackers.com/search?query=${encodeURIComponent(c.name)}`,
   },
 ];
 

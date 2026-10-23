@@ -51,6 +51,7 @@ const STATUS_OPTIONS: { id: OutreachStatus; label: string }[] = [
   { id: "pitched", label: "Pitched" },
   { id: "demo_sent", label: "Demo Sent" },
   { id: "replied", label: "Replied" },
+  { id: "applied", label: "Applied" },
   { id: "archived", label: "Archived" },
 ];
 

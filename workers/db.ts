@@ -128,6 +128,7 @@ export async function ensureSchema(db: D1Database): Promise<void> {
     ["company_linkedin_url", "TEXT"],
     ["company_email", "TEXT"],
     ["contact_checked_at", "TEXT"],
+    ["follow_up_at", "TEXT"],
   ] as const) {
     try {
       await db.prepare(`SELECT ${column} FROM companies LIMIT 0`).all();
@@ -438,6 +439,7 @@ interface RawCompanyRow {
   company_linkedin_url: string | null;
   company_email: string | null;
   contact_checked_at: string | null;
+  follow_up_at: string | null;
   launch_date: string | null;
   launch_source: string | null;
   launch_url: string | null;
@@ -562,6 +564,7 @@ export function mapCompanyRow(row: RawCompanyRow, jobs?: JobPosting[]): Company 
     company_linkedin_url: row.company_linkedin_url ?? null,
     company_email: row.company_email ?? null,
     contact_checked_at: row.contact_checked_at ?? null,
+    follow_up_at: row.follow_up_at ?? null,
     launch_date: row.launch_date ?? null,
     launch_source: row.launch_source ?? null,
     launch_url: row.launch_url ?? null,
@@ -1269,6 +1272,7 @@ export async function getDashboardStats(
     pitched: 0,
     demo_sent: 0,
     replied: 0,
+    applied: 0,
     archived: 0,
   };
   for (const r of statusRows.results || []) {
