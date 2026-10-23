@@ -1,11 +1,9 @@
 "use client";
 
 import React from "react";
-import { Briefcase, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, Search, Send, Sparkles, Users } from "lucide-react";
+import { Briefcase, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, RefreshCw, Search, Send, Sparkles, Users } from "lucide-react";
 import {
-  businessEmailSearchUrl,
   isUsableSourceWebsite,
-  linkedinCompanySearchUrl,
   officialWebsiteSearchUrl,
 } from "@/lib/companyLinks";
 import { Company, OutreachStatus } from "@/lib/types";
@@ -14,6 +12,11 @@ interface Props {
   company: Company;
   onSelect: (company: Company) => void;
   onUpdateStatus: (companyId: string, status: OutreachStatus) => void;
+  onCheckCompanyContacts: (companyId: string) => Promise<{
+    skipped: boolean;
+    checked: boolean;
+    found: boolean;
+  }>;
 }
 
 const SOURCE_BADGES: Record<string, string> = {
@@ -41,7 +44,10 @@ export function CompanyCard({
   company,
   onSelect,
   onUpdateStatus,
+  onCheckCompanyContacts,
 }: Props) {
+  const [contactCheckState, setContactCheckState] = React.useState<string | null>(null);
+  const [checkingContacts, setCheckingContacts] = React.useState(false);
   const initials = company.name
     .split(/[\s-]+/)
     .slice(0, 2)
@@ -67,6 +73,29 @@ export function CompanyCard({
     // If status is unknown or archived, wrap to new; otherwise advance
     const next = currentIdx === -1 ? "saved" : order[(currentIdx + 1) % order.length];
     onUpdateStatus(company.id, next as OutreachStatus);
+  };
+
+  const handleCheckContacts = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (checkingContacts) return;
+    setCheckingContacts(true);
+    setContactCheckState(null);
+    try {
+      const result = await onCheckCompanyContacts(company.id);
+      setContactCheckState(
+        result.skipped
+          ? "Checked recently"
+          : result.found
+            ? "Contacts loaded"
+            : result.checked
+              ? "No contacts published"
+              : "Site unavailable"
+      );
+    } catch (error) {
+      setContactCheckState(error instanceof Error ? error.message : "Website check failed");
+    } finally {
+      setCheckingContacts(false);
+    }
   };
 
   return (
@@ -232,15 +261,15 @@ export function CompanyCard({
             </a>
           )}
 
-          <a
-            href={linkedinCompanySearchUrl(company.name, company.domain)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 transition-all"
-            title="Search public web results for this company's LinkedIn page; avoids LinkedIn's sign-in search wall"
-          >
-            <Search className="w-3 h-3" /> Company LinkedIn
-          </a>
+          {company.company_linkedin_url && (
+            <a
+              href={company.company_linkedin_url}
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-sky-400 hover:bg-sky-500/10 transition-all"
+              title="Company LinkedIn URL found on its website; your phone may open the LinkedIn app"
+            >
+              <Linkedin className="w-3 h-3" /> Company page
+            </a>
+          )}
 
           {company.founder_linkedin && (
             <a
@@ -252,24 +281,37 @@ export function CompanyCard({
             </a>
           )}
 
-          {company.founder_email ? (
+          {company.company_email && (
+            <a
+              href={`mailto:${company.company_email}`}
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-violet-400 hover:bg-violet-500/10 transition-all"
+              title="Company email published on its website"
+            >
+              <Mail className="w-3 h-3" /> Company email
+            </a>
+          )}
+
+          {company.founder_email && (
             <a
               href={`mailto:${company.founder_email}`}
-              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-violet-400 hover:bg-violet-500/10 transition-all"
-              title={`Email listed in source data; verify before contacting: ${company.founder_email}`}
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-violet-300 hover:bg-violet-500/10 transition-all"
+              title="Founder email from source data; verify before contacting"
             >
-              <Mail className="w-3 h-3" /> Source email
+              <Mail className="w-3 h-3" /> Founder email
             </a>
-          ) : (
-            <a
-              href={businessEmailSearchUrl(company.name, company.domain, company.website)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-violet-400 hover:bg-violet-500/10 transition-all"
-              title="Search the web for a company email; search results are not verified"
+          )}
+
+          {(!company.company_email || !company.company_linkedin_url) && (
+            <button
+              type="button"
+              onClick={handleCheckContacts}
+              disabled={checkingContacts}
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-emerald-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-60"
+              title="Fetches published contact details from the listed company website and saves them to D1; one check per 30 minutes"
             >
-              <Mail className="w-3 h-3" /> Find email
-            </a>
+              <RefreshCw className={`w-3 h-3 ${checkingContacts ? "animate-spin" : ""}`} />
+              {checkingContacts ? "Checking site…" : contactCheckState || "Fetch site contacts"}
+            </button>
           )}
         </div>
       </div>

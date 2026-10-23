@@ -172,20 +172,28 @@ export async function enrichSingleCompany(
   env: WorkerEnv,
   companyId: string,
   options: { cooldownMs?: number } = {}
-): Promise<{ company: Company | null; checkedLive: boolean; skipped?: boolean }> {
+): Promise<{
+  company: Company | null;
+  checkedLive: boolean;
+  skipped?: boolean;
+  contactPageChecked?: boolean;
+  contactDetailsFound?: boolean;
+}> {
   await ensureSchema(env.DB);
   const existing = await getCompanyById(env, companyId);
   if (!existing) {
     return { company: null, checkedLive: false };
   }
-  if (options.cooldownMs && existing.enriched_at) {
-    const lastCheck = Date.parse(existing.enriched_at);
+  if (options.cooldownMs && existing.contact_checked_at) {
+    const lastCheck = Date.parse(existing.contact_checked_at);
     const elapsed = Date.now() - lastCheck;
     if (Number.isFinite(lastCheck) && elapsed < options.cooldownMs) {
       return {
         company: existing,
         checkedLive: false,
         skipped: true,
+        contactPageChecked: false,
+        contactDetailsFound: Boolean(existing.company_email || existing.company_linkedin_url),
       };
     }
   }
@@ -193,6 +201,7 @@ export async function enrichSingleCompany(
   const outcome = await detectCompanyHiringAndSignals(env, {
     id: existing.id,
     name: existing.name,
+    domain: existing.domain,
     website: existing.website,
     hiring_page_url: existing.hiring_page_url,
     hiring_provider: existing.hiring_provider,
@@ -207,6 +216,8 @@ export async function enrichSingleCompany(
   const nextTwitter = existing.founder_twitter || null;
   const nextLinkedin = existing.founder_linkedin || null;
   const nextEmail = existing.founder_email || null;
+  const nextCompanyLinkedinUrl = outcome.company_linkedin_url || existing.company_linkedin_url || null;
+  const nextCompanyEmail = outcome.company_email || existing.company_email || null;
 
   const { score } = computeSniperScore({
     batch: existing.batch,
@@ -232,22 +243,29 @@ export async function enrichSingleCompany(
     nextHiringProvider !== existing.hiring_provider ||
     outcome.open_roles_count !== existing.open_roles_count ||
     nextStackJson !== JSON.stringify(existing.tech_stack || []) ||
+    nextCompanyLinkedinUrl !== existing.company_linkedin_url ||
+    nextCompanyEmail !== existing.company_email ||
     score !== existing.sniper_score;
   const lastEnrichedAt = existing.enriched_at
     ? Date.parse(existing.enriched_at)
     : Number.NaN;
   const refreshCheckpointDue =
     !Number.isFinite(lastEnrichedAt) || Date.now() - lastEnrichedAt >= 24 * 60 * 60 * 1000;
+  const lastContactCheckAt = existing.contact_checked_at
+    ? Date.parse(existing.contact_checked_at)
+    : Number.NaN;
+  const contactCheckCheckpointDue =
+    !Number.isFinite(lastContactCheckAt) || Date.now() - lastContactCheckAt >= 30 * 60 * 1000;
 
-  // Avoid writing an unchanged company row on every manual check. The timestamp
-  // checkpoint only needs refreshing daily; substantive changes refresh it now.
-  if (hasCompanyDataChanged || refreshCheckpointDue) {
+  // Avoid no-op writes; contact checks are checkpointed at most every 30 minutes.
+  if (hasCompanyDataChanged || refreshCheckpointDue || contactCheckCheckpointDue) {
     if (hasCompanyDataChanged) {
       await env.DB.prepare(
         `UPDATE companies
          SET hiring_page_url = ?, hiring_provider = ?, open_roles_count = ?,
              tech_stack_json = ?, founder_twitter = ?, founder_linkedin = ?,
-             founder_email = ?, sniper_score = ?, enriched_at = ?, updated_at = ?
+             founder_email = ?, company_linkedin_url = ?, company_email = ?,
+             contact_checked_at = ?, sniper_score = ?, enriched_at = ?, updated_at = ?
          WHERE id = ?`
       )
         .bind(
@@ -258,6 +276,9 @@ export async function enrichSingleCompany(
           nextTwitter,
           nextLinkedin,
           nextEmail,
+          nextCompanyLinkedinUrl,
+          nextCompanyEmail,
+          nowIso,
           score,
           nowIso,
           nowIso,
@@ -265,8 +286,10 @@ export async function enrichSingleCompany(
         )
         .run();
     } else {
-      await env.DB.prepare("UPDATE companies SET enriched_at = ? WHERE id = ?")
-        .bind(nowIso, companyId)
+      await env.DB.prepare(
+        "UPDATE companies SET enriched_at = ?, contact_checked_at = ?, updated_at = ? WHERE id = ?"
+      )
+        .bind(nowIso, nowIso, nowIso, companyId)
         .run();
     }
   }
@@ -332,7 +355,12 @@ export async function enrichSingleCompany(
   }
 
   const updated = await getCompanyById(env, companyId);
-  return { company: updated, checkedLive: outcome.checkedLive };
+  return {
+    company: updated,
+    checkedLive: outcome.checkedLive,
+    contactPageChecked: outcome.contactPageChecked,
+    contactDetailsFound: Boolean(nextCompanyEmail || nextCompanyLinkedinUrl),
+  };
 }
 
 // Bounded batch enrichment (respects Cloudflare's 50 subrequest limit per Worker invocation!)

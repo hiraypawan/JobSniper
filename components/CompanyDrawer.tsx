@@ -30,9 +30,7 @@ import {
 } from "@/lib/aiPitches";
 import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
 import {
-  businessEmailSearchUrl,
   isUsableSourceWebsite,
-  linkedinCompanySearchUrl,
   officialWebsiteSearchUrl,
 } from "@/lib/companyLinks";
 
@@ -170,10 +168,14 @@ export function CompanyDrawer({
       onCompanyUpdated(data.company);
       setLiveBadge(
         data.skipped
-          ? "Checked recently; skipped another fetch"
-          : data.checkedLive
-            ? "Checked live just now"
-            : "Using the last synced check"
+          ? "Website details checked recently; skipped another fetch"
+          : data.contactPageChecked
+            ? data.contactDetailsFound
+              ? "Website check complete; published company contact details are available"
+              : "Scanned the public site; no company email or LinkedIn page was published there"
+            : data.contactDetailsFound
+              ? "Site was unavailable; previously found company details were kept"
+              : "Could not reach the listed website to check contact details"
       );
     } catch (error) {
       setLiveBadge(
@@ -328,14 +330,17 @@ export function CompanyDrawer({
                 type="button"
                 onClick={runLiveCheck}
                 disabled={liveChecking}
+                title="Scans the source-listed company homepage and at most one same-site contact page for published company email and LinkedIn, plus ATS jobs"
                 className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 hover:underline disabled:opacity-60"
               >
                 <RefreshCw className={`w-3 h-3 ${liveChecking ? "animate-spin" : ""}`} />
-                {liveChecking ? "Checking jobs…" : "Check jobs live"}
+                {liveChecking ? "Checking company site & jobs…" : "Check company website & jobs"}
               </button>
               {liveBadge && (
                 <span className={`inline-flex items-center gap-1 font-mono ${
-                  liveBadge.startsWith("Check failed")
+                  liveBadge.startsWith("Check failed") ||
+                  liveBadge.startsWith("Could not reach") ||
+                  liveBadge.startsWith("Site was unavailable")
                     ? "text-amber-600 dark:text-amber-400"
                     : "text-emerald-500"
                 }`}>
@@ -422,37 +427,48 @@ export function CompanyDrawer({
               </a>
             )}
 
-            {company.founder_email ? (
+            {company.company_email ? (
+              <a
+                href={`mailto:${company.company_email}`}
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
+                title="Company email published on the company's own website"
+              >
+                <Mail className="w-3 h-3" /> Company email: {company.company_email}
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+                <Mail className="w-3 h-3" />
+                {company.contact_checked_at ? "No company email found on scanned pages" : "Company email not fetched yet"}
+              </span>
+            )}
+
+            {company.founder_email && (
               <a
                 href={aiPitches
                   ? `mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`
                   : `mailto:${company.founder_email}`}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
-                title="Email listed in source data; verify before contacting"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
+                title="Founder email listed in source data; verify before contacting"
               >
-                <Mail className="w-3 h-3" /> Source email: {company.founder_email}
-              </a>
-            ) : (
-              <a
-                href={businessEmailSearchUrl(company.name, company.domain, company.website)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-violet-600 dark:text-violet-400 border border-violet-500/20 hover:bg-violet-500/10 transition-all"
-                title="Search the web for company contact details; results are not verified email addresses"
-              >
-                <Mail className="w-3 h-3" /> Search for business email
+                <Mail className="w-3 h-3" /> Founder email: {company.founder_email}
               </a>
             )}
 
-            <a
-              href={linkedinCompanySearchUrl(company.name, company.domain)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-sky-600 dark:text-sky-400 border border-sky-500/20 hover:bg-sky-500/10 transition-all"
-              title="Search public web results for this company's LinkedIn page; avoids LinkedIn's sign-in search wall"
-            >
-              <Search className="w-3.5 h-3.5" /> Search company LinkedIn page
-            </a>
+            {company.company_linkedin_url ? (
+              <a
+                href={company.company_linkedin_url}
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-all"
+                title="Company LinkedIn page found on the official website; your phone may open the LinkedIn app"
+              >
+                <Linkedin className="w-3.5 h-3.5" /> Company LinkedIn page
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+                <Linkedin className="w-3.5 h-3.5" />
+                {company.contact_checked_at ? "No company LinkedIn link found on scanned pages" : "Company LinkedIn not fetched yet"}
+              </span>
+            )}
 
             {company.founder_linkedin && (
               <a
@@ -466,7 +482,7 @@ export function CompanyDrawer({
             )}
           </div>
           <p className="text-[10px] text-slate-500">
-            Website and contact fields are listed by data sources, not independently verified. Search results also need verification before use.
+            Company email and LinkedIn are extracted only from the source-listed website's homepage/contact pages. Founder contacts remain separately labeled source data; verify before contacting. Missing details are never guessed.
           </p>
 
           {/* Pitch Studio */}

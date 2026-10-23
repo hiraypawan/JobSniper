@@ -63,6 +63,9 @@ export interface NormalizedCompanyInput {
   founder_twitter?: string | null;
   founder_linkedin?: string | null;
   founder_email?: string | null;
+  company_linkedin_url?: string | null;
+  company_email?: string | null;
+  contact_checked_at?: string | null;
   jobs?: Omit<JobPosting, "company_id">[];
 }
 
@@ -93,6 +96,9 @@ export interface Company {
   founder_twitter: string | null;
   founder_linkedin: string | null;
   founder_email: string | null;
+  company_linkedin_url: string | null;
+  company_email: string | null;
+  contact_checked_at: string | null;
   sniper_score: number;
   outreach_status: OutreachStatus;
   outreach_notes: string;

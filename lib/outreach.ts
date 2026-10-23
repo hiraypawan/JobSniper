@@ -1,6 +1,5 @@
 import { Company } from "./types";
 import { slugify } from "./domain";
-import { linkedinCompanySearchUrl } from "./companyLinks";
 
 export interface ContactInfo {
   name: string;
@@ -16,7 +15,7 @@ export interface OutreachChannel {
   label: string;
   icon: string;
   color: string;
-  url?: (company: Company, contact: ContactInfo | null) => string;
+  url?: (company: Company, contact: ContactInfo | null) => string | undefined;
 }
 
 export const OUTREACH_CHANNELS: OutreachChannel[] = [
@@ -25,18 +24,17 @@ export const OUTREACH_CHANNELS: OutreachChannel[] = [
     label: "Email",
     icon: "Mail",
     color: "text-violet-500",
-    url: (c, contact) =>
-      contact?.email
-        ? `mailto:${contact.email}`
-        : `https://hunter.io/search/${c.domain}`,
+    url: (c, contact) => {
+      const email = contact?.email || c.company_email;
+      return email ? `mailto:${email}` : undefined;
+    },
   },
   {
     id: "linkedin",
     label: "LinkedIn",
     icon: "Linkedin",
     color: "text-sky-500",
-    url: (c, contact) =>
-      contact?.linkedin || linkedinCompanySearchUrl(c.name, c.domain),
+    url: (c, contact) => contact?.linkedin || c.company_linkedin_url || undefined,
   },
   {
     id: "twitter",

@@ -404,6 +404,25 @@ export default function DashboardPage() {
     );
   };
 
+  const handleCheckCompanyContacts = async (companyId: string) => {
+    const response = await fetch(
+      `/api/companies/${encodeURIComponent(companyId)}/enrich`,
+      { method: "POST" }
+    );
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.company) {
+      throw new Error(data?.error || `Company check failed (${response.status})`);
+    }
+    const updated = data.company as Company;
+    setCompanies((prev) => prev.map((item) => item.id === updated.id ? updated : item));
+    setSelectedCompany((current) => current?.id === updated.id ? updated : current);
+    return {
+      skipped: Boolean(data.skipped),
+      checked: Boolean(data.contactPageChecked),
+      found: Boolean(updated.company_email || updated.company_linkedin_url),
+    };
+  };
+
   const handleSavePitchSettings = (next: PitchSettings) => {
     setPitchSettings(next);
     try {
@@ -632,6 +651,7 @@ export default function DashboardPage() {
                     company={company}
                     onSelect={setSelectedCompany}
                     onUpdateStatus={handleUpdateCompanyStatus}
+                    onCheckCompanyContacts={handleCheckCompanyContacts}
                   />
                 </motion.div>
               ))}
