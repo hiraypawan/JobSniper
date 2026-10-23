@@ -41,14 +41,20 @@ export async function findAIContacts(
 ): Promise<AIContactResult> {
   // A language model cannot verify identities or discover live contact details
   // from a domain. Return only person fields already supplied by a source.
-  const contacts: ContactInfo[] = company.founder_name
+  const hasSourceListedContact = Boolean(
+    company.founder_name ||
+      company.founder_email ||
+      company.founder_linkedin ||
+      company.founder_twitter
+  );
+  const contacts: ContactInfo[] = hasSourceListedContact
     ? [{
-        name: company.founder_name,
+        name: company.founder_name || "Founder contact (name not listed)",
         role: "founder",
         ...(company.founder_email ? { email: company.founder_email } : {}),
         ...(company.founder_linkedin ? { linkedin: company.founder_linkedin } : {}),
         ...(company.founder_twitter ? { twitter: company.founder_twitter } : {}),
-        source: "Listed in the company record. Verify before contacting.",
+        source: "Contact fields present in the company record; verify before contacting.",
       }]
     : [];
 

@@ -159,52 +159,83 @@ export async function enrichSingleCompany(
     sources: existing.sources,
   });
 
-  await env.DB.prepare(
-    `UPDATE companies
-     SET hiring_page_url = COALESCE(?, hiring_page_url),
-         hiring_provider = COALESCE(?, hiring_provider),
-         open_roles_count = ?,
-         tech_stack_json = ?,
-         founder_twitter = COALESCE(?, founder_twitter),
-         founder_linkedin = COALESCE(?, founder_linkedin),
-         founder_email = COALESCE(?, founder_email),
-         sniper_score = ?,
-         enriched_at = ?,
-         updated_at = ?
-     WHERE id = ?`
-  )
-    .bind(
-      outcome.hiring_page_url,
-      outcome.hiring_provider,
-      outcome.open_roles_count,
-      JSON.stringify(mergedStack),
-      nextTwitter,
-      nextLinkedin,
-      nextEmail,
-      score,
-      nowIso,
-      nowIso,
-      companyId
-    )
-    .run();
+  const nextHiringPageUrl = outcome.hiring_page_url ?? existing.hiring_page_url;
+  const nextHiringProvider = outcome.hiring_provider ?? existing.hiring_provider;
+  const nextStackJson = JSON.stringify(mergedStack);
+  const hasCompanyDataChanged =
+    nextHiringPageUrl !== existing.hiring_page_url ||
+    nextHiringProvider !== existing.hiring_provider ||
+    outcome.open_roles_count !== existing.open_roles_count ||
+    nextStackJson !== JSON.stringify(existing.tech_stack || []) ||
+    score !== existing.sniper_score;
+  const lastEnrichedAt = existing.enriched_at
+    ? Date.parse(existing.enriched_at)
+    : Number.NaN;
+  const refreshCheckpointDue =
+    !Number.isFinite(lastEnrichedAt) || Date.now() - lastEnrichedAt >= 24 * 60 * 60 * 1000;
 
-  if (outcome.jobsVerified) {
-    await env.DB.prepare("DELETE FROM jobs WHERE company_id = ?")
-      .bind(companyId)
-      .run();
+  // Avoid writing an unchanged company row on every manual check. The timestamp
+  // checkpoint only needs refreshing daily; substantive changes refresh it now.
+  if (hasCompanyDataChanged || refreshCheckpointDue) {
+    if (hasCompanyDataChanged) {
+      await env.DB.prepare(
+        `UPDATE companies
+         SET hiring_page_url = ?, hiring_provider = ?, open_roles_count = ?,
+             tech_stack_json = ?, founder_twitter = ?, founder_linkedin = ?,
+             founder_email = ?, sniper_score = ?, enriched_at = ?, updated_at = ?
+         WHERE id = ?`
+      )
+        .bind(
+          nextHiringPageUrl,
+          nextHiringProvider,
+          outcome.open_roles_count,
+          nextStackJson,
+          nextTwitter,
+          nextLinkedin,
+          nextEmail,
+          score,
+          nowIso,
+          nowIso,
+          companyId
+        )
+        .run();
+    } else {
+      await env.DB.prepare("UPDATE companies SET enriched_at = ? WHERE id = ?")
+        .bind(nowIso, companyId)
+        .run();
+    }
   }
 
-  if (outcome.jobs.length > 0) {
-    const jobStmts = outcome.jobs.map((job) =>
+  // A successful ATS response is authoritative. Upsert only changed postings,
+  // then remove stale IDs; never delete/reinsert an identical board on refresh.
+  if (outcome.jobsVerified) {
+    const currentJobs = new Map((existing.jobs || []).map((job) => [job.id, job]));
+    const changedJobs = outcome.jobs.filter((job) => {
+      const current = currentJobs.get(job.id);
+      return !current ||
+        current.title !== job.title ||
+        current.url !== job.url ||
+        (current.location ?? null) !== (job.location ?? null) ||
+        Boolean(current.remote) !== Boolean(job.remote) ||
+        (current.department ?? null) !== (job.department ?? null) ||
+        (current.description ?? null) !== (job.description ?? null) ||
+        (current.posted_at ?? null) !== (job.posted_at ?? null);
+    });
+    const desiredIds = outcome.jobs.map((job) => job.id);
+    const desiredIdSet = new Set(desiredIds);
+    const hasStaleJobs = (existing.jobs || []).some((job) => !desiredIdSet.has(job.id));
+    const jobStmts = changedJobs.map((job) =>
       env.DB.prepare(
         `INSERT INTO jobs (id, company_id, title, url, location, remote, department, description, posted_at, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            title = excluded.title,
            url = excluded.url,
-           location = COALESCE(excluded.location, jobs.location),
-           remote = MAX(jobs.remote, excluded.remote),
-           description = COALESCE(excluded.description, jobs.description)`
+           location = excluded.location,
+           remote = excluded.remote,
+           department = excluded.department,
+           description = excluded.description,
+           posted_at = excluded.posted_at`
       ).bind(
         job.id,
         companyId,
@@ -218,7 +249,21 @@ export async function enrichSingleCompany(
         nowIso
       )
     );
-    await env.DB.batch(jobStmts);
+    if (hasStaleJobs) {
+      if (desiredIds.length > 0) {
+        const placeholders = desiredIds.map(() => "?").join(", ");
+        jobStmts.push(
+          env.DB.prepare(
+            `DELETE FROM jobs WHERE company_id = ? AND id NOT IN (${placeholders})`
+          ).bind(companyId, ...desiredIds)
+        );
+      } else {
+        jobStmts.push(
+          env.DB.prepare("DELETE FROM jobs WHERE company_id = ?").bind(companyId)
+        );
+      }
+    }
+    if (jobStmts.length > 0) await env.DB.batch(jobStmts);
   }
 
   const updated = await getCompanyById(env, companyId);

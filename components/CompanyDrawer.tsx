@@ -147,35 +147,31 @@ export function CompanyDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [company, onClose]);
 
-  // Live enrich check on open
-  useEffect(() => {
-    if (!company?.id) return;
-    let cancelled = false;
+  const runLiveCheck = async () => {
+    if (!company?.id || liveChecking) return;
     setLiveChecking(true);
     setLiveBadge(null);
-
-    fetch(`/api/companies/${encodeURIComponent(company.id)}/enrich`, {
-      method: "POST",
-    })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data?.company) return;
-        onCompanyUpdated(data.company);
-        setLiveBadge(
-          data.checkedLive
-            ? "Checked live just now"
-            : "Using the last synced check"
-        );
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!cancelled) setLiveChecking(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [company?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    try {
+      const response = await fetch(
+        `/api/companies/${encodeURIComponent(company.id)}/enrich`,
+        { method: "POST" }
+      );
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data?.company) {
+        throw new Error(data?.error || `Live check failed (${response.status})`);
+      }
+      onCompanyUpdated(data.company);
+      setLiveBadge(
+        data.checkedLive ? "Checked live just now" : "Using the last synced check"
+      );
+    } catch (error) {
+      setLiveBadge(
+        error instanceof Error ? `Check failed: ${error.message}` : "Live check failed"
+      );
+    } finally {
+      setLiveChecking(false);
+    }
+  };
 
   // AI is the only pitch source. Errors stay visible and never fall back to
   // generic or fabricated copy.
@@ -219,6 +215,9 @@ export function CompanyDrawer({
   }, [company?.id, runAiGeneration]);
 
   if (!company || !generated) return null;
+  const hasVerifiedWebsite = Boolean(company.website?.trim()) &&
+    !company.domain.toLowerCase().endsWith(".invalid") &&
+    !company.website.toLowerCase().includes(".invalid");
 
   const patchOutreach = async (patch: {
     outreach_status?: OutreachStatus;
@@ -316,17 +315,23 @@ export function CompanyDrawer({
             </div>
 
             <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 flex-wrap">
-              {liveChecking ? (
-                <span className="inline-flex items-center gap-1.5 text-emerald-500 font-mono">
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  Checking this company...
+              <button
+                type="button"
+                onClick={runLiveCheck}
+                disabled={liveChecking}
+                className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 hover:underline disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3 h-3 ${liveChecking ? "animate-spin" : ""}`} />
+                {liveChecking ? "Checking jobs…" : "Check jobs live"}
+              </button>
+              {liveBadge && (
+                <span className={`inline-flex items-center gap-1 font-mono ${
+                  liveBadge.startsWith("Check failed")
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-emerald-500"
+                }`}>
+                  {liveBadge.startsWith("Check failed") ? "!" : "✓"} {liveBadge}
                 </span>
-              ) : (
-                liveBadge && (
-                  <span className="inline-flex items-center gap-1 text-emerald-500 font-mono">
-                    ✓ {liveBadge}
-                  </span>
-                )
               )}
               {company.location && (
                 <span className="inline-flex items-center gap-1">
@@ -355,16 +360,22 @@ export function CompanyDrawer({
         <div className="p-6 sm:p-8 space-y-6">
           {/* Quick Links */}
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={company.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-semibold bg-slate-900 dark:bg-obsidian-900 text-white dark:text-white hover:opacity-90 transition-all"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              {company.domain}
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            {hasVerifiedWebsite ? (
+              <a
+                href={company.website}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-semibold bg-slate-900 dark:bg-obsidian-900 text-white dark:text-white hover:opacity-90 transition-all"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                Website · {company.domain}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+                <Globe className="w-3.5 h-3.5" /> No verified website listed
+              </span>
+            )}
 
             {(company.hiring_page_url || company.yc_url) && (
               <a
@@ -395,13 +406,37 @@ export function CompanyDrawer({
               </a>
             )}
 
-            {company.founder_email && aiPitches && (
+            {company.founder_email ? (
               <a
-                href={`mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`}
+                href={aiPitches
+                  ? `mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`
+                  : `mailto:${company.founder_email}`}
                 className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
+                title="Email address listed in the company data"
               >
                 <Mail className="w-3 h-3" /> {company.founder_email}
               </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+                <Mail className="w-3 h-3" /> No verified email listed
+              </span>
+            )}
+
+            {company.founder_linkedin ? (
+              <a
+                href={company.founder_linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-all"
+                title="LinkedIn profile listed in the company data"
+              >
+                <Linkedin className="w-3 h-3" /> Founder LinkedIn
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+                <Linkedin className="w-3 h-3" /> No verified LinkedIn listed
+              </span>
             )}
           </div>
 

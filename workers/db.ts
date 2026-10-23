@@ -1081,6 +1081,14 @@ export async function updateCompanyOutreach(
     pitchedAt = null;
   }
 
+  if (
+    nextStatus === current.outreach_status &&
+    nextNotes === current.outreach_notes &&
+    pitchedAt === current.pitched_at
+  ) {
+    return current;
+  }
+
   await env.DB.prepare(
     `UPDATE companies
      SET outreach_status = ?, outreach_notes = ?, pitched_at = ?, updated_at = ?
