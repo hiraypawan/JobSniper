@@ -4,6 +4,7 @@ export type CompanySource =
   | "wellfound"
   | "producthunt"
   | "indie"
+  | "trustmrr"
   | "hn_hiring";
 
 export type HiringProvider =
@@ -66,6 +67,12 @@ export interface NormalizedCompanyInput {
   company_linkedin_url?: string | null;
   company_email?: string | null;
   contact_checked_at?: string | null;
+  launch_date?: string | null;
+  launch_source?: string | null;
+  launch_url?: string | null;
+  trustmrr_mrr?: number | null;
+  trustmrr_last30?: number | null;
+  trustmrr_total?: number | null;
   jobs?: Omit<JobPosting, "company_id">[];
 }
 
@@ -99,6 +106,12 @@ export interface Company {
   company_linkedin_url: string | null;
   company_email: string | null;
   contact_checked_at: string | null;
+  launch_date: string | null;
+  launch_source: string | null;
+  launch_url: string | null;
+  trustmrr_mrr: number | null;
+  trustmrr_last30: number | null;
+  trustmrr_total: number | null;
   sniper_score: number;
   outreach_status: OutreachStatus;
   outreach_notes: string;

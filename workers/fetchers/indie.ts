@@ -99,6 +99,11 @@ export async function fetchIndieShowHn(
         is_funded_last_12mo: false,
         tags: ["Show HN", "Indie Builder"],
         founder_name: null,
+        launch_date: hit.created_at && Number.isFinite(Date.parse(hit.created_at))
+          ? new Date(hit.created_at).toISOString()
+          : null,
+        launch_source: hit.created_at ? "Show HN" : null,
+        launch_url: `https://news.ycombinator.com/item?id=${encodeURIComponent(hit.objectID)}`,
       });
     }
   } catch {
@@ -164,6 +169,11 @@ export async function fetchIndieShowHn(
         ],
         tech_stack: item.language ? [item.language] : [],
         founder_name: null,
+        launch_date: Number.isFinite(Date.parse(item.created_at))
+          ? new Date(item.created_at).toISOString()
+          : null,
+        launch_source: "GitHub",
+        launch_url: item.html_url,
       });
     }
   } catch {

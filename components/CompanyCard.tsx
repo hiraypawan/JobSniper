@@ -25,8 +25,17 @@ const SOURCE_BADGES: Record<string, string> = {
   wellfound: "Funded",
   producthunt: "Product Hunt",
   indie: "Indie",
+  trustmrr: "TrustMRR",
   hn_hiring: "HN Hiring",
 };
+
+function formatRevenue(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: value >= 1000 ? 0 : 2,
+  }).format(value);
+}
 
 const STATUS_META: Record<
   OutreachStatus,
@@ -153,6 +162,25 @@ export function CompanyCard({
           `${company.name} is a startup.`}
         </p>
 
+        {/* Source listing date and revenue evidence are distinct from funding. */}
+        {(company.launch_date || company.trustmrr_mrr !== null || company.trustmrr_last30 !== null || company.trustmrr_total !== null) && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[10px] text-slate-400">
+            {company.launch_date && (
+              <span className="rounded-full border border-white/10 px-2.5 py-1">
+                {company.launch_source || "Platform"} · {new Date(company.launch_date).toLocaleDateString()}
+              </span>
+            )}
+            {(company.trustmrr_mrr !== null || company.trustmrr_last30 !== null || company.trustmrr_total !== null) && (
+              <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-emerald-300">
+                TrustMRR revenue evidence
+                {company.trustmrr_mrr !== null && ` · ${formatRevenue(company.trustmrr_mrr)} MRR`}
+                {company.trustmrr_last30 !== null && ` · ${formatRevenue(company.trustmrr_last30)} last 30d`}
+                {company.trustmrr_total !== null && ` · ${formatRevenue(company.trustmrr_total)} lifetime`}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Badges */}
         <div className="mt-4 flex flex-wrap gap-2">
           {company.is_funded_last_12mo && (
@@ -214,6 +242,18 @@ export function CompanyCard({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-1 max-w-full" onClick={(e) => e.stopPropagation()}>
+          {company.launch_url && (
+            <a
+              href={company.launch_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-emerald-400 hover:bg-emerald-500/10 transition-all"
+              title={`Open the source listing${company.launch_source ? ` on ${company.launch_source}` : ""}`}
+            >
+              {company.launch_source || "Launch listing"}
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
           {hasSourceWebsite ? (
             <a
               href={company.website}

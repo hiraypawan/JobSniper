@@ -160,6 +160,7 @@ export function FilterBar({
               { value: "wellfound", label: "Funding RSS" },
               { value: "producthunt", label: "Product Hunt" },
               { value: "indie", label: "Show HN / GitHub" },
+              { value: "trustmrr", label: "TrustMRR" },
               { value: "hn_hiring", label: "HN Hiring" },
             ]}
           />

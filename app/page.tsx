@@ -7,6 +7,7 @@ import { CompanyCard } from "@/components/CompanyCard";
 import { CompanyDrawer } from "@/components/CompanyDrawer";
 import { AIJobHuntDrawer } from "@/components/AIJobHuntDrawer";
 import { FilterBar, FilterState } from "@/components/FilterBar";
+import { IndieLaunchControls, LaunchWindow } from "@/components/IndieLaunchControls";
 import { HeaderBar } from "@/components/HeaderBar";
 import { KpiStrip } from "@/components/KpiStrip";
 import { PitchSettingsModal } from "@/components/PitchSettingsModal";
@@ -100,6 +101,9 @@ export default function DashboardPage() {
   );
   const [darkMode, setDarkMode] = useState(true);
   const [activeLens, setActiveLens] = useState("all");
+  const [activeSection, setActiveSection] = useState<"leads" | "indie">("leads");
+  const [launchWindow, setLaunchWindow] = useState<LaunchWindow>("7d");
+  const [earningOnly, setEarningOnly] = useState(false);
   const latestCompaniesRequest = useRef(0);
 
   useEffect(() => {
@@ -188,16 +192,19 @@ export default function DashboardPage() {
 
       try {
         const params = new URLSearchParams({
-          source: filters.source,
-          batch: filters.batch,
-          ats: filters.ats,
-          pipeline: filters.pipeline,
-          funded12mo: String(filters.funded12mo),
-          fresh14d: String(filters.fresh14d),
-          remote: String(filters.remote),
-          hiring: String(filters.hiring),
-          smallTeam: String(filters.smallTeam),
-          sort: filters.sort,
+          source: activeSection === "indie" ? "all" : filters.source,
+          batch: activeSection === "indie" ? "all" : filters.batch,
+          ats: activeSection === "indie" ? "all" : filters.ats,
+          pipeline: activeSection === "indie" ? "all" : filters.pipeline,
+          funded12mo: String(activeSection === "indie" ? false : filters.funded12mo),
+          fresh14d: String(activeSection === "indie" ? false : filters.fresh14d),
+          remote: String(activeSection === "indie" ? false : filters.remote),
+          hiring: String(activeSection === "indie" ? false : filters.hiring),
+          smallTeam: String(activeSection === "indie" ? false : filters.smallTeam),
+          launchOnly: String(activeSection === "indie"),
+          launchWindow: activeSection === "indie" ? launchWindow : "all",
+          earningOnly: String(activeSection === "indie" && earningOnly),
+          sort: activeSection === "indie" ? "launchDate" : filters.sort,
           search: debouncedSearch,
           page: String(targetPage),
           limit: "48",
@@ -264,6 +271,9 @@ export default function DashboardPage() {
       filters.smallTeam,
       filters.sort,
       debouncedSearch,
+      activeSection,
+      launchWindow,
+      earningOnly,
     ]
   );
 
@@ -287,7 +297,7 @@ export default function DashboardPage() {
     setSyncStatusText(
       force
         ? "Fetching every source from upstream, cache ignored."
-        : "Fetching all six sources..."
+        : "Fetching all seven sources..."
     );
 
     try {
@@ -450,6 +460,12 @@ export default function DashboardPage() {
       "Founder X",
       "Founder LinkedIn",
       "Founder Email",
+      "Launch Date",
+      "Launch Source",
+      "Launch URL",
+      "TrustMRR MRR (USD)",
+      "TrustMRR Receipts Last 30d (USD)",
+      "TrustMRR Lifetime Revenue (USD)",
       "CRM Status",
     ];
     const rows = companies.map((c) => [
@@ -469,6 +485,12 @@ export default function DashboardPage() {
         c.founder_twitter || "",
         c.founder_linkedin || "",
         c.founder_email || "",
+        c.launch_date || "",
+        c.launch_source || "",
+        c.launch_url || "",
+        c.trustmrr_mrr ?? "",
+        c.trustmrr_last30 ?? "",
+        c.trustmrr_total ?? "",
         c.outreach_status,
       ].map((cell) => `"${String(cell).replace(/"/g, '""')}"`));
 
@@ -483,7 +505,13 @@ export default function DashboardPage() {
     URL.revokeObjectURL(url);
   };
 
-  const activeFilterLabels = getActiveFilterLabels(filters);
+  const activeFilterLabels = activeSection === "indie"
+    ? [
+        `Listed in the last ${launchWindow === "1d" ? "1 day" : launchWindow === "7d" ? "1 week" : launchWindow === "30d" ? "1 month" : "1 year"}`,
+        ...(earningOnly ? ["Positive TrustMRR revenue evidence"] : []),
+        ...(filters.search.trim() ? [`Search: “${filters.search.trim()}”`] : []),
+      ]
+    : getActiveFilterLabels(filters);
   const hasFilteredEmptyState = total === 0 && activeFilterLabels.length > 0;
 
   return (
@@ -501,22 +529,60 @@ export default function DashboardPage() {
       />
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <KpiStrip
-          stats={stats}
-          activeQuickLens={activeLens}
-          onSelectLens={handleSelectQuickLens}
-        />
+        <div className="flex w-fit items-center gap-1 rounded-2xl border border-white/10 bg-white/5 p-1">
+          {([
+            ["leads", "Startup & funding leads"],
+            ["indie", "Indie launches"],
+          ] as const).map(([section, label]) => (
+            <button
+              key={section}
+              type="button"
+              aria-pressed={activeSection === section}
+              onClick={() => {
+                setActiveSection(section);
+                setActiveLens("all");
+              }}
+              className={`rounded-xl px-4 py-2.5 text-xs transition ${
+                activeSection === section
+                  ? "bg-emerald-500/15 font-semibold text-emerald-300"
+                  : "text-slate-400 hover:text-slate-100"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        <FilterBar
-          filters={filters}
-          stats={stats}
-          totalResults={total}
-          onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-          onReset={() => {
-            setActiveLens("all");
-            setFilters(DEFAULT_FILTERS);
-          }}
-        />
+        {activeSection === "indie" ? (
+          <IndieLaunchControls
+            window={launchWindow}
+            earningOnly={earningOnly}
+            total={total}
+            search={filters.search}
+            onSearchChange={(search) => setFilters((prev) => ({ ...prev, search }))}
+            onWindowChange={setLaunchWindow}
+            onEarningOnlyChange={setEarningOnly}
+            onOpenSources={() => setSourcesOpen(true)}
+          />
+        ) : (
+          <>
+            <KpiStrip
+              stats={stats}
+              activeQuickLens={activeLens}
+              onSelectLens={handleSelectQuickLens}
+            />
+            <FilterBar
+              filters={filters}
+              stats={stats}
+              totalResults={total}
+              onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+              onReset={() => {
+                setActiveLens("all");
+                setFilters(DEFAULT_FILTERS);
+              }}
+            />
+          </>
+        )}
 
         {/* Startup Cards Grid */}
         <AnimatePresence>
@@ -558,7 +624,9 @@ export default function DashboardPage() {
             >
               <Crosshair className="w-10 h-10 text-emerald-500 mx-auto" />
               <h3 className="text-lg font-semibold text-slate-100">
-                {syncStatusText?.startsWith("Dashboard data error:")
+                {activeSection === "indie" && !syncStatusText?.startsWith("Dashboard data error:")
+                  ? "No indie launches match this window"
+                  : syncStatusText?.startsWith("Dashboard data error:")
                   ? "Could not load the company list"
                   : hasFilteredEmptyState
                     ? "No leads match the active filters"
@@ -591,11 +659,23 @@ export default function DashboardPage() {
                 </p>
               )}
               <div className="flex flex-wrap items-center justify-center gap-2">
+                {activeSection === "indie" && (
+                  <button
+                    type="button"
+                    onClick={() => handleSyncLive(false)}
+                    disabled={syncing}
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
+                  >
+                    Sync launch feeds
+                  </button>
+                )}
                 {hasFilteredEmptyState ? (
                   <button
                     type="button"
                     onClick={() => {
                       setFilters({ ...DEFAULT_FILTERS, funded12mo: false });
+                      setLaunchWindow("365d");
+                      setEarningOnly(false);
                       setActiveLens("all");
                     }}
                     className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
