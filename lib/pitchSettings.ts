@@ -1,7 +1,7 @@
 import { PitchSettings } from "./types";
 
 export const DEFAULT_PITCH_SETTINGS: PitchSettings = {
-  aiProvider: "gemini",
+  aiProvider: "openrouter",
   senderName: "",
   customToolIdea: "",
   similarCompanyProof: "",

@@ -207,10 +207,10 @@ export function PitchSettingsModal({
               AI provider
             </label>
             <p className="text-[10px] text-slate-500 mb-2">
-              5-Day pitches use this provider. A successful key test selects it; click Save to apply the provider and key.
+              5-Day pitches use the selected provider. When OpenRouter is selected, only free endpoints are used and the app tries another free model if one fails; no paid model is used. OpenRouter&apos;s free-tier request limits still apply. A successful key test selects the provider; click Save to apply it.
             </p>
             <select
-              value={draft.aiProvider || "gemini"}
+              value={draft.aiProvider || "openrouter"}
               onChange={(e) =>
                 setDraft({
                   ...draft,
@@ -220,7 +220,7 @@ export function PitchSettingsModal({
               className="input-field"
             >
               <option value="gemini">Gemini</option>
-              <option value="openrouter">OpenRouter</option>
+              <option value="openrouter">OpenRouter (free models)</option>
             </select>
           </div>
 

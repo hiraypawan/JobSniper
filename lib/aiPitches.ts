@@ -68,11 +68,19 @@ export function validateApiKey(
   return { valid: true };
 }
 
-/** OpenRouter model catalog (current). First 404 triggers fallback to the next. */
+/**
+ * Free-only OpenRouter candidates. The router selects a free endpoint first;
+ * explicit :free models provide deterministic fallbacks when it is unavailable
+ * or returns unusable structured output. Never put a paid model in this list.
+ */
 export const OPENROUTER_MODELS: string[] = [
-  "google/gemini-3.8-flash",
-  "openai/gpt-4o-mini",
+  "openrouter/free",
+  "xingchen-agi/xing4.0-29b-a4b:free",
+  "recursive/flint-v1.0:free",
+  "minimax/minimax-m3.1-flash:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
 ];
+const OPENROUTER_REQUEST_TIMEOUT_MS = 18000;
 
 // Gemini 1.5 Flash was shut down; use the current stable Gemini API model.
 export const GEMINI_MODEL = "gemini-3.8-flash";
@@ -156,12 +164,59 @@ export async function callGemini(
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
+function hasUsableStructuredOutput(prompt: string, text: string): boolean {
+  let value: unknown;
+  try {
+    value = extractJson(text);
+  } catch {
+    return false;
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  const hasStrings = (keys: string[]) =>
+    keys.every((key) => typeof result[key] === "string" && Boolean((result[key] as string).trim()));
+  const hasStringArrays = (keys: string[]) =>
+    keys.every((key) =>
+      Array.isArray(result[key]) &&
+      result[key].length > 0 &&
+      result[key].every((item) => typeof item === "string" && item.trim())
+    );
+
+  if (prompt.includes("angleRationale") && prompt.includes("classicSpecDm")) {
+    return hasStrings([
+      "angleRationale",
+      "proposedBuildIdea",
+      "classicSpecDm",
+      "roleHookDm",
+      "linkedinNote",
+      "emailSubject",
+      "emailBody",
+    ]);
+  }
+  if (prompt.includes("experience_bullets")) {
+    return hasStrings(["summary", "cover_letter", "subject_line"]) &&
+      hasStringArrays(["skills", "experience_bullets"]);
+  }
+  if (prompt.includes("company_questions")) {
+    return hasStringArrays([
+      "company_questions",
+      "role_questions",
+      "behavioral_questions",
+      "questions_to_ask",
+      "key_talking_points",
+    ]);
+  }
+  return Object.keys(result).length > 0;
+}
+
 export async function callOpenRouter(
   apiKey: string,
   prompt: string
 ): Promise<string> {
-  let lastError: unknown;
-  for (const model of OPENROUTER_MODELS) {
+  let lastError: AIError | null = null;
+  let onlyRateLimited = true;
+
+  for (const [index, model] of OPENROUTER_MODELS.entries()) {
     try {
       const res = await fetchWithTimeout(
         "https://openrouter.ai/api/v1/chat/completions",
@@ -179,59 +234,73 @@ export async function callOpenRouter(
             temperature: 0.7,
             max_tokens: 1500,
           }),
-        }
+        },
+        OPENROUTER_REQUEST_TIMEOUT_MS
       );
 
-      if (res.status === 404) {
-        const text = await readBodyText(res);
-        console.debug(
-          "[aiPitches] OpenRouter model 404, trying fallback",
-          model,
-          text
-        );
+      if (!res.ok) {
+        const body = await readBodyText(res);
+        if (res.status === 401 || res.status === 403) {
+          throw new AIError(`OpenRouter authentication failed: ${res.status} ${body}`, {
+            status: res.status,
+            provider: "openrouter",
+          });
+        }
+        if (res.status !== 429) onlyRateLimited = false;
         lastError = new AIError(
-          `OpenRouter model not found: ${model}`,
-          { status: 404, provider: "openrouter", retryable: true }
+          `Free OpenRouter model ${model} failed: ${res.status} ${body}`,
+          { status: res.status, provider: "openrouter", retryable: true }
         );
+        console.debug("[aiPitches] Free OpenRouter model failed; trying next", model, res.status);
         continue;
       }
 
-      if (res.status === 429) {
-        throw new AIError(`OpenRouter API error: 429 rate limited`, {
-          status: 429,
-          provider: "openrouter",
-          retryable: true,
-        });
+      const data = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string | null } }>;
+      };
+      const text = data.choices?.[0]?.message?.content;
+      if (typeof text !== "string" || !hasUsableStructuredOutput(prompt, text)) {
+        onlyRateLimited = false;
+        lastError = new AIError(
+          `Free OpenRouter model ${model} returned unreadable or incomplete JSON`,
+          { provider: "openrouter", retryable: true }
+        );
+        console.debug("[aiPitches] Free OpenRouter model returned unusable JSON; trying next", model);
+        continue;
       }
 
-      if (!res.ok) {
-        const text = await readBodyText(res);
-        throw new AIError(`OpenRouter API error: ${res.status} ${text}`, {
-          status: res.status,
-          provider: "openrouter",
-          retryable: res.status >= 500,
-        });
+      if (index > 0) {
+        console.debug("[aiPitches] Free OpenRouter fallback model succeeded:", model);
       }
-
-      const data = await res.json();
-      if (model !== OPENROUTER_MODELS[0]) {
-        console.debug("[aiPitches] OpenRouter fallback model succeeded:", model);
-      }
-      return data.choices?.[0]?.message?.content || "";
+      return text;
     } catch (err) {
-      if (err instanceof AIError && !err.retryable) throw err;
-      lastError = err;
-      // 404 falls through to next model; anything else re-throws below
-      if (!(err instanceof AIError) || err.status === 404) continue;
-      throw err;
+      if (err instanceof AIError && (err.status === 401 || err.status === 403)) throw err;
+      onlyRateLimited = false;
+      lastError = err instanceof AIError
+        ? err
+        : new AIError(
+            `Free OpenRouter model ${model} request failed: ${err instanceof Error ? err.message : String(err)}`,
+            { provider: "openrouter", retryable: true }
+          );
+      console.debug("[aiPitches] Free OpenRouter request failed; trying next", model);
     }
   }
-  throw lastError;
+
+  if (onlyRateLimited) {
+    throw new AIError(
+      "All free OpenRouter models are currently rate-limited. Retry later; no paid model was used.",
+      { status: 503, provider: "openrouter", retryable: true }
+    );
+  }
+  throw new AIError(
+    `All configured free OpenRouter models failed or returned unusable JSON. No paid model was used.${lastError ? ` Last issue: ${lastError.message}` : ""}`,
+    { provider: "openrouter", retryable: true }
+  );
 }
 
 /**
- * Run a provider call with exponential backoff on 429 (and retryable 404 model fallback
- * is already handled inside callOpenRouter).
+ * Run a provider call with exponential backoff on provider-level 429 responses.
+ * OpenRouter tries its free-only model chain inside callOpenRouter first.
  */
 async function callWithBackoff(fn: () => Promise<string>): Promise<string> {
   let attempt = 0;
@@ -552,7 +621,13 @@ export async function fetchAIText(
   try {
     return await viaProxy(provider, prompt, clientApiKey);
   } catch (proxyErr) {
-    if (clientApiKey) {
+    // Only retry directly when the same-origin proxy is missing or unreachable.
+    // Provider/model errors mean the proxy already exhausted its free-model chain;
+    // repeating it in the browser would waste the user's free request quota.
+    if (
+      clientApiKey &&
+      (proxyErr instanceof ProxyMissing || !(proxyErr instanceof AIError))
+    ) {
       console.debug(
         "[aiPitches] proxy unavailable, falling back to direct fetch",
         provider,
