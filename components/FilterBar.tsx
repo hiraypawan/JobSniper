@@ -62,7 +62,7 @@ export function FilterBar({
   ];
 
   return (
-    <section className="rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.7)] backdrop-blur-sm p-3 sm:p-4 shadow-[0_6px_24px_-10px_rgba(255,220,180,0.15)]">
+    <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-sm p-3 sm:p-4 shadow-[0_6px_24px_-10px_rgba(42,83,59,0.08)]">
       {/* Row 1: Pipeline + Search */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
@@ -81,7 +81,7 @@ export function FilterBar({
               >
                 {tab.label}
                 {typeof tab.count === "number" && tab.alert && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[var(--pastel-amber)] text-[var(--text-warm)]">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[var(--accent-soft)] text-[var(--text-warm)]">
                     {tab.count}
                   </span>
                 )}
@@ -91,7 +91,7 @@ export function FilterBar({
         </div>
 
         <div className="relative w-full lg:w-96">
-          <Search className="w-4 h-4 text-[var(--pastel-butter)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             ref={searchRef}
             type="text"
@@ -148,7 +148,7 @@ export function FilterBar({
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
           <SourceSelect
             label="Source"
             value={filters.source}
@@ -195,7 +195,7 @@ export function FilterBar({
           />
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="grid w-full grid-cols-[1fr_auto] items-end gap-2 sm:flex sm:w-auto sm:items-center sm:gap-2 sm:ml-auto">
           <span className="hidden sm:inline text-[10px] font-mono text-[var(--text-muted)]">
             {totalResults.toLocaleString()} matches
           </span>
@@ -267,17 +267,20 @@ function SourceSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <select
-      aria-label={label}
-      value={value}
-      onChange={onChange}
-      className="input-soft appearance-none pr-8 bg-white dark:bg-slate-800/40 cursor-pointer"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <label className="flex w-full min-w-0 flex-col gap-1 sm:w-36">
+      <span className="px-1 text-[10px] font-medium leading-tight text-[var(--text-muted)]">{label}</span>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={onChange}
+        className="input-soft w-full appearance-none pr-8 bg-[var(--surface-input)] cursor-pointer"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

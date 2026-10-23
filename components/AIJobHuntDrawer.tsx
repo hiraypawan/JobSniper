@@ -276,10 +276,10 @@ export function AIJobHuntDrawer({
         exit={{ opacity: 0, y: 40 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-[640px] h-[92dvh] sm:h-[85vh] sm:max-h-[85dvh] bg-white dark:bg-slate-950 border border-white/30 dark:border-slate-700/40 shadow-2xl overflow-hidden flex flex-col rounded-t-3xl sm:rounded-3xl overscroll-contain"
+        className="w-full sm:max-w-[640px] h-[92dvh] sm:h-[85vh] sm:max-h-[85dvh] bg-[var(--surface-card)] border border-[var(--border-soft)] shadow-2xl overflow-hidden flex flex-col rounded-t-2xl sm:rounded-2xl overscroll-contain"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/30 dark:border-slate-700/40 flex items-start justify-between gap-4 shrink-0 bg-white dark:bg-slate-950">
+        <div className="px-6 py-4 border-b border-[var(--border-soft)] flex items-start justify-between gap-4 shrink-0 bg-[var(--surface-card)]">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
@@ -304,20 +304,20 @@ export function AIJobHuntDrawer({
         </div>
 
         {/* Provider toggle */}
-        <div className="px-6 py-2 border-b border-white/30 dark:border-slate-700/40 bg-slate-50/50 dark:bg-slate-800/30 flex items-center gap-2 shrink-0">
+        <div className="px-6 py-2 border-b border-[var(--border-soft)] bg-[var(--surface-muted)] flex items-center gap-2 shrink-0">
           <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">AI Provider:</span>
-          <div className="inline-flex rounded-xl border border-white/30 dark:border-slate-700/40 overflow-hidden">
+          <div className="inline-flex rounded-xl border border-[var(--border-soft)] overflow-hidden">
             <button
               type="button"
               onClick={() => setAiProvider("gemini")}
-              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "gemini" ? "bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200" : "bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40"}`}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "gemini" ? "bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200" : "bg-[var(--surface-input)] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40"}`}
             >
               Gemini
             </button>
             <button
               type="button"
               onClick={() => setAiProvider("openrouter")}
-              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "openrouter" ? "bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200" : "bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40"}`}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "openrouter" ? "bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200" : "bg-[var(--surface-input)] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40"}`}
             >
               OpenRouter (free)
             </button>
@@ -352,7 +352,7 @@ export function AIJobHuntDrawer({
         )}
 
         {/* Tabs, scrolled sideways on a phone */}
-        <div className="flex gap-1 border-b border-white/30 dark:border-slate-700/40 px-3 sm:px-6 overflow-x-auto no-scrollbar shrink-0 [-webkit-overflow-scrolling:touch] overscroll-x-contain">
+        <div className="flex gap-1 border-b border-[var(--border-soft)] px-3 sm:px-6 overflow-x-auto no-scrollbar shrink-0 [-webkit-overflow-scrolling:touch] overscroll-x-contain">
           {(Object.keys(TAB_LABELS) as JobTab[]).map((tab) => {
             const LabelIcon = TAB_LABELS[tab].icon;
             const active = activeTab === tab;
@@ -420,7 +420,7 @@ export function AIJobHuntDrawer({
                     type="button"
                     onClick={() => retryTab("contacts")}
                     disabled={loading.contacts}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -432,7 +432,7 @@ export function AIJobHuntDrawer({
                   {contacts.map((c, i) => (
                     <div
                       key={i}
-                      className="p-3.5 rounded-xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30"
+                      className="p-3.5 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)]"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span
@@ -569,7 +569,7 @@ export function AIJobHuntDrawer({
                     type="button"
                     onClick={() => retryTab("resume")}
                     disabled={loading.resume}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -681,7 +681,7 @@ export function AIJobHuntDrawer({
                     type="button"
                     onClick={() => retryTab("interview")}
                     disabled={loading.interview}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -815,7 +815,7 @@ export function AIJobHuntDrawer({
                     type="button"
                     onClick={() => retryTab("salary")}
                     disabled={loading.salary}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -940,7 +940,7 @@ export function AIJobHuntDrawer({
                 })}
               </div>
 
-              <div className="rounded-xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 p-4">
+              <div className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] p-4">
                 <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
                   Where to write
                 </h4>
@@ -967,7 +967,7 @@ function getChannelClass(color: string): string {
     case "text-orange-500":
       return "border-amber-200 dark:border-amber-800/30 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/20";
     default:
-      return "border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40";
+      return "border-[var(--border-soft)] bg-[var(--surface-muted)] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40";
   }
 }
 

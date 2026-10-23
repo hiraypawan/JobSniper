@@ -42,12 +42,12 @@ export function HeaderBar({
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-[var(--pastel-peach)] flex items-center justify-center shadow-[0_4px_12px_-4px_rgba(255,200,180,0.5)]">
+          <div className="w-9 h-9 rounded-2xl bg-[var(--pastel-peach)] flex items-center justify-center shadow-[0_4px_12px_-4px_rgba(42,83,59,0.16)]">
             <Crosshair className="w-5 h-5 text-[var(--text-warm)]" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm sm:text-base font-bold tracking-tight text-[var(--text-warm)]" style={{ fontFamily: "Quicksand, sans-serif" }}>
+              <h1 className="text-sm sm:text-base font-bold tracking-tight text-[var(--text-warm)]">
                 StartupSniper
               </h1>
               {stats && (
@@ -97,7 +97,7 @@ export function HeaderBar({
             title="Data sources"
             className="inline-flex shrink-0 items-center gap-1.5 px-2.5 sm:px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-butter)]/60 text-[var(--text-warm)] hover:bg-[var(--pastel-butterSoft)] transition-all"
           >
-            <Database className="w-3.5 h-3.5 text-[var(--pastel-amber)]" />
+            <Database className="w-3.5 h-3.5 text-amber-700 dark:text-amber-300" />
             <span className="hidden sm:inline">7 Sources</span>
           </button>
 
@@ -108,7 +108,7 @@ export function HeaderBar({
             title="My 5-day offer"
             className="inline-flex shrink-0 items-center gap-1.5 px-2.5 sm:px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-lavender)]/50 text-[var(--text-warm)] hover:bg-[var(--pastel-lavenderSoft)] transition-all"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[var(--pastel-pink)]" />
+            <Sparkles className="w-3.5 h-3.5 text-pink-700 dark:text-pink-300" />
             <span className="hidden sm:inline">My 5d Offer</span>
           </button>
 
@@ -119,7 +119,7 @@ export function HeaderBar({
             className="inline-flex shrink-0 items-center gap-1.5 px-2.5 sm:px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-cyan)]/50 text-[var(--text-warm)] hover:bg-[var(--pastel-mintSoft)] transition-all"
             title="Export to CSV"
           >
-            <Download className="w-3.5 h-3.5 text-[var(--pastel-cyan)]" />
+            <Download className="w-3.5 h-3.5 text-cyan-700 dark:text-cyan-300" />
             <span className="hidden md:inline">CSV</span>
           </button>
 
@@ -130,9 +130,9 @@ export function HeaderBar({
             aria-label="Toggle theme"
           >
             {darkMode ? (
-              <Sun className="w-4 h-4 text-[var(--pastel-amber)]" />
+              <Sun className="w-4 h-4 text-amber-700 dark:text-amber-300" />
             ) : (
-              <Moon className="w-4 h-4 text-[var(--pastel-slate)]" />
+              <Moon className="w-4 h-4 text-[var(--text-muted)]" />
             )}
           </button>
         </div>

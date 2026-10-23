@@ -45,9 +45,9 @@ export function PitchSettingsModal({
           e.stopPropagation();
           handleSubmit(e);
         }}
-        className="w-full max-w-lg rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.9)] backdrop-blur-md shadow-[0_16px_40px_-12px_rgba(255,220,180,0.35)] overflow-y-auto max-h-[90vh] flex flex-col"
+        className="w-full max-w-lg rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-md shadow-[0_16px_40px_-12px_rgba(42,83,59,0.12)] overflow-y-auto max-h-[90vh] flex flex-col"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)] shrink-0 bg-[rgba(255,255,255,0.7)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)] shrink-0 bg-[var(--surface-card)]">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-lime-500" />
             <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -156,7 +156,7 @@ export function PitchSettingsModal({
           </div>
 
           {/* AI Keys (BYOK) */}
-          <div className="pt-4 border-t border-white/30 dark:border-slate-700/40 shrink-0">
+          <div className="pt-4 border-t border-[var(--border-soft)] shrink-0">
             <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-3">
               AI Provider Keys (Bring Your Own Key)
             </p>
@@ -185,7 +185,7 @@ export function PitchSettingsModal({
                       clearApiKey("gemini");
                     }}
                     disabled={!draft.geminiApiKey}
-                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-[var(--border-soft)] bg-[var(--surface-muted)] text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all"
                   >
                     Clear
                   </button>
@@ -223,7 +223,7 @@ export function PitchSettingsModal({
                       clearApiKey("openrouter");
                     }}
                     disabled={!draft.openrouterApiKey}
-                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all"
+                    className="px-3 py-2.5 rounded-xl text-xs font-medium border border-[var(--border-soft)] bg-[var(--surface-muted)] text-slate-500 disabled:opacity-50 disabled:pointer-events-none transition-all"
                   >
                     Clear
                   </button>
@@ -238,7 +238,7 @@ export function PitchSettingsModal({
           </div>
         </div>
 
-        <div className="flex items-center justify-between px-5 py-4 bg-slate-50/50 dark:bg-slate-900/80 border-t border-white/30 dark:border-slate-700/40 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 bg-slate-50/50 dark:bg-slate-900/80 border-t border-[var(--border-soft)] shrink-0">
           <button
             type="button"
             onClick={() => setDraft(DEFAULT_PITCH_SETTINGS)}
@@ -253,7 +253,7 @@ export function PitchSettingsModal({
                 e.stopPropagation();
                 onClose();
               }}
-              className="px-4 py-2.5 rounded-xl text-xs font-medium border border-white/30 dark:border-slate-700/40 bg-white dark:bg-slate-950 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all"
+              className="px-4 py-2.5 rounded-xl text-xs font-medium border border-[var(--border-soft)] bg-[var(--surface-card)] text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all"
             >
               Cancel
             </button>

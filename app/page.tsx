@@ -99,7 +99,7 @@ export default function DashboardPage() {
   const [pitchSettings, setPitchSettings] = useState<PitchSettings>(
     DEFAULT_PITCH_SETTINGS
   );
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   const [activeLens, setActiveLens] = useState("all");
   const [activeSection, setActiveSection] = useState<"leads" | "indie">("leads");
   const [launchWindow, setLaunchWindow] = useState<LaunchWindow>("7d");
@@ -151,10 +151,9 @@ export default function DashboardPage() {
         setDarkMode(true);
         document.documentElement.classList.add("dark");
       } else {
-        // Respect system preference on first visit
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        setDarkMode(prefersDark ? true : true); // default dark for branding
-        document.documentElement.classList.toggle("dark", prefersDark || true);
+        // Start in the calm, high-contrast light theme; users can opt into dark mode.
+        setDarkMode(false);
+        document.documentElement.classList.remove("dark");
       }
     } catch {
       // ignore storage errors
@@ -516,7 +515,7 @@ export default function DashboardPage() {
   const trustMrrSummary = stats?.lastSyncSummary.find((summary) => summary.source === "trustmrr");
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--bg-cream)] text-[var(--text-warm)] font-[family-name:Quicksand,sans-serif] selection:bg-pastel-peach/50">
+    <div className="min-h-screen flex flex-col bg-[var(--bg-cream)] text-[var(--text-warm)] font-sans">
       <HeaderBar
         stats={stats}
         syncing={syncing}
@@ -600,7 +599,7 @@ export default function DashboardPage() {
                   variants={cardVariants}
                   initial="hidden"
                   animate="visible"
-                  className="h-64 rounded-3xl border border-white/10 bg-white/5 p-6 animate-pulse"
+                  className="h-64 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] p-6 animate-pulse"
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-2xl bg-[var(--pastel-lavender)]" />
@@ -621,9 +620,9 @@ export default function DashboardPage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center space-y-4"
+              className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] p-8 sm:p-12 text-center space-y-4"
             >
-              <Crosshair className="w-10 h-10 text-[var(--pastel-peach)] mx-auto" />
+              <Crosshair className="w-10 h-10 text-[var(--accent)] mx-auto" />
               <h3 className="text-lg font-semibold text-[var(--text-warm)]">
                 {activeSection === "indie" && !syncStatusText?.startsWith("Dashboard data error:")
                   ? "No indie launches match this window"
@@ -667,7 +666,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => handleSyncLive(false)}
                     disabled={syncing}
-                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] transition shadow-[0_4px_16px_-4px_rgba(255,220,180,0.35)]"
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] transition shadow-[0_4px_16px_-4px_rgba(42,83,59,0.12)]"
                   >
                     Sync launch feeds
                   </button>
@@ -681,7 +680,7 @@ export default function DashboardPage() {
                       setEarningOnly(false);
                       setActiveLens("all");
                     }}
-                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                    className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition"
                   >
                     Clear filters
                   </button>
@@ -689,7 +688,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => fetchCompaniesPage(1, false)}
-                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition"
+                    className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition"
                   >
                     Retry dashboard
                   </button>
@@ -698,7 +697,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => handleSyncLive(false)}
                     disabled={syncing}
-                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] transition shadow-[0_4px_16px_-4px_rgba(255,220,180,0.35)]"
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] transition shadow-[0_4px_16px_-4px_rgba(42,83,59,0.12)]"
                   >
                     Sync live feeds
                   </button>
@@ -749,7 +748,7 @@ export default function DashboardPage() {
               type="button"
               disabled={loadingMore}
               onClick={() => fetchCompaniesPage(page + 1, true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold bg-[var(--surface-white)] border border-[var(--pastel-butter)]/40 hover:border-[var(--pastel-peach)]/50 hover:bg-[var(--pastel-peach)]/10 shadow-[0_6px_20px_-8px_rgba(255,220,180,0.3)] transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold bg-[var(--surface-white)] border border-[var(--pastel-butter)]/40 hover:border-[var(--pastel-peach)]/50 hover:bg-[var(--pastel-peach)]/10 shadow-[0_6px_20px_-8px_rgba(42,83,59,0.10)] transition-all"
             >
               {loadingMore ? (
                 <>

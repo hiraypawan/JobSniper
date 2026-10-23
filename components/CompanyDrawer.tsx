@@ -295,10 +295,10 @@ export function CompanyDrawer({
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:w-[480px] sm:max-w-[90vw] h-[92dvh] sm:h-screen max-h-[92dvh] sm:max-h-screen bg-white dark:bg-slate-950 border-t sm:border-l border-white/30 dark:border-slate-700/40 shadow-2xl overflow-y-auto flex flex-col rounded-t-3xl sm:rounded-none overscroll-contain [-webkit-overflow-scrolling:touch]"
+        className="w-full sm:w-[480px] sm:max-w-[90vw] h-[92dvh] sm:h-screen max-h-[92dvh] sm:max-h-screen bg-[var(--surface-card)] border-t sm:border-l border-[var(--border-soft)] shadow-2xl overflow-y-auto flex flex-col rounded-t-2xl sm:rounded-none overscroll-contain [-webkit-overflow-scrolling:touch]"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 px-6 py-4 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-white/30 dark:border-slate-700/40 flex items-start justify-between gap-4 shrink-0">
+        <div className="sticky top-0 z-10 px-6 py-4 bg-[var(--surface-header)] backdrop-blur-md border-b border-[var(--border-soft)] flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
@@ -328,7 +328,7 @@ export function CompanyDrawer({
                 <button
                   type="button"
                   onClick={onOpenAIJobHunt}
-                  className="ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border border-slate-200 dark:border-slate-700/40 bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all"
+                  className="ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border border-slate-200 dark:border-slate-700/40 bg-[var(--surface-input)] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all"
                   title="AI Job Hunt Assistant"
                 >
                   <Sparkles className="w-2.5 h-2.5" /> Job Hunt
@@ -375,7 +375,7 @@ export function CompanyDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl border border-white/30 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all shrink-0"
+            className="p-2 rounded-xl border border-[var(--border-soft)] hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all shrink-0"
             aria-label="Close drawer"
           >
             <X className="w-4 h-4 text-slate-500" />
@@ -517,7 +517,7 @@ export function CompanyDrawer({
           )}
 
           {/* Pitch Studio */}
-          <section className="rounded-3xl border border-lime-100 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 p-5 sm:p-6 space-y-4">
+          <section className="rounded-2xl border border-lime-100 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 p-5 sm:p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-lime-500" />
@@ -565,7 +565,7 @@ export function CompanyDrawer({
                     type="button"
                     onClick={runAiGeneration}
                     disabled={aiLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -585,7 +585,7 @@ export function CompanyDrawer({
                   className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
                     activeTab === t.id
                       ? "bg-lime-100 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800/30 text-lime-800 dark:text-lime-200 font-semibold shadow-[0_0_15px_rgba(132,204,22,0.15)]"
-                      : "bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                      : "bg-[var(--surface-input)] border border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   {t.label}
@@ -594,7 +594,7 @@ export function CompanyDrawer({
             </div>
 
             {activeTab === "email" && aiPitches && (
-              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 text-xs">
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-[var(--surface-input)] border border-[var(--border-soft)] text-xs">
                 <span className="truncate">
                   <span className="text-slate-500 dark:text-slate-400">Subject:</span>{" "}
                   {generated.emailSubject}
@@ -617,7 +617,7 @@ export function CompanyDrawer({
               rows={activeTab === "email" ? 8 : 4}
               value={aiPitches ? customPitchText : ""}
               onChange={(e) => setCustomPitchText(e.target.value)}
-              className="w-full p-3.5 rounded-xl text-xs leading-relaxed bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 focus:outline-none focus:ring-2 focus:ring-lime-200/50 dark:focus:ring-lime-400/30 transition-all disabled:opacity-50"
+              className="w-full p-3.5 rounded-xl text-xs leading-relaxed bg-[var(--surface-input)] border border-[var(--border-soft)] focus:outline-none focus:ring-2 focus:ring-lime-200/50 dark:focus:ring-lime-400/30 transition-all disabled:opacity-50"
               disabled={!aiPitches || aiLoading}
               placeholder={aiLoading
                 ? "AI is analyzing the company's product and job requirements..."
@@ -637,7 +637,7 @@ export function CompanyDrawer({
                   type="button"
                   onClick={() => handleCopyAndMark(false)}
                   disabled={!aiPitches || aiLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium border border-white/30 dark:border-slate-700/40 bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium border border-[var(--border-soft)] bg-[var(--surface-input)] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {copiedKey === "copied" ? (
                     <>
@@ -681,7 +681,7 @@ export function CompanyDrawer({
             {company.jobs && company.jobs.length > 0 ? (
               <div className="space-y-2">
                 {company.jobs.map((job) => (
-                  <div key={job.id} className="p-3 rounded-2xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 flex items-center justify-between gap-3">
+                  <div key={job.id} className="p-3 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-muted)] flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                         {job.title}
@@ -703,7 +703,7 @@ export function CompanyDrawer({
                       href={job.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-slate-900 text-white dark:text-lime-400 hover:bg-lime-100 dark:hover:bg-lime-900/20 dark:hover:text-lime-300 transition-all"
+                      className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white dark:text-slate-950 hover:bg-[var(--accent-hover)] transition-all"
                     >
                       Apply
                       <ExternalLink className="w-3 h-3" />
@@ -712,7 +712,7 @@ export function CompanyDrawer({
                 ))}
               </div>
             ) : (
-              <div className="p-4 rounded-2xl border border-dashed border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 text-xs text-slate-500 dark:text-slate-400 text-center">
+              <div className="p-4 rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--surface-muted)] text-xs text-slate-500 dark:text-slate-400 text-center">
                 No public job board found for this one. A direct pitch to the founder still works.
               </div>
             )}
@@ -741,7 +741,7 @@ export function CompanyDrawer({
             </div>
 
             {scoreDetail && (
-              <div className="mt-3 p-3.5 rounded-xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 space-y-1.5">
+              <div className="mt-3 p-3.5 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] space-y-1.5">
                 <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                   Why Score {company.sniper_score}/100
                 </div>
@@ -758,7 +758,7 @@ export function CompanyDrawer({
           </section>
 
           {/* CRM Pipeline */}
-          <section className="p-4 rounded-3xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 space-y-3">
+          <section className="p-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-muted)] space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">CRM Pipeline</h3>
               {savingNotes && (
@@ -774,8 +774,8 @@ export function CompanyDrawer({
                   onClick={() => patchOutreach({ outreach_status: opt.id })}
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                     company.outreach_status === opt.id
-                      ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-semibold border-transparent"
-                      : "bg-white dark:bg-slate-800/60 border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                      ? "bg-[var(--accent)] dark:bg-[var(--accent)] text-white dark:text-slate-950 font-semibold border-transparent"
+                      : "bg-[var(--surface-input)] border-[var(--border-soft)] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40"
                   }`}
                 >
                   {opt.label}
@@ -789,12 +789,12 @@ export function CompanyDrawer({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add Loom link, founder notes, follow-up reminder..."
-                className="w-full p-2.5 rounded-xl text-xs bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 focus:outline-none focus:ring-1 focus:ring-lime-200/50 dark:focus:ring-lime-400/30 transition-all"
+                className="w-full p-2.5 rounded-xl text-xs bg-[var(--surface-input)] border border-[var(--border-soft)] focus:outline-none focus:ring-1 focus:ring-lime-200/50 dark:focus:ring-lime-400/30 transition-all"
               />
               <button
                 type="button"
                 onClick={() => patchOutreach({ outreach_notes: notes })}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition-all"
               >
                 Save Notes
               </button>
