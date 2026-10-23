@@ -61,10 +61,10 @@ export function SourceHealthPopover({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.9)] backdrop-blur-md shadow-[0_16px_40px_-12px_rgba(255,220,180,0.3)] overflow-hidden"
+        className="w-full max-w-md rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-md shadow-[0_16px_40px_-12px_rgba(42,83,59,0.10)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)] shrink-0 bg-[rgba(255,255,255,0.6)]">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)] shrink-0 bg-[var(--surface-input)]">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-lime-500" />
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -105,7 +105,7 @@ export function SourceHealthPopover({
             return (
               <div
                 key={key}
-                className="p-3 rounded-xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.5)] flex items-start justify-between gap-3"
+                className="p-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] flex items-start justify-between gap-3"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">

@@ -82,19 +82,18 @@ export function CompanyCard({
   return (
     <article
       onClick={() => onSelect(company)}
-      className="group cursor-pointer rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-sm hover:border-[var(--pastel-peach)]/60 hover:-translate-y-1 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.18)] transition-all duration-300 p-5 flex flex-col justify-between"
-      style={{ fontFamily: "Quicksand, sans-serif" }}
+      className="group cursor-pointer rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-sm hover:border-[var(--pastel-peach)]/60 hover:-translate-y-1 hover:shadow-[0_12px_30px_-10px_rgba(0,0,0,0.18)] transition-all duration-300 p-5 flex flex-col justify-between"
     >
       <div>
         {/* Top Row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--pastel-peach)] to-[var(--pastel-butter)] flex items-center justify-center font-mono text-xs font-bold text-[var(--text-warm)] shadow-[0_4px_10px_-4px_rgba(255,220,180,0.4)] shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[var(--pastel-peach)] to-[var(--pastel-butter)] flex items-center justify-center font-mono text-xs font-bold text-[var(--text-warm)] shadow-[0_4px_10px_-4px_rgba(42,83,59,0.12)] shrink-0">
               {initials || "ST"}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="font-semibold text-sm text-[var(--text-warm)] truncate max-w-[150px] group-hover:text-[var(--pastel-amber)] transition" style={{ fontFamily: "Quicksand, sans-serif" }}>
+                <h2 className="font-semibold text-sm text-[var(--text-warm)] truncate max-w-[150px] group-hover:text-[var(--accent)] transition">
                   {company.name}
                 </h2>
                 {company.batch && (
@@ -116,7 +115,7 @@ export function CompanyCard({
           <div
             className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl border font-mono text-[10px] font-bold transition-colors ${
               company.sniper_score >= 82
-                ? "bg-[var(--pastel-mint)] border-[var(--pastel-mint)]/50 text-[var(--text-warm)]"
+                ? "bg-[var(--pastel-mintSoft)] border-[var(--pastel-mint)]/50 text-[var(--text-warm)]"
                 : company.sniper_score >= 68
                   ? "bg-[var(--pastel-cyan)]/30 border-[var(--pastel-cyan)]/40 text-[var(--text-warm)]"
                   : "bg-[var(--pastel-butter)]/30 border-[var(--pastel-butter)]/40 text-[var(--text-muted)]"
@@ -128,7 +127,7 @@ export function CompanyCard({
         </div>
 
         {/* Description */}
-        <p className="mt-4 text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed" style={{ fontFamily: "Quicksand, sans-serif" }}>
+        <p className="mt-4 text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
           {company.one_liner ||
           company.description ||
           `${company.name} is a startup.`}
@@ -182,7 +181,7 @@ export function CompanyCard({
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(event) => event.stopPropagation()}
-                    className="inline-flex items-center gap-1 font-semibold text-[var(--text-warm)] underline underline-offset-2 hover:text-[var(--pastel-amber)]"
+                    className="inline-flex items-center gap-1 font-semibold text-[var(--text-warm)] underline underline-offset-2 hover:text-[var(--accent)]"
                     title={`Open the source listing${company.launch_source ? ` on ${company.launch_source}` : ""}`}
                   >
                     Open source listing <ExternalLink className="w-3 h-3" />
@@ -200,9 +199,9 @@ export function CompanyCard({
           <button
             type="button"
             onClick={handleCopyPitch}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all shadow-[0_4px_14px_-6px_rgba(255,220,180,0.35)] ${
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all shadow-sm ${
               copied
-                ? "bg-[var(--pastel-mint)] text-[var(--text-warm)]"
+                ? "bg-[var(--accent-soft)] text-[var(--text-warm)]"
                 : "bg-[var(--pastel-butterSoft)] text-[var(--text-warm)] hover:bg-[var(--pastel-peach)] border border-[var(--pastel-butter)]/40"
             }`}
           >
@@ -222,7 +221,7 @@ export function CompanyCard({
             onClick={handleCycleSave}
             className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-[10px] font-medium border transition-all ${
               statusInfo.color.includes("mint") || statusInfo.color.includes("cyan") || statusInfo.color.includes("pink")
-                ? "bg-[var(--pastel-mintSoft)] border-[var(--pastel-mint)]/40 text-[var(--text-warm)] hover:border-[var(--pastel-peach)]/50 hover:text-[var(--pastel-amber)]"
+                ? "bg-[var(--pastel-mintSoft)] border-[var(--pastel-mint)]/40 text-[var(--text-warm)] hover:border-[var(--pastel-peach)]/50 hover:text-[var(--accent)]"
                 : "bg-[var(--pastel-butterSoft)] border border-[var(--pastel-butter)]/40 text-[var(--text-muted)] hover:bg-[var(--pastel-butter)]"
             }`}
             title="Cycle CRM status"

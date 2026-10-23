@@ -33,13 +33,13 @@ export function IndieLaunchControls({
   onOpenSources,
 }: Props) {
   return (
-    <section className="rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.7)] backdrop-blur-sm p-4 sm:p-5 space-y-4 shadow-[0_6px_24px_-10px_rgba(255,220,180,0.15)]">
+    <section className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-sm p-4 sm:p-5 space-y-4 shadow-[0_6px_24px_-10px_rgba(42,83,59,0.08)]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-[var(--text-warm)]" style={{ fontFamily: "Quicksand, sans-serif" }}>
+          <h2 className="text-base font-semibold text-[var(--text-warm)]">
             Indie product launches
           </h2>
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[var(--text-muted)]" style={{ fontFamily: "Quicksand, sans-serif" }}>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-[var(--text-muted)]">
             A separate discovery feed for solo-builder products from Product Hunt, Show HN, GitHub, and TrustMRR. Dates use each platform&apos;s publication or listing time; revenue is shown only when TrustMRR explicitly reports it. TrustMRR uses its API when configured and otherwise tries a robots-permitted public-page scrape.
           </p>
         </div>
@@ -62,7 +62,7 @@ export function IndieLaunchControls({
               onClick={() => onWindowChange(option.value)}
               className={`rounded-xl border px-3.5 py-2 text-xs transition ${
                 window === option.value
-                  ? "border-[var(--pastel-peach)]/60 bg-[var(--pastel-peach)]/20 font-semibold text-[var(--text-warm)] shadow-[0_4px_12px_-4px_rgba(255,220,180,0.35)]"
+                  ? "border-[var(--pastel-peach)]/60 bg-[var(--pastel-peach)]/20 font-semibold text-[var(--text-warm)] shadow-sm"
                   : "border-[var(--border-soft)] text-[var(--text-muted)] hover:border-[var(--pastel-butter)]/50 hover:text-[var(--text-warm)] hover:bg-[var(--pastel-butterSoft)]"
               }`}
             >
@@ -78,7 +78,7 @@ export function IndieLaunchControls({
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search launches"
             aria-label="Search indie launches"
-            className="w-44 rounded-xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.6)] px-3.5 py-2 text-xs text-[var(--text-warm)] placeholder:text-[var(--text-muted)] focus:border-[var(--pastel-peach)]/50 focus:outline-none transition-all"
+            className="w-44 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-input)] px-3.5 py-2 text-xs text-[var(--text-warm)] placeholder:text-[var(--text-muted)] focus:border-[var(--pastel-peach)]/50 focus:outline-none transition-all"
           />
           <button
             type="button"
@@ -86,7 +86,7 @@ export function IndieLaunchControls({
             onClick={() => onEarningOnlyChange(!earningOnly)}
             className={`rounded-xl border px-3.5 py-2 text-xs transition ${
               earningOnly
-                ? "border-[var(--pastel-amber)]/60 bg-[var(--pastel-amber)]/20 font-semibold text-[var(--text-warm)] shadow-[0_4px_12px_-4px_rgba(255,200,150,0.35)]"
+                ? "border-[var(--pastel-amber)]/60 bg-[var(--pastel-amber)]/20 font-semibold text-[var(--text-warm)] shadow-sm"
                 : "border-[var(--border-soft)] text-[var(--text-muted)] hover:border-[var(--pastel-butter)]/50 hover:text-[var(--text-warm)] hover:bg-[var(--pastel-butterSoft)]"
             }`}
             title="Keeps products with positive TrustMRR MRR, last-30-day receipts, or lifetime revenue"

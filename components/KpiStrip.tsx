@@ -120,7 +120,7 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
             onClick={() => onSelectLens(c.id)}
             className={`text-left p-4 rounded-3xl border transition-all duration-300 ${
               active
-                ? `${variant.border.replace("/40", "/60")} ${variant.bg.replace("Soft", "Soft")} shadow-[0_6px_20px_-8px_rgba(255,220,180,0.35)]`
+                ? `${variant.border.replace("/40", "/60")} ${variant.bg.replace("Soft", "Soft")} shadow-[0_6px_20px_-8px_rgba(42,83,59,0.12)]`
                 : `${variant.border} ${variant.bg} hover:border-[var(--pastel-peach)]/50 hover:bg-[var(--pastel-butterSoft)]`
             }`}
           >
