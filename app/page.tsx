@@ -516,7 +516,7 @@ export default function DashboardPage() {
   const trustMrrSummary = stats?.lastSyncSummary.find((summary) => summary.source === "trustmrr");
 
   return (
-    <div className={`min-h-screen flex flex-col selection:bg-emerald-500/25 ${darkMode ? "bg-obsidian-950 text-slate-100" : "bg-slate-50 text-slate-900"}`}>
+    <div className="min-h-screen flex flex-col bg-[var(--bg-cream)] text-[var(--text-warm)] font-[family-name:Quicksand,sans-serif] selection:bg-pastel-peach/50">
       <HeaderBar
         stats={stats}
         syncing={syncing}
@@ -545,8 +545,8 @@ export default function DashboardPage() {
               }}
               className={`rounded-xl px-4 py-2.5 text-xs transition ${
                 activeSection === section
-                  ? "bg-emerald-500/15 font-semibold text-emerald-300"
-                  : "text-slate-400 hover:text-slate-100"
+                  ? "bg-pastel-peach/30 font-semibold text-[var(--pastel-amber)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-warm)]"
               }`}
             >
               {label}
@@ -603,17 +603,17 @@ export default function DashboardPage() {
                   className="h-64 rounded-3xl border border-white/10 bg-white/5 p-6 animate-pulse"
                 >
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-800" />
+                    <div className="w-10 h-10 rounded-2xl bg-[var(--pastel-lavender)]" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-4 w-48 bg-slate-800 rounded" />
-                      <div className="h-3 w-32 bg-slate-800 rounded" />
+                      <div className="h-4 w-48 bg-[var(--pastel-butter)] rounded" />
+                      <div className="h-3 w-32 bg-[var(--pastel-butter)]/60 rounded" />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="h-4 w-full bg-slate-800 rounded" />
-                    <div className="h-4 w-3/4 bg-slate-800 rounded" />
+                    <div className="h-4 w-full bg-[var(--pastel-peach)/40] rounded" />
+                    <div className="h-4 w-3/4 bg-[var(--pastel-peach)/40] rounded" />
                   </div>
-                  <div className="h-8 w-24 rounded-xl bg-slate-800 mt-4" />
+                  <div className="h-8 w-24 rounded-xl bg-[var(--pastel-mint)] mt-4" />
                 </motion.div>
               ))}
             </motion.div>
@@ -623,8 +623,8 @@ export default function DashboardPage() {
               animate={{ opacity: 1, y: 0 }}
               className="rounded-3xl border border-white/10 bg-white/5 p-12 text-center space-y-4"
             >
-              <Crosshair className="w-10 h-10 text-emerald-500 mx-auto" />
-              <h3 className="text-lg font-semibold text-slate-100">
+              <Crosshair className="w-10 h-10 text-[var(--pastel-peach)] mx-auto" />
+              <h3 className="text-lg font-semibold text-[var(--text-warm)]">
                 {activeSection === "indie" && !syncStatusText?.startsWith("Dashboard data error:")
                   ? "No indie launches match this window"
                   : syncStatusText?.startsWith("Dashboard data error:")
@@ -641,7 +641,7 @@ export default function DashboardPage() {
                 </p>
               ) : hasFilteredEmptyState ? (
                 <>
-                  <p className="text-sm text-slate-400 max-w-xl mx-auto">
+                  <p className="text-sm text-[var(--text-muted)] max-w-xl mx-auto">
                     {activeSection === "indie" && earningOnly
                       ? `No matching product with positive TrustMRR-reported MRR, last-30-day receipts, or lifetime revenue is currently stored for this time window. Revenue is never estimated. ${trustMrrSummary?.note || "Run Sync launch feeds and check TrustMRR source status for API or public-scrape availability."}`
                       : (stats?.totalCompanies || 0) > 0
@@ -650,14 +650,14 @@ export default function DashboardPage() {
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl mx-auto">
                     {activeFilterLabels.map((label) => (
-                      <span key={label} className="px-2.5 py-1 rounded-full text-[10px] border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
+                      <span key={label} className="px-2.5 py-1 rounded-full text-[10px] border border-[var(--pastel-peach)]/30 bg-[var(--pastel-peach)]/20 text-[var(--text-warm)]">
                         {label}
                       </span>
                     ))}
                   </div>
                 </>
               ) : (
-                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                <p className="text-sm text-[var(--text-muted)] max-w-md mx-auto">
                   No company records are currently available. Check the feed status before forcing another upstream request.
                 </p>
               )}
@@ -667,7 +667,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => handleSyncLive(false)}
                     disabled={syncing}
-                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] transition shadow-[0_4px_16px_-4px_rgba(255,220,180,0.35)]"
                   >
                     Sync launch feeds
                   </button>
@@ -698,7 +698,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => handleSyncLive(false)}
                     disabled={syncing}
-                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition"
+                    className="px-5 py-2.5 rounded-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] transition shadow-[0_4px_16px_-4px_rgba(255,220,180,0.35)]"
                   >
                     Sync live feeds
                   </button>
@@ -706,7 +706,7 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setSourcesOpen(true)}
-                  className="px-5 py-2.5 rounded-2xl text-xs font-medium border border-emerald-500/30 bg-white/5 text-emerald-400 hover:bg-emerald-500/10 transition"
+                  className="px-5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-mint)]/40 bg-[var(--pastel-mint)]/10 text-[var(--text-warm)] hover:bg-[var(--pastel-mint)]/20 transition"
                 >
                   Check feed status
                 </button>
@@ -732,6 +732,7 @@ export default function DashboardPage() {
                 >
                   <CompanyCard
                     company={company}
+                    pitchSettings={pitchSettings}
                     onSelect={setSelectedCompany}
                     onUpdateStatus={handleUpdateCompanyStatus}
                     onCheckCompanyContacts={handleCheckCompanyContacts}
@@ -748,7 +749,7 @@ export default function DashboardPage() {
               type="button"
               disabled={loadingMore}
               onClick={() => fetchCompaniesPage(page + 1, true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 hover:border-emerald-500/50 hover:bg-emerald-500/5 shadow-xs transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-semibold bg-[var(--surface-white)] border border-[var(--pastel-butter)]/40 hover:border-[var(--pastel-peach)]/50 hover:bg-[var(--pastel-peach)]/10 shadow-[0_6px_20px_-8px_rgba(255,220,180,0.3)] transition-all"
             >
               {loadingMore ? (
                 <>
@@ -757,7 +758,7 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <>
-                  <ChevronDown className="w-4 h-4 text-emerald-500" />
+                  <ChevronDown className="w-4 h-4 text-[var(--pastel-amber)]" />
                   Load More ({companies.length} of {total.toLocaleString()})
                 </>
               )}

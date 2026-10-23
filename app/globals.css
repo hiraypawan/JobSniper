@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,80 +12,179 @@
   html {
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
-    /* Prevent horizontal scroll on mobile */
-    overflow-x: hidden;
   }
 
   body {
-    @apply bg-obsidian-950 text-slate-100 antialiased selection:bg-emerald-500/25;
+    @apply antialiased selection:bg-[#FFE4D6]/50 bg-[var(--bg-cream)] text-[var(--text-warm)] font-[family-name:var(--font-body)];
     font-feature-settings: "cv11", "ss01";
     -webkit-overflow-scrolling: touch;
-    /* iOS: prevent elastic bounce propagating behind modals */
-    overscroll-behavior-y: contain;
-    overflow-x: hidden;
   }
 
   * {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Remove 300ms tap delay on mobile + improve touch */
   button, a, [role="button"] {
     touch-action: manipulation;
-    -webkit-touch-callout: none;
-  }
-
-  /* iOS zooms into inputs under 16px, so keep the text at 16px or larger */
-  input, textarea, select {
-    font-size: 16px;
-  }
-  @media (min-width: 640px) {
-    input, textarea, select {
-      font-size: 14px;
-    }
-  }
-
-  /* Prevent iOS input zoom + stuck viewport */
-  input[type="text"], input[type="password"], input[type="number"], textarea {
-    -webkit-appearance: none;
-    appearance: none;
-  }
-
-  /* iOS: force 16px font on inputs so focusing never triggers zoom.
-     Beats utility text-sm via !important; applied only on iOS webkit. */
-  @supports (-webkit-touch-callout: none) {
-    input, textarea, select {
-      font-size: 16px !important;
-    }
   }
 }
 
 @layer components {
-  .glass-card {
-    @apply bg-white/5 dark:bg-obsidian-900/80 backdrop-blur-md border border-white/10 dark:border-obsidian-800/60 rounded-3xl shadow-2xs transition-all duration-300;
+  /* ── Pastel color tokens ── */
+  :root {
+    --pastel-lime: #C8F5C0;
+    --pastel-cyan: #C2F0F7;
+    --pastel-pink: #FAD2D8;
+    --pastel-amber: #FDE8B8;
+    --pastel-slate: #D8DCE4;
+    --pastel-red: #F5C8C8;
+    --bg-cream: #FFF8F0;
+    --surface-white: #FFFFFF;
+    --border-soft: #F0EAE3;
+    --text-warm: #5C4A42;
+    --text-muted: #A8988E;
+    --font-body: "Quicksand", sans-serif;
   }
 
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 text-slate-950 font-semibold text-sm transition-all duration-200 hover:bg-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.35)] active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  .dark {
+    --pastel-lime: #D2F8D0;
+    --pastel-cyan: #D2F0F5;
+    --pastel-pink: #FCE0E8;
+    --pastel-amber: #FDF0C8;
+    --pastel-slate: #E2E6EC;
+    --pastel-red: #F8D6D6;
+    --bg-cream: #2A2420;
+    --surface-white: #3A3430;
+    --border-soft: #4A4440;
+    --text-warm: #F5EFE8;
+    --text-muted: #B8A898;
+  }
+
+  /* ── Soothing base card ── */
+  .soft-card {
+    @apply rounded-2xl border border-white/30 dark:border-slate-700/40 bg-white dark:bg-slate-800/60 backdrop-blur-sm p-5 transition-all duration-300;
+  }
+
+  .soft-card-hover {
+    @apply soft-card hover:border-lime-200/60 dark:hover:border-lime-400/40 hover:-translate-y-1 hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_8px_24px_-6px_rgba(0,0,0,0.4)];
+  }
+
+  /* ── Buttons ── */
+  .btn-pastel {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-lime-100 dark:bg-lime-900/30 text-slate-900 dark:text-slate-100 font-semibold text-sm transition-all duration-200 hover:bg-lime-200 dark:hover:bg-lime-800/40 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-slate-300 font-semibold text-sm transition-all duration-200 hover:bg-white/10 hover:border-emerald-500/40 hover:text-emerald-400 active:scale-95;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-transparent text-slate-600 dark:text-slate-400 font-semibold text-sm transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800/40 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
   }
 
-  .input-field {
-    @apply w-full px-4 py-3 rounded-2xl bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-slate-100 placeholder-slate-500/60 text-sm transition-all duration-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40;
-    /* Ensure iOS keyboard doesn't cause viewport stuck */
-    -webkit-user-select: text;
-    user-select: text;
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-semibold text-sm transition-all duration-200 hover:border-lime-200 dark:hover:border-lime-400/40 hover:bg-lime-50 dark:hover:bg-lime-900/10 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
   }
 
-  .badge {
+  /* ── Inputs ── */
+  .input-soft {
+    @apply w-full px-4 py-3 rounded-xl bg-[rgba(255,255,255,0.8)] dark:bg-[rgba(30,35,45,0.5)] border border-[var(--border-soft)] text-[var(--text-warm)] placeholder:text-[var(--text-muted)] text-sm transition-all duration-200 focus:outline-none focus:border-[#FFE4D6] dark:focus:border-[#FFE4D6]/50 focus:ring-1 focus:ring-[#FFE4D6]/30;
+  }
+
+  .textarea-soft {
+    @apply input-soft h-32 resize-none leading-relaxed;
+  }
+
+  /* ── Badges / Tags ── */
+  .badge-soft {
     @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border transition-colors duration-200;
   }
 
-  .chip {
+  .badge-lime {
+    @apply badge-soft bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 border-lime-200 dark:border-lime-800/30;
+  }
+
+  .badge-cyan {
+    @apply badge-soft bg-cyan-100 dark:bg-cyan-900/20 text-cyan-800 dark:text-cyan-200 border-cyan-200 dark:border-cyan-800/30;
+  }
+
+  .badge-pink {
+    @apply badge-soft bg-pink-100 dark:bg-pink-900/20 text-pink-800 dark:text-pink-200 border-pink-200 dark:border-pink-800/30;
+  }
+
+  .badge-slate {
+    @apply badge-soft bg-slate-100 dark:bg-slate-800/30 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700/40;
+  }
+
+  /* ── Chips ── */
+  .chip-soft {
     @apply px-3 py-1.5 rounded-xl text-xs font-medium border transition-all duration-200 cursor-pointer select-none active:scale-95;
+  }
+
+  .chip-active {
+    @apply chip-soft bg-lime-100 dark:bg-lime-900/20 border-lime-200 dark:border-lime-400/40 text-lime-800 dark:text-lime-200;
+  }
+
+  .chip-inactive {
+    @apply chip-soft border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 hover:border-slate-300 dark:hover:border-slate-600;
+  }
+
+  /* ── KPI Card ── */
+  .kpi-card {
+    @apply rounded-3xl border border-white/30 dark:border-slate-700/40 bg-white dark:bg-slate-800/60 p-4 transition-all duration-300;
+  }
+
+  .kpi-card-lime {
+    @apply kpi-card bg-lime-50 dark:bg-lime-900/10 border-lime-100 dark:border-lime-800/30;
+  }
+
+  .kpi-card-cyan {
+    @apply kpi-card bg-cyan-50 dark:bg-cyan-900/10 border-cyan-100 dark:border-cyan-800/30;
+  }
+
+  .kpi-card-pink {
+    @apply kpi-card bg-pink-50 dark:bg-pink-900/10 border-pink-100 dark:border-pink-800/30;
+  }
+
+  .kpi-card-slate {
+    @apply kpi-card bg-slate-50 dark:bg-slate-800/30 border-slate-100 dark:border-slate-700/40;
+  }
+
+  /* ── Skeleton ── */
+  .skeleton {
+    @apply bg-slate-200 dark:bg-slate-700 rounded animate-pulse;
+  }
+
+  /* ── Sections ── */
+  .section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3;
+  }
+
+  .section-divider {
+    @apply border-t border-slate-100 dark:border-slate-700/40 my-6;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.15);
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.3);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
@@ -92,104 +193,23 @@
     text-wrap: balance;
   }
 
-  .animate-fade-in {
-    animation: fadeIn 0.4s ease-out forwards;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.5s ease-out forwards;
+  .animate-fade-up {
+    animation: fadeUp 0.5s ease-out forwards;
   }
 
   .animate-stagger-children > * {
     opacity: 0;
-    animation: fadeInUp 0.4s ease-out forwards;
-  }
-
-  /* dvh support for iOS Safari dynamic viewport */
-  .h-dvh-safe {
-    height: 100vh;
-    height: 100dvh;
-  }
-  .max-h-dvh-safe {
-    max-height: 90vh;
-    max-height: 90dvh;
+    animation: fadeUp 0.4s ease-out forwards;
   }
 }
 
-@keyframes fadeIn {
+@keyframes fadeUp {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.15);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.3);
-}
-
-/* Hide scrollbar for clean horizontal bars but keep functionality + momentum scroll on iOS */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Ensure fixed overlays handle iOS bottom bar correctly */
-@supports (height: 100dvh) {
-  .h-\[92dvh\] {
-    height: 92dvh;
-  }
-  .max-h-\[92dvh\] {
-    max-height: 92dvh;
-  }
-  .max-h-\[90dvh\] {
-    max-height: 90dvh;
-  }
-}
-
-/* Focus visible for accessibility */
-:focus-visible {
-  outline: 2px solid rgba(16, 185, 129, 0.5);
-  outline-offset: 2px;
 }

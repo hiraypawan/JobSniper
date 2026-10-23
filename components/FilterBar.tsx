@@ -58,10 +58,11 @@ export function FilterBar({
       alert: (stats?.followUpDueCount || 0) > 0,
     },
     { id: "replied", label: "Replied", count: stats?.pipelineCounts.replied },
+    { id: "applied", label: "Applied", count: stats?.pipelineCounts.applied },
   ];
 
   return (
-    <section className="rounded-3xl border border-white/10 dark:border-obsidian-800/60 bg-white/5 dark:bg-obsidian-900/80 p-3 sm:p-4 shadow-sm backdrop-blur-sm">
+    <section className="rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.7)] backdrop-blur-sm p-3 sm:p-4 shadow-[0_6px_24px_-10px_rgba(255,220,180,0.15)]">
       {/* Row 1: Pipeline + Search */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
@@ -74,13 +75,13 @@ export function FilterBar({
                 onClick={() => onChange({ pipeline: tab.id })}
                 className={`whitespace-nowrap inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                   active
-                    ? "bg-white/10 dark:bg-obsidian-800 text-white border-transparent font-semibold"
-                    : "text-slate-400 hover:bg-white/10 dark:hover:bg-obsidian-800 hover:text-slate-200 border-transparent"
+                    ? "bg-[var(--pastel-mintSoft)] border-[var(--pastel-mint)]/50 text-[var(--text-warm)] font-semibold"
+                    : "border-transparent text-[var(--text-muted)] hover:bg-[var(--pastel-butterSoft)] hover:text-[var(--text-warm)]"
                 }`}
               >
                 {tab.label}
                 {typeof tab.count === "number" && tab.alert && (
-                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-500 text-slate-950">
+                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[var(--pastel-amber)] text-[var(--text-warm)]">
                     {tab.count}
                   </span>
                 )}
@@ -90,20 +91,20 @@ export function FilterBar({
         </div>
 
         <div className="relative w-full lg:w-96">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-[var(--pastel-butter)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             ref={searchRef}
             type="text"
             value={filters.search}
             onChange={(e) => onChange({ search: e.target.value })}
-            placeholder="Search company, founder or role (Cmd K)"
-            className="w-full pl-9 pr-8 py-3 rounded-2xl text-sm border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 placeholder-slate-500/60 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40 transition-all"
+            placeholder="Search startup, founder, role... (⌘K)"
+            className="input-soft pl-10"
           />
           {filters.search && (
             <button
               type="button"
               onClick={() => onChange({ search: "" })}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-warm)]"
               aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
@@ -113,7 +114,7 @@ export function FilterBar({
       </div>
 
       {/* Row 2: Toggles + Dropdowns */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-white/10 dark:border-obsidian-800/40">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 sm:pt-4 border-t border-[var(--border-soft)]">
         <div className="flex flex-wrap items-center gap-2">
           <ToggleChip
             active={filters.funded12mo}
@@ -128,8 +129,7 @@ export function FilterBar({
                 sort: !filters.fresh14d ? "newest" : filters.sort,
               })
             }
-            label="Funded 14d"
-            title="Companies whose recorded funding date is within the last 14 days"
+            label="Fresh 14d"
           />
           <ToggleChip
             active={filters.remote}
@@ -157,11 +157,11 @@ export function FilterBar({
               { value: "all", label: "All" },
               { value: "yc", label: "Y Combinator" },
               { value: "workatastartup", label: "WAAS" },
-              { value: "wellfound", label: "Funding RSS" },
+              { value: "wellfound", label: "Wellfound" },
               { value: "producthunt", label: "Product Hunt" },
-              { value: "indie", label: "Show HN / GitHub" },
-              { value: "trustmrr", label: "TrustMRR" },
+              { value: "indie", label: "Indie / HN" },
               { value: "hn_hiring", label: "HN Hiring" },
+              { value: "trustmrr", label: "TrustMRR" },
             ]}
           />
           <SourceSelect
@@ -196,7 +196,7 @@ export function FilterBar({
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
-          <span className="hidden sm:inline text-[10px] font-mono text-slate-500">
+          <span className="hidden sm:inline text-[10px] font-mono text-[var(--text-muted)]">
             {totalResults.toLocaleString()} matches
           </span>
 
@@ -215,7 +215,7 @@ export function FilterBar({
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs text-slate-400 hover:text-white hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-xs text-[var(--text-muted)] hover:text-[var(--text-warm)] hover:bg-[var(--pastel-butterSoft)] transition-all"
             title="Reset filters"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset
@@ -230,27 +230,24 @@ function ToggleChip({
   active,
   onClick,
   label,
-  title,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
-  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title={title}
       className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${
         active
-          ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400 font-semibold"
-          : "border-transparent text-slate-500 hover:bg-white/10 dark:hover:bg-obsidian-800 hover:text-slate-300"
+          ? "bg-[var(--pastel-mintSoft)] border-[var(--pastel-mint)]/50 text-[var(--text-warm)]"
+          : "border-transparent text-[var(--text-muted)] hover:bg-[var(--pastel-butterSoft)] hover:text-[var(--text-warm)]"
       }`}
     >
       <span
         className={`w-2 h-2 rounded-full ${
-          active ? "bg-emerald-500" : "bg-slate-700"
+          active ? "bg-[var(--pastel-mint)]" : "bg-[var(--pastel-butter)]"
         }`}
       />
       {label}
@@ -274,7 +271,7 @@ function SourceSelect({
       aria-label={label}
       value={value}
       onChange={onChange}
-      className="px-3 py-2.5 rounded-xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-300 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/40 transition-all appearance-none"
+      className="input-soft appearance-none pr-8 bg-white dark:bg-slate-800/40 cursor-pointer"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>

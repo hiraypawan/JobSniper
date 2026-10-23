@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Mail,
   Linkedin,
@@ -252,7 +252,10 @@ export function AIJobHuntDrawer({
     return OUTREACH_CHANNELS.map((ch) => ({
       ...ch,
       url: ch.url
-        ? ch.url(company, primaryContact)
+        ? ch.url(
+            company,
+            contacts.find((c) => c.role === "founder") || contacts[0] || null
+          )
         : undefined,
     }));
   }, [company, contacts]);
@@ -261,7 +264,7 @@ export function AIJobHuntDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-md p-0 sm:p-6"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-6"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -273,27 +276,27 @@ export function AIJobHuntDrawer({
         exit={{ opacity: 0, y: 40 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:max-w-[640px] h-[92dvh] sm:h-[85vh] sm:max-h-[85dvh] bg-white dark:bg-obsidian-950 border border-white/10 dark:border-obsidian-800 shadow-2xl overflow-hidden flex flex-col rounded-t-3xl sm:rounded-3xl overscroll-contain"
+        className="w-full sm:max-w-[640px] h-[92dvh] sm:h-[85vh] sm:max-h-[85dvh] bg-white dark:bg-slate-950 border border-white/30 dark:border-slate-700/40 shadow-2xl overflow-hidden flex flex-col rounded-t-3xl sm:rounded-3xl overscroll-contain"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 dark:border-obsidian-800 flex items-start justify-between gap-4 shrink-0 bg-white dark:bg-obsidian-950">
+        <div className="px-6 py-4 border-b border-white/30 dark:border-slate-700/40 flex items-start justify-between gap-4 shrink-0 bg-white dark:bg-slate-950">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
                 AI Job Hunt Assistant
               </h2>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 border border-lime-200 dark:border-lime-800/30">
                 {company.name}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Find contacts, tighten your resume, get ready for the interview.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-500 hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all shrink-0"
+            className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all shrink-0"
             aria-label="Close"
           >
             <XIcon className="w-4 h-4" />
@@ -301,34 +304,34 @@ export function AIJobHuntDrawer({
         </div>
 
         {/* Provider toggle */}
-        <div className="px-6 py-2 border-b border-white/5 dark:border-obsidian-800/50 bg-slate-50/50 dark:bg-obsidian-900/30 flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">AI Provider:</span>
-          <div className="inline-flex rounded-xl border border-white/10 dark:border-obsidian-800 overflow-hidden">
+        <div className="px-6 py-2 border-b border-white/30 dark:border-slate-700/40 bg-slate-50/50 dark:bg-slate-800/30 flex items-center gap-2 shrink-0">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-slate-500 dark:text-slate-400">AI Provider:</span>
+          <div className="inline-flex rounded-xl border border-white/30 dark:border-slate-700/40 overflow-hidden">
             <button
               type="button"
               onClick={() => setAiProvider("gemini")}
-              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "gemini" ? "bg-emerald-500 text-slate-950" : "bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-obsidian-800"}`}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "gemini" ? "bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200" : "bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40"}`}
             >
               Gemini
             </button>
             <button
               type="button"
               onClick={() => setAiProvider("openrouter")}
-              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "openrouter" ? "bg-emerald-500 text-slate-950" : "bg-white dark:bg-obsidian-900 text-slate-500 hover:bg-slate-50 dark:hover:bg-obsidian-800"}`}
+              className={`px-3 py-1.5 text-xs font-medium transition-all ${aiProvider === "openrouter" ? "bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200" : "bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40"}`}
             >
               OpenRouter (free)
             </button>
           </div>
           {hasApiKey ? (
-            <span className="ml-2 text-[10px] text-emerald-600 dark:text-emerald-500 font-mono">Key set ✓</span>
+            <span className="ml-2 text-[10px] font-mono text-lime-600 dark:text-lime-400">Key set ✓</span>
           ) : (
-            <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-500 font-mono">No key</span>
+            <span className="ml-2 text-[10px] font-mono text-amber-600 dark:text-amber-400">No key</span>
           )}
         </div>
 
         {/* AI Key Setup banner */}
         {!hasApiKey && (
-          <div className="mx-6 mt-4 p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 space-y-3 shrink-0">
+          <div className="mx-6 mt-4 p-4 rounded-xl border border-amber-200 dark:border-amber-800/30 bg-amber-50 dark:bg-amber-900/5 space-y-3 shrink-0">
             <h3 className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
               No API key yet
             </h3>
@@ -341,7 +344,7 @@ export function AIJobHuntDrawer({
                 if (onOpenPitchSettings) onOpenPitchSettings();
                 else onClose();
               }}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all"
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 hover:bg-lime-200 dark:hover:bg-lime-800/40 transition-all"
             >
               Open Settings
             </button>
@@ -349,7 +352,7 @@ export function AIJobHuntDrawer({
         )}
 
         {/* Tabs, scrolled sideways on a phone */}
-        <div className="flex gap-1 border-b border-white/10 dark:border-obsidian-800 px-3 sm:px-6 overflow-x-auto no-scrollbar shrink-0 [-webkit-overflow-scrolling:touch] overscroll-x-contain">
+        <div className="flex gap-1 border-b border-white/30 dark:border-slate-700/40 px-3 sm:px-6 overflow-x-auto no-scrollbar shrink-0 [-webkit-overflow-scrolling:touch] overscroll-x-contain">
           {(Object.keys(TAB_LABELS) as JobTab[]).map((tab) => {
             const LabelIcon = TAB_LABELS[tab].icon;
             const active = activeTab === tab;
@@ -360,13 +363,13 @@ export function AIJobHuntDrawer({
                 onClick={() => setActiveTab(tab)}
                 className={`shrink-0 flex items-center gap-2 px-3 sm:px-4 py-3 text-xs font-medium transition-all border-b-2 whitespace-nowrap ${
                   active
-                    ? "border-emerald-500 text-emerald-600 dark:text-emerald-500 font-semibold"
-                    : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-white/5 dark:hover:bg-obsidian-800"
+                    ? "border-lime-400 text-lime-600 dark:text-lime-400 font-semibold"
+                    : "border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 hover:text-slate-900 dark:hover:text-white"
                 }`}
               >
                 <LabelIcon className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">{TAB_LABELS[tab].label}</span>
-                <span className="sm:hidden">{tab === "contacts" ? "Contacts" : tab === "resume" ? "Resume" : tab === "interview" ? "Interview" : "Outreach"}</span>
+                <span className="sm:hidden">{tab === "contacts" ? "Contacts" : tab === "resume" ? "Resume" : tab === "interview" ? "Interview" : tab === "salary" ? "Salary" : "Outreach"}</span>
               </button>
             );
           })}
@@ -375,7 +378,7 @@ export function AIJobHuntDrawer({
         {/* Tab body */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 overscroll-contain [-webkit-overflow-scrolling:touch]">
           {error && (
-            <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-600 dark:text-red-400">
+            <div className="rounded-xl border border-pink-100 dark:border-pink-800/30 bg-pink-50 dark:bg-pink-900/5 p-4 text-sm text-pink-600 dark:text-pink-400">
               {error}
             </div>
           )}
@@ -385,10 +388,10 @@ export function AIJobHuntDrawer({
             <section className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                     Source-listed Contacts
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     Person details are source-listed; company email and LinkedIn links are scanned from the listed website. Nothing is guessed.
                   </p>
                 </div>
@@ -396,7 +399,7 @@ export function AIJobHuntDrawer({
                   type="button"
                   onClick={findContacts}
                   disabled={loading.contacts}
-                  className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 hover:bg-emerald-500 hover:text-slate-950 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border border-lime-200 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 text-lime-600 dark:text-lime-400 hover:bg-lime-100 dark:hover:bg-lime-900/20 transition-all disabled:opacity-50 disabled:pointer-events-none"
                 >
                   {loading.contacts ? (
                     <span className="flex items-center gap-1.5">
@@ -408,16 +411,16 @@ export function AIJobHuntDrawer({
               </div>
 
               {tabErrors.contacts && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                <div className="rounded-xl border border-pink-100 dark:border-pink-800/30 bg-pink-50 dark:bg-pink-900/5 p-3 space-y-2">
                   <div className="flex items-start gap-2 text-sm">
-                    <span className="text-red-600 dark:text-red-400 font-semibold">Contacts error:</span>{" "}
-                    <span className="text-red-600 dark:text-red-400">{tabErrors.contacts}</span>
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold">Contacts error:</span>{" "}
+                    <span className="text-pink-600 dark:text-pink-400">{tabErrors.contacts}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => retryTab("contacts")}
                     disabled={loading.contacts}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -429,17 +432,17 @@ export function AIJobHuntDrawer({
                   {contacts.map((c, i) => (
                     <div
                       key={i}
-                      className="p-3.5 rounded-xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900"
+                      className="p-3.5 rounded-xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span
                           className={`text-[9px] font-bold uppercase tracking-wider ${
                             c.role === "founder"
-                              ? "text-emerald-600 dark:text-emerald-500"
+                              ? "text-lime-600 dark:text-lime-400"
                               : c.role === "hr"
-                                ? "text-sky-600 dark:text-sky-500"
+                                ? "text-cyan-600 dark:text-cyan-400"
                                 : c.role === "cto"
-                                  ? "text-violet-600 dark:text-violet-500"
+                                  ? "text-pink-600 dark:text-pink-400"
                                   : "text-slate-500"
                           }`}
                         >
@@ -449,12 +452,12 @@ export function AIJobHuntDrawer({
                           {c.source}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-sm text-slate-900 dark:text-white flex-wrap">
+                      <div className="flex items-center gap-1 text-sm text-slate-900 dark:text-slate-100 flex-wrap">
                         <span className="font-medium">{c.name}</span>
                         {c.email && (
                           <a
                             href={`mailto:${c.email}`}
-                            className="ml-1 text-emerald-600 dark:text-emerald-500 hover:text-emerald-500 font-mono text-[11px] break-all"
+                            className="ml-1 text-lime-600 dark:text-lime-400 hover:text-lime-500 dark:hover:text-lime-300 font-mono text-[11px] break-all"
                           >
                             {c.email}
                           </a>
@@ -464,7 +467,7 @@ export function AIJobHuntDrawer({
                         {c.linkedin && (
                           <a
                             href={c.linkedin}
-                            className="p-1.5 rounded-lg text-sky-600 dark:text-sky-500 hover:bg-sky-500/10 transition-all"
+                            className="p-1.5 rounded-lg text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
                             title="LinkedIn"
                           >
                             <LinkedinIcon className="w-3.5 h-3.5" />
@@ -475,7 +478,7 @@ export function AIJobHuntDrawer({
                             href={c.twitter}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-obsidian-800 transition-all"
+                            className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all"
                             title="Twitter"
                           >
                             <XIcon className="w-3 h-3" />
@@ -488,18 +491,18 @@ export function AIJobHuntDrawer({
               )}
 
               {(company.company_email || company.company_linkedin_url) && (
-                <div className="p-3.5 rounded-xl border border-sky-500/20 bg-sky-500/5 space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+                <div className="p-3.5 rounded-xl border border-cyan-100 dark:border-cyan-800/30 bg-cyan-50 dark:bg-cyan-900/5 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-300">
                     Company website contacts
                   </p>
                   <div className="flex flex-wrap gap-3 text-xs">
                     {company.company_email && (
-                      <a href={`mailto:${company.company_email}`} className="text-violet-600 dark:text-violet-400 hover:underline">
+                      <a href={`mailto:${company.company_email}`} className="text-pink-600 dark:text-pink-400 hover:underline">
                         {company.company_email}
                       </a>
                     )}
                     {company.company_linkedin_url && (
-                      <a href={company.company_linkedin_url} className="text-sky-600 dark:text-sky-400 hover:underline">
+                      <a href={company.company_linkedin_url} className="text-cyan-600 dark:text-cyan-400 hover:underline">
                         Company LinkedIn page
                       </a>
                     )}
@@ -510,7 +513,7 @@ export function AIJobHuntDrawer({
               {contacts.length === 0 && !loading.contacts && !error && (
                 <div className="text-center py-8">
                   <p className="text-xs text-slate-500">
-                    No named person is listed in the source data. Company-level links above come from the website scan. If not checked yet, close this panel and use Check company website &amp; jobs in the company drawer. The app will not guess contact details.
+                    No named person is listed in the source data. Company-level links above come from the website scan. If not checked yet, close this panel and use Check company website & jobs in the company drawer. The app will not guess contact details.
                   </p>
                 </div>
               )}
@@ -521,10 +524,10 @@ export function AIJobHuntDrawer({
           {activeTab === "resume" && (
             <section className="space-y-4">
               <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   AI Resume & Cover Letter
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   A summary, a few bullets and a cover letter for this company
                 </p>
               </div>
@@ -538,7 +541,7 @@ export function AIJobHuntDrawer({
                   value={userResume}
                   onChange={(e) => setUserResume(e.target.value)}
                   placeholder="Paste your resume or work experience here..."
-                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                  className="textarea-soft"
                 />
               </div>
 
@@ -546,7 +549,7 @@ export function AIJobHuntDrawer({
                 type="button"
                 onClick={generateResume}
                 disabled={loading.resume || !hasApiKey || !userResume.trim()}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 hover:bg-lime-200 dark:hover:bg-lime-800/40 transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading.resume ? (
                   <span className="flex items-center gap-1.5">
@@ -557,16 +560,16 @@ export function AIJobHuntDrawer({
               </button>
 
               {tabErrors.resume && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                <div className="rounded-xl border border-pink-100 dark:border-pink-800/30 bg-pink-50 dark:bg-pink-900/5 p-3 space-y-2">
                   <div className="flex items-start gap-2 text-sm">
-                    <span className="text-red-600 dark:text-red-400 font-semibold">Resume error:</span>{" "}
-                    <span className="text-red-600 dark:text-red-400">{tabErrors.resume}</span>
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold">Resume error:</span>{" "}
+                    <span className="text-pink-600 dark:text-pink-400">{tabErrors.resume}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => retryTab("resume")}
                     disabled={loading.resume}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -591,7 +594,7 @@ export function AIJobHuntDrawer({
                       {resume.skills.map((s) => (
                         <span
                           key={s}
-                          className="px-2.5 py-1 rounded-xl text-[10px] bg-white/5 dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 border border-white/10 dark:border-obsidian-800"
+                          className="px-2.5 py-1 rounded-xl text-[10px] bg-slate-50 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/40"
                         >
                           {s}
                         </span>
@@ -605,20 +608,20 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {resume.experience_bullets.map((b, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-emerald-500">▹</span>
+                          <span className="mt-0.5 text-lime-500">▹</span>
                           {b}
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                    <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2">
+                  <div className="rounded-xl border border-lime-100 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 p-4">
+                    <h4 className="text-xs font-bold text-lime-700 dark:text-lime-300 uppercase tracking-wider mb-2">
                       Cover Letter
                     </h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
                       {resume.cover_letter}
                     </p>
-                    <p className="mt-2 text-[10px] font-mono text-emerald-600 dark:text-emerald-500">
+                    <p className="mt-2 text-[10px] font-mono text-lime-600 dark:text-lime-400">
                       Subject: {resume.subject_line}
                     </p>
                   </div>
@@ -630,13 +633,15 @@ export function AIJobHuntDrawer({
           {/* INTERVIEW TAB */}
           {activeTab === "interview" && (
             <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  AI Interview Prep
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Questions this team is likely to ask, plus a few to ask them
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    AI Interview Prep
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Questions this team is likely to ask, plus a few to ask them
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -648,20 +653,7 @@ export function AIJobHuntDrawer({
                   value={roleTitle}
                   onChange={(e) => setRoleTitle(e.target.value)}
                   placeholder="e.g. Founding Engineer, Product Manager"
-                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Current Offer (optional)
-                </label>
-                <input
-                  type="text"
-                  value={currentOffer}
-                  onChange={(e) => setCurrentOffer(e.target.value)}
-                  placeholder="e.g. 95k, 100k-120k, not stated yet"
-                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                  className="input-soft"
                 />
               </div>
 
@@ -669,7 +661,7 @@ export function AIJobHuntDrawer({
                 type="button"
                 onClick={generateInterview}
                 disabled={loading.interview || !hasApiKey || !roleTitle.trim()}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 hover:bg-lime-200 dark:hover:bg-lime-800/40 transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading.interview ? (
                   <span className="flex items-center gap-1.5">
@@ -679,31 +671,17 @@ export function AIJobHuntDrawer({
                 ) : "Generate Interview Prep"}
               </button>
 
-              <button
-                type="button"
-                onClick={generateSalary}
-                disabled={loading.salary || !hasApiKey || !roleTitle.trim()}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
-              >
-                {loading.salary ? (
-                  <span className="flex items-center gap-1.5">
-                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.941l3-2.647z"></path></svg>
-                    Generating...
-                  </span>
-                ) : "Generate Salary Negotiation"}
-              </button>
-
               {tabErrors.interview && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                <div className="rounded-xl border border-pink-100 dark:border-pink-800/30 bg-pink-50 dark:bg-pink-900/5 p-3 space-y-2">
                   <div className="flex items-start gap-2 text-sm">
-                    <span className="text-red-600 dark:text-red-400 font-semibold">Interview error:</span>{" "}
-                    <span className="text-red-600 dark:text-red-400">{tabErrors.interview}</span>
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold">Interview error:</span>{" "}
+                    <span className="text-pink-600 dark:text-pink-400">{tabErrors.interview}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => retryTab("interview")}
                     disabled={loading.interview}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -719,7 +697,7 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {interview.company_questions.map((q, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-sky-500">▹</span>
+                          <span className="mt-0.5 text-cyan-500">▹</span>
                           {q}
                         </li>
                       ))}
@@ -732,7 +710,7 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {interview.role_questions.map((q, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-sky-500">▹</span>
+                          <span className="mt-0.5 text-cyan-500">▹</span>
                           {q}
                         </li>
                       ))}
@@ -745,7 +723,7 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {interview.questions_to_ask.map((q, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-emerald-500">▹</span>
+                          <span className="mt-0.5 text-lime-500">▹</span>
                           {q}
                         </li>
                       ))}
@@ -758,7 +736,7 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {interview.key_talking_points.map((p, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-violet-500">▹</span>
+                          <span className="mt-0.5 text-pink-500">▹</span>
                           {p}
                         </li>
                       ))}
@@ -774,10 +752,10 @@ export function AIJobHuntDrawer({
             <section className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                     AI Salary Negotiation
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     Target range, opener script, and walk-away number for this role
                   </p>
                 </div>
@@ -792,7 +770,7 @@ export function AIJobHuntDrawer({
                   value={roleTitle}
                   onChange={(e) => setRoleTitle(e.target.value)}
                   placeholder="e.g. Founding Engineer, Product Manager"
-                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                  className="input-soft"
                 />
               </div>
 
@@ -805,7 +783,7 @@ export function AIJobHuntDrawer({
                   value={currentOffer}
                   onChange={(e) => setCurrentOffer(e.target.value)}
                   placeholder="e.g. 95k, 100k-120k, not stated yet"
-                  className="w-full p-3 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                  className="input-soft"
                 />
               </div>
 
@@ -813,7 +791,7 @@ export function AIJobHuntDrawer({
                 type="button"
                 onClick={generateSalary}
                 disabled={loading.salary || !hasApiKey || !roleTitle.trim()}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-semibold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 hover:bg-lime-200 dark:hover:bg-lime-800/40 transition-all disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading.salary ? (
                   <span className="flex items-center gap-1.5">
@@ -824,12 +802,12 @@ export function AIJobHuntDrawer({
               </button>
 
               {tabErrors.salary && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+                <div className="rounded-xl border border-pink-100 dark:border-pink-800/30 bg-pink-50 dark:bg-pink-900/5 p-3 space-y-2">
                   <div className="flex items-start gap-2 text-sm">
-                    <span className="text-red-600 dark:text-red-400 font-semibold">
+                    <span className="text-pink-600 dark:text-pink-400 font-semibold">
                       Salary error:
                     </span>{" "}
-                    <span className="text-red-600 dark:text-red-400">
+                    <span className="text-pink-600 dark:text-pink-400">
                       {tabErrors.salary}
                     </span>
                   </div>
@@ -837,7 +815,7 @@ export function AIJobHuntDrawer({
                     type="button"
                     onClick={() => retryTab("salary")}
                     disabled={loading.salary}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -861,22 +839,22 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {salary.justification.map((j, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-emerald-500">▹</span>
+                          <span className="mt-0.5 text-lime-500">▹</span>
                           {j}
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                    <h4 className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-2">
+                  <div className="rounded-xl border border-lime-100 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 p-4">
+                    <h4 className="text-xs font-bold text-lime-700 dark:text-lime-300 uppercase tracking-wider mb-2">
                       Opener Script
                     </h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
                       {salary.opener_script}
                     </p>
                   </div>
-                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-                    <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2">
+                  <div className="rounded-xl border border-amber-100 dark:border-amber-800/30 bg-amber-50 dark:bg-amber-900/5 p-4">
+                    <h4 className="text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-2">
                       Response to Low Offer
                     </h4>
                     <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-line">
@@ -890,7 +868,7 @@ export function AIJobHuntDrawer({
                     <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
                       {salary.benefits_to_ask.map((b, i) => (
                         <li key={i} className="flex items-start gap-2">
-                          <span className="mt-0.5 text-sky-500">▹</span>
+                          <span className="mt-0.5 text-cyan-500">▹</span>
                           {b}
                         </li>
                       ))}
@@ -912,13 +890,15 @@ export function AIJobHuntDrawer({
           {/* OUTREACH TAB */}
           {activeTab === "outreach" && (
             <section className="space-y-4">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Multi-Platform Outreach
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Places founders still read their own messages
-                </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    Multi-Platform Outreach
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Places founders still read their own messages
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -932,17 +912,7 @@ export function AIJobHuntDrawer({
                     Building2: BuildingIcon,
                   };
                   const Icon = IconMap[ch.icon] || Briefcase;
-                  const channelClass = `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all border ${
-                    ch.color === "text-violet-500"
-                      ? "border-violet-500/20 bg-violet-500/5 text-violet-700 dark:text-violet-400 hover:bg-violet-500/15"
-                      : ch.color === "text-sky-500"
-                        ? "border-sky-500/20 bg-sky-500/5 text-sky-700 dark:text-sky-400 hover:bg-sky-500/15"
-                        : ch.color === "text-emerald-500"
-                          ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15"
-                          : ch.color === "text-orange-500"
-                            ? "border-orange-500/20 bg-orange-500/5 text-orange-700 dark:text-orange-400 hover:bg-orange-500/15"
-                            : "border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-white/10 dark:hover:bg-obsidian-800"
-                  }`;
+                  const channelClass = `flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all border ${getChannelClass(ch.color)}`;
                   return ch.url ? (
                     <a
                       key={ch.id}
@@ -970,15 +940,12 @@ export function AIJobHuntDrawer({
                 })}
               </div>
 
-              <div className="rounded-xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 p-4">
+              <div className="rounded-xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 p-4">
                 <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
                   Where to write
                 </h4>
-                <p className="text-xs text-slate-500">
-                  Wellfound, Otta and Built In get a fraction of the traffic
-                  LinkedIn does, so a founder is more likely to see what you
-                  send. Mention their product in the first line and skip the
-                  pitch deck.
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Wellfound, Otta and Built In get a fraction of the traffic LinkedIn does, so a founder is more likely to see what you send. Mention their product in the first line and skip the pitch deck.
                 </p>
               </div>
             </section>
@@ -987,6 +954,21 @@ export function AIJobHuntDrawer({
       </motion.div>
     </div>
   );
+}
+
+function getChannelClass(color: string): string {
+  switch (color) {
+    case "text-violet-500":
+      return "border-violet-200 dark:border-violet-800/30 bg-violet-50 dark:bg-violet-900/10 text-violet-700 dark:text-violet-300 hover:bg-violet-100 dark:hover:bg-violet-800/20";
+    case "text-sky-500":
+      return "border-cyan-200 dark:border-cyan-800/30 bg-cyan-50 dark:bg-cyan-900/10 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-100 dark:hover:bg-cyan-800/20";
+    case "text-emerald-500":
+      return "border-lime-200 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/10 text-lime-700 dark:text-lime-300 hover:bg-lime-100 dark:hover:bg-lime-800/20";
+    case "text-orange-500":
+      return "border-amber-200 dark:border-amber-800/30 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-800/20";
+    default:
+      return "border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40";
+  }
 }
 
 interface AITailoredResume {

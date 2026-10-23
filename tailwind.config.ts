@@ -11,7 +11,7 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: [
-          "Inter",
+          "Quicksand",
           "Plus Jakarta Sans",
           "ui-sans-serif",
           "system-ui",
@@ -26,7 +26,20 @@ const config: Config = {
           "monospace",
         ],
       },
-      colors: {
+        colors: {
+        pastels: {
+          cream: "#FFF8F0",
+          peach: "#FFE4D6",
+          peachSoft: "#FFF0EB",
+          mint: "#E0F5E9",
+          mintSoft: "#EBF8F1",
+          lavender: "#EAE6FA",
+          lavenderSoft: "#F3F0FF",
+          butter: "#FFF5CC",
+          butterSoft: "#FFFBE6",
+          warmDark: "#5C4A42",
+          warmMuted: "#A8988E",
+        },
         obsidian: {
           950: "#080A0F",
           900: "#0D1117",

@@ -14,13 +14,14 @@ import {
   Mail,
   MapPin,
   RefreshCw,
-  Search,
   Send,
+  Search,
   Sparkles,
   Users,
   X,
 } from "lucide-react";
 import { copyTextSafe } from "@/lib/clipboard";
+import { buildOutreachPitches } from "@/lib/pitchTemplates";
 import { computeSniperScore } from "@/lib/scoring";
 import {
   generateAIPitches,
@@ -187,14 +188,11 @@ export function CompanyDrawer({
     }
   };
 
-  // AI is the only pitch source. Errors stay visible and never fall back to
-  // generic or fabricated copy.
   const runAiGeneration = useCallback(async () => {
     if (!company?.id) return;
     const requestId = ++aiRequestId.current;
     setAiLoading(true);
     setAiError(null);
-    // Clear the previous result so no company's copy survives regeneration.
     setAiPitchState(null);
     try {
       const result = await generateAIPitches(company, pitchSettings, aiProvider);
@@ -273,7 +271,7 @@ export function CompanyDrawer({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-stretch justify-end bg-black/40 backdrop-blur-sm"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -285,21 +283,21 @@ export function CompanyDrawer({
         exit={{ opacity: 0, y: 20 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full sm:w-[480px] sm:max-w-[90vw] h-[92dvh] sm:h-screen max-h-[92dvh] sm:max-h-screen bg-white dark:bg-obsidian-950 border-t sm:border-l border-white/10 dark:border-obsidian-800 shadow-2xl overflow-y-auto flex flex-col rounded-t-3xl sm:rounded-none overscroll-contain [-webkit-overflow-scrolling:touch]"
+        className="w-full sm:w-[480px] sm:max-w-[90vw] h-[92dvh] sm:h-screen max-h-[92dvh] sm:max-h-screen bg-white dark:bg-slate-950 border-t sm:border-l border-white/30 dark:border-slate-700/40 shadow-2xl overflow-y-auto flex flex-col rounded-t-3xl sm:rounded-none overscroll-contain [-webkit-overflow-scrolling:touch]"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 px-6 py-4 bg-white/95 dark:bg-obsidian-950/95 backdrop-blur-md border-b border-white/10 dark:border-obsidian-800 flex items-start justify-between gap-4 shrink-0">
+        <div className="sticky top-0 z-10 px-6 py-4 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-white/30 dark:border-slate-700/40 flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {company.name}
               </h2>
               {company.batch && (
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-500/15 text-orange-500 border border-orange-500/30">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/30">
                   YC {company.batch}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-500 border border-emerald-500/30">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 border border-lime-200 dark:border-lime-800/30">
                 <Flame className="w-3 h-3" />
                 Score {company.sniper_score}/100
               </span>
@@ -307,18 +305,18 @@ export function CompanyDrawer({
                 type="button"
                 onClick={runAiGeneration}
                 disabled={aiLoading}
-                className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono border border-emerald-500/30 bg-emerald-500/10 text-emerald-500 transition-all disabled:opacity-60"
+                className="ml-1 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono border border-lime-200 dark:border-lime-800/30 bg-lime-100 dark:bg-lime-900/10 text-lime-800 dark:text-lime-200 transition-all disabled:opacity-60"
                 title="Generate a fresh company-specific pitch with AI"
               >
                 {aiLoading ? <RefreshCw className="w-2.5 h-2.5 animate-spin" /> : <Sparkles className="w-2.5 h-2.5" />}
                 {aiLoading ? "Writing with AI" : "Regenerate AI"}
-                {aiError && <span className="w-1.5 h-1.5 rounded-full bg-red-500" />}
+                {aiError && <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />}
               </button>
               {onOpenAIJobHunt && (
                 <button
                   type="button"
                   onClick={onOpenAIJobHunt}
-                  className="ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border bg-white dark:bg-obsidian-900 border-white/20 dark:border-obsidian-800 text-slate-500 hover:text-slate-300 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+                  className="ml-1 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-mono border border-slate-200 dark:border-slate-700/40 bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all"
                   title="AI Job Hunt Assistant"
                 >
                   <Sparkles className="w-2.5 h-2.5" /> Job Hunt
@@ -326,13 +324,13 @@ export function CompanyDrawer({
               )}
             </div>
 
-            <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 flex-wrap">
+            <div className="mt-2 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
               <button
                 type="button"
                 onClick={runLiveCheck}
                 disabled={liveChecking}
                 title="Scans the source-listed company homepage and at most one same-site contact page for published company email and LinkedIn, plus ATS jobs"
-                className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 hover:underline disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 text-lime-600 dark:text-lime-400 hover:underline disabled:opacity-60"
               >
                 <RefreshCw className={`w-3 h-3 ${liveChecking ? "animate-spin" : ""}`} />
                 {liveChecking ? "Checking company site & jobs…" : "Check company website & jobs"}
@@ -343,7 +341,7 @@ export function CompanyDrawer({
                   liveBadge.startsWith("Could not reach") ||
                   liveBadge.startsWith("Site was unavailable")
                     ? "text-amber-600 dark:text-amber-400"
-                    : "text-emerald-500"
+                    : "text-lime-600 dark:text-lime-400"
                 }`}>
                   {liveBadge.startsWith("Check failed") ? "!" : "✓"} {liveBadge}
                 </span>
@@ -365,7 +363,7 @@ export function CompanyDrawer({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-xl border border-white/10 dark:border-obsidian-800 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all shrink-0"
+            className="p-2 rounded-xl border border-white/30 dark:border-slate-700/40 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all shrink-0"
             aria-label="Close drawer"
           >
             <X className="w-4 h-4 text-slate-500" />
@@ -381,7 +379,7 @@ export function CompanyDrawer({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="Website URL listed by a data source; not independently verified"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-semibold bg-slate-900 dark:bg-obsidian-900 text-white dark:text-white hover:opacity-90 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800/30 text-slate-900 dark:text-white hover:opacity-90 transition-all"
               >
                 <Globe className="w-3.5 h-3.5" />
                 Source website · {company.domain}
@@ -392,7 +390,7 @@ export function CompanyDrawer({
                 href={officialWebsiteSearchUrl(company.name)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-sky-600 dark:text-sky-400 border border-sky-500/20 hover:bg-sky-500/10 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs text-cyan-600 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800/30 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
                 title="Search the web for the official website; results are not verified"
               >
                 <Search className="w-3.5 h-3.5" /> Search official website
@@ -404,7 +402,7 @@ export function CompanyDrawer({
                 href={company.hiring_page_url || `${company.yc_url}/jobs`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/25 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-semibold bg-lime-50 dark:bg-lime-900/10 text-lime-600 dark:text-lime-400 border border-lime-200 dark:border-lime-800/30 hover:bg-lime-100 dark:hover:bg-lime-800/20 transition-all"
               >
                 <Briefcase className="w-3.5 h-3.5" />
                 Careers ({company.open_roles_count})
@@ -422,7 +420,7 @@ export function CompanyDrawer({
                 href={company.yc_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-500 hover:bg-orange-500/20 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-orange-200 dark:border-orange-800/30 bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-800/20 transition-all"
               >
                 <Building2 className="w-3.5 h-3.5" /> YC Profile
               </a>
@@ -431,13 +429,13 @@ export function CompanyDrawer({
             {company.company_email ? (
               <a
                 href={`mailto:${company.company_email}`}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-pink-200 dark:border-pink-800/30 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/10 transition-all"
                 title="Company email published on the company's own website"
               >
                 <Mail className="w-3 h-3" /> Company email: {company.company_email}
               </a>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs text-slate-500 border border-slate-200 dark:border-slate-700/40">
                 <Mail className="w-3 h-3" />
                 {company.contact_checked_at ? "No company email found on scanned pages" : "Company email not fetched yet"}
               </span>
@@ -448,7 +446,7 @@ export function CompanyDrawer({
                 href={aiPitches
                   ? `mailto:${company.founder_email}?subject=${encodeURIComponent(generated.emailSubject)}&body=${encodeURIComponent(generated.emailBody)}`
                   : `mailto:${company.founder_email}`}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-violet-500/20 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-pink-200 dark:border-pink-800/30 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/10 transition-all"
                 title="Founder email listed in source data; verify before contacting"
               >
                 <Mail className="w-3 h-3" /> Founder email: {company.founder_email}
@@ -458,14 +456,14 @@ export function CompanyDrawer({
             {company.company_linkedin_url ? (
               <a
                 href={company.company_linkedin_url}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-cyan-200 dark:border-cyan-800/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
                 title="Company LinkedIn page found on the official website; your phone may open the LinkedIn app"
               >
                 <Linkedin className="w-3.5 h-3.5" /> Company LinkedIn page
                 <ExternalLink className="w-3 h-3" />
               </a>
             ) : (
-              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-slate-500 border border-slate-200 dark:border-obsidian-800">
+              <span className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs text-slate-500 border border-slate-200 dark:border-slate-700/40">
                 <Linkedin className="w-3.5 h-3.5" />
                 {company.contact_checked_at ? "No company LinkedIn link found on scanned pages" : "Company LinkedIn not fetched yet"}
               </span>
@@ -474,7 +472,7 @@ export function CompanyDrawer({
             {company.founder_linkedin && (
               <a
                 href={company.founder_linkedin}
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-xl text-xs font-medium border border-cyan-200 dark:border-cyan-800/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/10 transition-all"
                 title="Open the source-listed founder profile; your phone may open the LinkedIn app"
               >
                 <Linkedin className="w-3 h-3" /> Founder profile
@@ -482,20 +480,20 @@ export function CompanyDrawer({
               </a>
             )}
           </div>
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
             Company email and LinkedIn are extracted only from the source-listed website's homepage/contact pages. Founder contacts remain separately labeled source data; verify before contacting. Missing details are never guessed.
           </p>
 
           {/* Pitch Studio */}
-          <section className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/5 p-5 sm:p-6 space-y-4">
+          <section className="rounded-3xl border border-lime-100 dark:border-lime-800/30 bg-lime-50 dark:bg-lime-900/5 p-5 sm:p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-500" />
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                <Sparkles className="w-4 h-4 text-lime-500" />
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   AI Outreach Studio
                 </h3>
               </div>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-500">
+              <span className="text-[10px] font-mono text-lime-600 dark:text-lime-400">
                 {aiPitches
                   ? aiPitches.angleRationale
                   : aiLoading
@@ -503,7 +501,7 @@ export function CompanyDrawer({
                     : "AI pitch is waiting for a successful generation."}
                 {aiPitches && (
                   <>
-                    • <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ AI-generated ({aiProvider})</span>
+                    • <span className="text-lime-600 dark:text-lime-400 font-semibold">✓ AI-generated ({aiProvider})</span>
                   </>
                 )}
               </span>
@@ -516,17 +514,17 @@ export function CompanyDrawer({
             )}
 
             {aiError && (
-              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+              <div className="rounded-xl border border-pink-100 dark:border-pink-800/30 bg-pink-50 dark:bg-pink-900/5 p-3 space-y-2">
                 <div className="flex items-start gap-2">
-                  <span className="text-red-600 dark:text-red-400 font-semibold">AI ({aiError.provider}) error:</span>
-                  <span className="text-xs text-red-600 dark:text-red-400 leading-none">{aiError.message}</span>
+                  <span className="text-pink-600 dark:text-pink-400 font-semibold">AI ({aiError.provider}) error:</span>
+                  <span className="text-xs text-pink-600 dark:text-pink-400 leading-none">{aiError.message}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {onOpenPitchSettings && (
                     <button
                       type="button"
                       onClick={onOpenPitchSettings}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-pink-200 dark:border-pink-800/30 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-900/10 transition-all"
                     >
                       Open Settings
                     </button>
@@ -535,7 +533,7 @@ export function CompanyDrawer({
                     type="button"
                     onClick={runAiGeneration}
                     disabled={aiLoading}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/10 dark:border-obsidian-800 text-slate-600 dark:text-slate-400 hover:bg-white/5 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50"
                   >
                     Retry
                   </button>
@@ -554,8 +552,8 @@ export function CompanyDrawer({
                   onClick={() => setActiveTab(t.id)}
                   className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all ${
                     activeTab === t.id
-                      ? "bg-emerald-500 text-slate-950 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.25)]"
-                      : "bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      ? "bg-lime-100 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800/30 text-lime-800 dark:text-lime-200 font-semibold shadow-[0_0_15px_rgba(132,204,22,0.15)]"
+                      : "bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                   }`}
                 >
                   {t.label}
@@ -564,9 +562,9 @@ export function CompanyDrawer({
             </div>
 
             {activeTab === "email" && aiPitches && (
-              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 text-xs">
+              <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 text-xs">
                 <span className="truncate">
-                  <span className="text-slate-500">Subject:</span>{" "}
+                  <span className="text-slate-500 dark:text-slate-400">Subject:</span>{" "}
                   {generated.emailSubject}
                 </span>
                 <button
@@ -576,7 +574,7 @@ export function CompanyDrawer({
                     setCopiedKey("subject");
                     setTimeout(() => setCopiedKey(null), 1500);
                   }}
-                  className="text-emerald-600 dark:text-emerald-500 font-semibold shrink-0 hover:text-emerald-500 transition"
+                  className="text-lime-600 dark:text-lime-400 font-semibold shrink-0 hover:text-lime-500 dark:hover:text-lime-300 transition"
                 >
                   {copiedKey === "subject" ? "✓ Copied" : "Copy"}
                 </button>
@@ -587,18 +585,18 @@ export function CompanyDrawer({
               rows={activeTab === "email" ? 8 : 4}
               value={aiPitches ? customPitchText : ""}
               onChange={(e) => setCustomPitchText(e.target.value)}
+              className="w-full p-3.5 rounded-xl text-xs leading-relaxed bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 focus:outline-none focus:ring-2 focus:ring-lime-200/50 dark:focus:ring-lime-400/30 transition-all disabled:opacity-50"
               disabled={!aiPitches || aiLoading}
               placeholder={aiLoading
                 ? "AI is analyzing the company's product and job requirements..."
                 : "AI-generated copy appears here when generation succeeds."}
-              className="w-full p-3.5 rounded-2xl text-xs leading-relaxed bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all disabled:opacity-70"
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-mono text-slate-500">
+              <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
                 {customPitchText.length} chars
                 {activeTab === "linkedin" && customPitchText.length <= 300 && (
-                  <span className="ml-2 text-emerald-600 dark:text-emerald-500">Fits LinkedIn limit ✓</span>
+                  <span className="ml-2 text-lime-600 dark:text-lime-400">Fits LinkedIn limit ✓</span>
                 )}
               </span>
 
@@ -607,11 +605,11 @@ export function CompanyDrawer({
                   type="button"
                   onClick={() => handleCopyAndMark(false)}
                   disabled={!aiPitches || aiLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white dark:bg-obsidian-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-obsidian-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium border border-white/30 dark:border-slate-700/40 bg-white dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {copiedKey === "copied" ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      <Check className="w-3.5 h-3.5 text-lime-500" />
                       Copied
                     </>
                   ) : (
@@ -625,7 +623,7 @@ export function CompanyDrawer({
                   type="button"
                   onClick={() => handleCopyAndMark(true)}
                   disabled={!aiPitches || aiLoading}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-200 hover:bg-lime-200 dark:hover:bg-lime-800/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3 h-3" />
                   {copiedKey === "marked" ? "Copied & Marked" : "Copy & Mark Pitched"}
@@ -637,12 +635,12 @@ export function CompanyDrawer({
           {/* Open Roles */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-emerald-500" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-lime-500" />
                 Open Roles ({company.jobs?.length || company.open_roles_count})
               </h3>
               {company.hiring_provider && (
-                <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-md bg-slate-700/20 text-slate-500 border border-slate-700/40">
+                <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-md bg-slate-700/20 text-slate-500 dark:text-slate-400 border border-slate-700/40">
                   {company.hiring_provider}
                 </span>
               )}
@@ -651,20 +649,20 @@ export function CompanyDrawer({
             {company.jobs && company.jobs.length > 0 ? (
               <div className="space-y-2">
                 {company.jobs.map((job) => (
-                  <div key={job.id} className="p-3 rounded-2xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 flex items-center justify-between gap-3">
+                  <div key={job.id} className="p-3 rounded-2xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                      <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                         {job.title}
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-500 mt-0.5">
+                      <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                         {job.remote && (
-                          <span className="text-sky-600 dark:text-sky-400 font-medium">Remote</span>
+                          <span className="text-cyan-600 dark:text-cyan-400 font-medium">Remote</span>
                         )}
                         {job.location && <span>{job.location}</span>}
                         {job.department && <span>· {job.department}</span>}
                       </div>
                       {job.description && (
-                        <p className="text-[10px] leading-relaxed text-slate-500 mt-1 max-h-8 overflow-hidden">
+                        <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400 mt-1 max-h-8 overflow-hidden">
                           {job.description}
                         </p>
                       )}
@@ -673,7 +671,7 @@ export function CompanyDrawer({
                       href={job.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-obsidian-900 text-white dark:text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-300 transition-all"
+                      className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-slate-900 text-white dark:text-lime-400 hover:bg-lime-100 dark:hover:bg-lime-900/20 dark:hover:text-lime-300 transition-all"
                     >
                       Apply
                       <ExternalLink className="w-3 h-3" />
@@ -682,7 +680,7 @@ export function CompanyDrawer({
                 ))}
               </div>
             ) : (
-              <div className="p-4 rounded-2xl border border-dashed border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 text-xs text-slate-500 text-center">
+              <div className="p-4 rounded-2xl border border-dashed border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 text-xs text-slate-500 dark:text-slate-400 text-center">
                 No public job board found for this one. A direct pitch to the founder still works.
               </div>
             )}
@@ -690,8 +688,8 @@ export function CompanyDrawer({
 
           {/* Overview */}
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Overview</h3>
-            <p className="text-xs text-slate-500 leading-relaxed whitespace-pre-line">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Overview</h3>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-line">
               {company.description}
             </p>
 
@@ -701,7 +699,7 @@ export function CompanyDrawer({
                   (tag) => (
                     <span
                       key={tag}
-                      className="px-2.5 py-1 rounded-xl text-[10px] bg-white/5 dark:bg-obsidian-900 text-slate-500 border border-white/10 dark:border-obsidian-800"
+                      className="px-2.5 py-1 rounded-xl text-[10px] bg-slate-50 dark:bg-slate-800/30 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/40"
                     >
                       {tag}
                     </span>
@@ -711,14 +709,14 @@ export function CompanyDrawer({
             </div>
 
             {scoreDetail && (
-              <div className="mt-3 p-3.5 rounded-2xl bg-white/5 dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 space-y-1.5">
-                <div className="text-xs font-semibold text-slate-900 dark:text-white">
+              <div className="mt-3 p-3.5 rounded-xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 space-y-1.5">
+                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                   Why Score {company.sniper_score}/100
                 </div>
                 {scoreDetail.breakdown.map((b) => (
-                  <div key={b.label} className="flex items-center justify-between text-[10px] text-slate-500">
+                  <div key={b.label} className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
                     <span>• {b.label}</span>
-                    <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <span className="font-mono text-lime-600 dark:text-lime-400 font-semibold">
                       +{b.points}
                     </span>
                   </div>
@@ -728,11 +726,11 @@ export function CompanyDrawer({
           </section>
 
           {/* CRM Pipeline */}
-          <section className="p-4 rounded-3xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 space-y-3">
+          <section className="p-4 rounded-3xl border border-white/30 dark:border-slate-700/40 bg-white/5 dark:bg-slate-800/30 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">CRM Pipeline</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">CRM Pipeline</h3>
               {savingNotes && (
-                <span className="text-[10px] font-mono text-emerald-500">Saving...</span>
+                <span className="text-[10px] font-mono text-lime-500">Saving...</span>
               )}
             </div>
 
@@ -745,7 +743,7 @@ export function CompanyDrawer({
                   className={`px-3 py-1.5 rounded-xl text-xs font-medium border transition-all ${
                     company.outreach_status === opt.id
                       ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 font-semibold border-transparent"
-                      : "bg-white dark:bg-obsidian-950 border-white/10 dark:border-obsidian-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-obsidian-800"
+                      : "bg-white dark:bg-slate-800/60 border-white/30 dark:border-slate-700/40 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/40"
                   }`}
                 >
                   {opt.label}
@@ -759,7 +757,7 @@ export function CompanyDrawer({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add Loom link, founder notes, follow-up reminder..."
-                className="w-full p-2.5 rounded-xl text-xs bg-white dark:bg-obsidian-900 border border-white/10 dark:border-obsidian-800 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 transition-all"
+                className="w-full p-2.5 rounded-xl text-xs bg-white dark:bg-slate-800/60 border border-white/30 dark:border-slate-700/40 focus:outline-none focus:ring-1 focus:ring-lime-200/50 dark:focus:ring-lime-400/30 transition-all"
               />
               <button
                 type="button"

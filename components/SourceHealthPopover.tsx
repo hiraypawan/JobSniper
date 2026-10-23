@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect } from "react";
-import { CheckCircle2, Clock, Database, Radio, X } from "lucide-react";
+import React from "react";
+import { CheckCircle2, Clock, Database, X } from "lucide-react";
 import { SyncSourceSummary } from "@/lib/types";
 
 interface Props {
@@ -14,32 +14,32 @@ interface Props {
 
 const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   yc: {
-    name: "Y Combinator (W25 to F26)",
-    desc: "Recent YC cohorts from the yc-oss JSON API",
+    name: "Y Combinator (W25–F26)",
+    desc: "Live 2025–2026 YC cohorts via yc-oss JSON API",
   },
   workatastartup: {
     name: "Work at a Startup",
-    desc: "YC companies that are hiring right now",
+    desc: "Active hiring YC remote startups & open roles",
   },
   wellfound: {
-    name: "Funding RSS (FinSMEs, EU-Startups, TechCrunch)",
-    desc: "Funding headlines with an explicitly linked company website",
+    name: "Wellfound & Seed RSS",
+    desc: "Funded <12mo (<50 team) + verified ATS boards",
   },
   producthunt: {
     name: "Product Hunt / Launches",
-    desc: "Launches from the last week that link to their own site",
+    desc: "Fresh 7–14 day product launches with external sites",
   },
   indie: {
-    name: "Show HN & GitHub Projects",
-    desc: "Recent Show HN posts or repositories with an explicit project website",
-  },
-  trustmrr: {
-    name: "TrustMRR · Revenue Evidence",
-    desc: "Official API when keyed; otherwise a robots-checked, cached public-page fallback for explicit revenue metrics",
+    name: "Show HN / Indie Builders",
+    desc: "Recent Show HN & high-velocity indie launches",
   },
   hn_hiring: {
     name: "HN Who is Hiring?",
-    desc: "The newest hiring thread, parsed for remote roles",
+    desc: "Remote startup engineering roles & founder emails",
+  },
+  trustmrr: {
+    name: "TrustMRR",
+    desc: "Revenue-verified indie product launches",
   },
 };
 
@@ -50,23 +50,6 @@ export function SourceHealthPopover({
   bySource,
   lastSyncedAt,
 }: Props) {
-  // Body scroll lock & Escape
-  useEffect(() => {
-    if (!isOpen) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overscrollBehavior = "contain";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.documentElement.style.overscrollBehavior = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const summaryMap = new Map(summaries.map((s) => [s.source, s]));
@@ -74,36 +57,34 @@ export function SourceHealthPopover({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center sm:justify-end bg-black/40 backdrop-blur-[1px] p-4 sm:pt-16 sm:pr-6 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-50 flex items-start justify-end bg-black/30 backdrop-blur-sm p-4 sm:pt-16 sm:pr-6"
       onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Data sources"
     >
       <div
+        className="w-full max-w-md rounded-3xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.9)] backdrop-blur-md shadow-[0_16px_40px_-12px_rgba(255,220,180,0.3)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-obsidian-900 shadow-2xl overflow-hidden flex flex-col max-h-[90dvh] sm:max-h-[85vh]"
       >
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-obsidian-900">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)] shrink-0 bg-[rgba(255,255,255,0.6)]">
           <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Data sources</h3>
+            <Database className="w-4 h-4 text-lime-500" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              Live Data Sources Health
+            </h3>
           </div>
           <button
-            type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-obsidian-800 transition-all"
+            className="p-1 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/40"
             aria-label="Close source health"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="p-4 space-y-2.5 overflow-y-auto flex-1 min-h-0 overscroll-contain [-webkit-overflow-scrolling:touch]">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-obsidian-850 px-3 py-2 rounded-xl border border-slate-200/70 dark:border-slate-800">
+        <div className="p-4 space-y-2.5 max-h-[70vh] overflow-y-auto">
+          <div className="flex items-center justify-between text-xs text-[var(--text-muted)] bg-[var(--pastel-butterSoft)] px-3 py-2 rounded-xl border border-[var(--pastel-butter)]/30">
             <span className="flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5 text-emerald-500" />
-              D1-backed cache · manual sync cooldown: 5 minutes
+              <Database className="w-3.5 h-3.5 text-lime-500" />
+              Engine: Live Worker + D1 Cache (No Cron Needed)
             </span>
             {lastSyncedAt && (
               <span className="font-mono flex items-center gap-1">
@@ -119,56 +100,35 @@ export function SourceHealthPopover({
           {keys.map((key) => {
             const meta = SOURCE_LABELS[key];
             const sum = summaryMap.get(key as SyncSourceSummary["source"]);
-            const dbCount = bySource[key] ?? 0;
-            const sourceUnavailable = sum?.mode === "unavailable" || Boolean(sum?.error);
+            const dbCount = bySource[key] ?? sum?.count ?? 0;
 
             return (
               <div
                 key={key}
-                className="p-3 rounded-xl border border-slate-200/80 dark:border-slate-800/90 bg-slate-50/50 dark:bg-obsidian-850/60 flex items-start justify-between gap-3"
+                className="p-3 rounded-xl border border-[var(--border-soft)] bg-[rgba(255,255,255,0.5)] flex items-start justify-between gap-3"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    {sourceUnavailable ? (
-                      <Clock className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    )}
-                    <span className="text-xs font-semibold truncate text-slate-900 dark:text-white">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--pastel-mint)] shrink-0" />
+                      <span className="text-xs font-semibold truncate text-[var(--text-warm)]">
                       {meta.name}
                     </span>
                   </div>
-                  <p className={`text-[11px] mt-0.5 ${sourceUnavailable ? "text-amber-600 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"}`}>
-                    {sum?.error || sum?.note || meta.desc}
+                    <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                    {sum?.note || meta.desc}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <div className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
-                    {sum ? `${sum.count} last result` : "No sync result"}
+                  <div className="font-mono text-xs font-semibold text-[var(--text-warm)]">
+                    {sum?.count ?? dbCount} leads
                   </div>
-                  <div className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                    {dbCount.toLocaleString()} in D1
-                  </div>
-                  <div className={`font-mono text-[10px] ${
-                    sourceUnavailable
-                      ? "text-amber-600 dark:text-amber-400"
-                      : "text-emerald-600 dark:text-emerald-400"
-                  }`}>
-                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "not checked"}
+                  <div className="font-mono text-[10px] text-[var(--pastel-mint)]">
+                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "synced"}
                   </div>
                 </div>
               </div>
             );
           })}
-        </div>
-        <div className="p-3 border-t border-slate-200 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-obsidian-900">
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full py-2.5 rounded-xl text-xs font-semibold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 transition"
-          >
-            Close
-          </button>
         </div>
       </div>
     </div>

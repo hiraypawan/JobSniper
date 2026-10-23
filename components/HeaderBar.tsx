@@ -37,32 +37,28 @@ export function HeaderBar({
   onOpenPitchSettings,
   onExportCsv,
 }: Props) {
-  const statusIsWarning = /^(Dashboard data error|Live sync failed|No startup|No startups|Sync finished|Sync skipped|Sync checked)/.test(
-    syncStatusText ?? ""
-  );
-
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-obsidian-800/60 bg-white/90 dark:bg-obsidian-950/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-[var(--border-soft)] bg-[rgba(255,248,240,0.85)] backdrop-blur-md">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-            <Crosshair className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-2xl bg-[var(--pastel-peach)] flex items-center justify-center shadow-[0_4px_12px_-4px_rgba(255,200,180,0.5)]">
+            <Crosshair className="w-5 h-5 text-[var(--text-warm)]" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              <h1 className="text-sm sm:text-base font-bold tracking-tight text-[var(--text-warm)]" style={{ fontFamily: "Quicksand, sans-serif" }}>
                 StartupSniper
               </h1>
               {stats && (
-                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-slate-100 dark:bg-obsidian-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-obsidian-800">
+                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium text-[var(--text-muted)] bg-[var(--pastel-butterSoft)] border border-[var(--pastel-butter)]/40">
                   {stats.totalCompanies.toLocaleString()} startups
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-slate-500">
-              Startup leads &middot; Filter by funding, remote work &amp; hiring &middot; Last checked{" "}
-              <span className="font-mono text-slate-400">
+            <p className="text-[10px] text-[var(--text-muted)]">
+              Fresh funded {'<12mo'} &amp; verified ATS hiring · Updated{" "}
+              <span className="font-mono text-[var(--text-muted)]">
                 {formatTimeAgo(stats?.lastSyncedAt ?? null)}
               </span>
             </p>
@@ -71,12 +67,12 @@ export function HeaderBar({
 
         {/* Actions */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-2xl shadow-sm">
+          <div className="inline-flex rounded-2xl shadow-[0_4px_14px_-4px_rgba(255,220,180,0.35)]">
             <button
               type="button"
               disabled={syncing}
               onClick={() => onSyncLive(false)}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-l-2xl text-xs font-semibold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-60 disabled:pointer-events-none transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-l-2xl text-xs font-semibold bg-[var(--pastel-peach)] text-[var(--text-warm)] hover:bg-[var(--pastel-butter)] disabled:opacity-50 transition-all shadow-[0_4px_12px_-4px_rgba(255,220,180,0.4)]"
               title="Sync live feeds on demand"
             >
               <Zap className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
@@ -86,8 +82,8 @@ export function HeaderBar({
               type="button"
               disabled={syncing}
               onClick={() => onSyncLive(true)}
-              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-r-2xl text-xs font-mono font-semibold bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-60 disabled:pointer-events-none border-l border-emerald-700/40 transition-all"
-              title="Bypass source cache for a fresh upstream check. A global cooldown protects D1 and provider limits."
+              className="inline-flex items-center gap-1 px-3 py-2.5 rounded-r-2xl text-xs font-mono font-semibold bg-transparent text-[var(--text-muted)] hover:bg-[var(--pastel-butterSoft)] disabled:opacity-50 border-l border-[var(--border-soft)] transition-all"
+              title="Force uncached upstream fetch"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
               Force
@@ -97,70 +93,55 @@ export function HeaderBar({
           <button
             type="button"
             onClick={onOpenSources}
-            aria-label="Open data source health"
-            title="View source API health, last results, and D1 counts"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-butter)]/40 text-[var(--text-muted)] hover:bg-[var(--pastel-butterSoft)] transition-all"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-500" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--pastel-amber)]" />
             <span className="hidden sm:inline">6 Sources</span>
-            <span className="sm:hidden">Feeds</span>
           </button>
 
           <button
             type="button"
             onClick={onOpenPitchSettings}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-lavender)]/40 text-[var(--text-muted)] hover:bg-[var(--pastel-lavenderSoft)] transition-all"
           >
-            <SlidersHorizontal className="w-3.5 h-3.5 text-violet-500" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--pastel-pink)]" />
             <span className="hidden sm:inline">My 5d Offer</span>
           </button>
 
           <button
             type="button"
             onClick={onExportCsv}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl text-xs font-medium border border-[var(--pastel-cyan)]/30 text-[var(--text-muted)] hover:bg-[var(--pastel-mintSoft)] transition-all"
             title="Export to CSV"
           >
-            <Download className="w-3.5 h-3.5 text-sky-500" />
+            <Download className="w-3.5 h-3.5 text-[var(--pastel-cyan)]" />
             <span className="hidden md:inline">CSV</span>
           </button>
 
           <button
             type="button"
             onClick={onToggleDarkMode}
-            className="p-2.5 rounded-2xl border border-white/10 dark:border-obsidian-800 bg-white/5 dark:bg-obsidian-900 hover:bg-white/10 dark:hover:bg-obsidian-800 transition-all"
+            className="p-2.5 rounded-2xl border border-[var(--border-soft)] text-[var(--text-muted)] hover:bg-[var(--pastel-butterSoft)] transition-all"
             aria-label="Toggle theme"
           >
             {darkMode ? (
-              <Sun className="w-4 h-4 text-amber-400" />
+              <Sun className="w-4 h-4 text-[var(--pastel-amber)]" />
             ) : (
-              <Moon className="w-4 h-4 text-slate-500" />
+              <Moon className="w-4 h-4 text-[var(--pastel-slate)]" />
             )}
           </button>
         </div>
       </div>
 
       {syncStatusText && (
-        <div
-          className={`px-4 sm:px-6 py-1.5 border-t ${
-            statusIsWarning
-              ? "bg-amber-500/10 border-amber-500/20"
-              : "bg-emerald-500/10 border-emerald-500/20"
-          }`}
-        >
-          <div
-            className={`max-w-[1440px] mx-auto flex items-center justify-between text-xs font-mono ${
-              statusIsWarning
-                ? "text-amber-700 dark:text-amber-300"
-                : "text-emerald-400 dark:text-emerald-300"
-            }`}
-          >
+        <div className="bg-[var(--pastel-mintSoft)] border-t border-[var(--pastel-mint)]/40 px-4 sm:px-6 py-1.5">
+          <div className="max-w-[1440px] mx-auto flex items-center justify-between text-xs font-mono text-[var(--text-warm)]">
             <span className="flex items-center gap-2">
               <RefreshCw className={`w-3 h-3 ${syncing ? "animate-spin" : ""}`} />
               {syncStatusText}
             </span>
-            <span className="hidden sm:inline text-[10px] opacity-70">
-              Cloudflare Worker · no cron
+            <span className="hidden sm:inline text-[10px] opacity-60">
+              Cloudflare Worker · 0 Cron
             </span>
           </div>
         </div>

@@ -10,85 +10,109 @@ interface Props {
   onSelectLens: (lens: string) => void;
 }
 
+const KPI_CONFIG: Array<{
+  id: string;
+  label: string;
+  value: (stats: DashboardStats) => string;
+  sub: (stats: DashboardStats) => string;
+  icon: React.ElementType;
+  variant: "lime" | "cyan" | "pink" | "slate";
+}> = [
+  {
+    id: "all",
+    label: "Tracked Startups",
+    value: (s) => s.totalCompanies.toLocaleString(),
+    sub: () => "Deduplicated by domain",
+    icon: Layers,
+    variant: "slate",
+  },
+  {
+    id: "funded12mo",
+    label: "Funded < 12 Months",
+    value: (s) => s.fundedLast12Mo.toLocaleString(),
+    sub: () => "W25–F26 + Seed rounds",
+    icon: Sparkles,
+    variant: "lime",
+  },
+  {
+    id: "hiring",
+    label: "Hiring Right Now",
+    value: (s) => s.hiringNow.toLocaleString(),
+    sub: (s) => `${s.totalOpenRoles.toLocaleString()} open roles`,
+    icon: Briefcase,
+    variant: "cyan",
+  },
+  {
+    id: "remote",
+    label: "Remote Friendly",
+    value: (s) => s.remoteCompanies.toLocaleString(),
+    sub: () => "Async build friendly",
+    icon: Globe2,
+    variant: "cyan",
+  },
+  {
+    id: "hot",
+    label: "Hot Build Fit",
+    value: (s) => s.hotLeadsCount.toLocaleString(),
+    sub: () => "Score 80+",
+    icon: Flame,
+    variant: "pink",
+  },
+  {
+    id: "pipeline",
+    label: "Outreach Pipeline",
+    value: (s) => {
+      const pitchedTotal =
+        (s.pipelineCounts.pitched || 0) +
+        (s.pipelineCounts.demo_sent || 0) +
+        (s.pipelineCounts.replied || 0);
+      return `${pitchedTotal} pitched · ${s.pipelineCounts.saved || 0} saved`;
+    },
+    sub: (s) =>
+      (s.followUpDueCount || 0) > 0
+        ? `${s.followUpDueCount} follow-up due`
+        : "Copy pitch to track",
+    icon: Send,
+    variant: "slate",
+  },
+];
+
+const VARIANT_CLASSES: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+  lime: {
+    bg: "bg-[var(--pastel-mintSoft)]",
+    border: "border-[var(--pastel-mint)]/40",
+    text: "text-[var(--text-warm)]",
+    icon: "text-[var(--pastel-mint)]",
+  },
+  cyan: {
+    bg: "bg-[var(--pastel-cyan)]/20",
+    border: "border-[var(--pastel-cyan)]/30",
+    text: "text-[var(--text-warm)]",
+    icon: "text-[var(--pastel-cyan)]",
+  },
+  pink: {
+    bg: "bg-[var(--pastel-pink)]/20",
+    border: "border-[var(--pastel-pink)]/30",
+    text: "text-[var(--text-warm)]",
+    icon: "text-[var(--pastel-pink)]",
+  },
+  slate: {
+    bg: "bg-[var(--pastel-butterSoft)]",
+    border: "border-[var(--pastel-butter)]/40",
+    text: "text-[var(--text-warm)]",
+    icon: "text-[var(--pastel-amber)]",
+  },
+};
+
 export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
-  const pitchedTotal =
-    (stats?.pipelineCounts.pitched || 0) +
-    (stats?.pipelineCounts.demo_sent || 0) +
-    (stats?.pipelineCounts.replied || 0);
-
-  const cards = [
-    {
-      id: "all",
-      label: "Tracked Startups",
-      value: stats ? stats.totalCompanies.toLocaleString() : "0",
-      sub: "Deduplicated by domain",
-      icon: Layers,
-      accent: "text-slate-400",
-      bg: "bg-white/5",
-      border: "border-white/10",
-    },
-    {
-      id: "funded12mo",
-      label: "Funded < 12 Months",
-      value: stats ? stats.fundedLast12Mo.toLocaleString() : "0",
-      sub: "W25 to F26 plus seed rounds",
-      icon: Sparkles,
-      accent: "text-amber-500",
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/20",
-    },
-    {
-      id: "hiring",
-      label: "Hiring Right Now",
-      value: stats ? stats.hiringNow.toLocaleString() : "0",
-      sub: `${stats?.totalOpenRoles?.toLocaleString() ?? "0"} open roles`,
-      icon: Briefcase,
-      accent: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-      border: "border-emerald-500/20",
-    },
-    {
-      id: "remote",
-      label: "Remote Friendly",
-      value: stats ? stats.remoteCompanies.toLocaleString() : "0",
-      sub: "Remote or async roles",
-      icon: Globe2,
-      accent: "text-sky-500",
-      bg: "bg-sky-500/10",
-      border: "border-sky-500/20",
-    },
-    {
-      id: "hot",
-      label: "Hot Build Fit",
-      value: stats ? stats.hotLeadsCount.toLocaleString() : "0",
-      sub: "Score 80 and above",
-      icon: Flame,
-      accent: "text-orange-500",
-      bg: "bg-orange-500/10",
-      border: "border-orange-500/20",
-    },
-    {
-      id: "pipeline",
-      label: "Outreach Pipeline",
-      value: stats
-        ? `${pitchedTotal} pitched · ${stats.pipelineCounts.saved || 0} saved`
-        : "0 pitched",
-      sub:
-        (stats?.followUpDueCount || 0) > 0
-          ? `${stats?.followUpDueCount} follow-ups due`
-          : "Copy a pitch to start tracking",
-      icon: Send,
-      accent: "text-violet-500",
-      bg: "bg-violet-500/10",
-      border: "border-violet-500/20",
-    },
-  ];
-
   return (
     <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-      {cards.map((c) => {
+      {KPI_CONFIG.map((c) => {
         const Icon = c.icon;
+        const variant = VARIANT_CLASSES[c.variant];
         const active = activeQuickLens === c.id;
+        const value = stats ? c.value(stats) : (c.id === "all" ? "—" : "—");
+        const sub = stats ? c.sub(stats) : "";
         return (
           <button
             key={c.id}
@@ -96,24 +120,24 @@ export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
             onClick={() => onSelectLens(c.id)}
             className={`text-left p-4 rounded-3xl border transition-all duration-300 ${
               active
-                ? `border-emerald-500 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.15)]`
-                : `${c.border} ${c.bg} hover:border-white/20 dark:hover:border-obsidian-700 hover:bg-white/10 dark:hover:bg-obsidian-900`
+                ? `${variant.border.replace("/40", "/60")} ${variant.bg.replace("Soft", "Soft")} shadow-[0_6px_20px_-8px_rgba(255,220,180,0.35)]`
+                : `${variant.border} ${variant.bg} hover:border-[var(--pastel-peach)]/50 hover:bg-[var(--pastel-butterSoft)]`
             }`}
           >
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                   {c.label}
                 </span>
-                <Icon className={`w-4 h-4 ${c.accent}`} />
+                <Icon className={`w-4 h-4 ${variant.icon}`} />
               </div>
             </div>
             <div className="mt-2">
-              <div className="text-lg font-mono font-bold text-slate-100 truncate">
-                {c.value}
+              <div className={`text-lg font-mono font-bold ${variant.text} truncate`}>
+                {value}
               </div>
-              <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                {c.sub}
+              <div className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
+                {sub}
               </div>
             </div>
           </button>
