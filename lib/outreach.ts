@@ -1,5 +1,6 @@
 import { Company } from "./types";
 import { slugify } from "./domain";
+import { linkedinCompanySearchUrl } from "./companyLinks";
 
 export interface ContactInfo {
   name: string;
@@ -34,10 +35,8 @@ export const OUTREACH_CHANNELS: OutreachChannel[] = [
     label: "LinkedIn",
     icon: "Linkedin",
     color: "text-sky-500",
-    url: (c) =>
-      `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(
-        c.name
-      )}`,
+    url: (c, contact) =>
+      contact?.linkedin || linkedinCompanySearchUrl(c.name, c.domain),
   },
   {
     id: "twitter",

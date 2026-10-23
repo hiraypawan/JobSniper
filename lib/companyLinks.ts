@@ -29,10 +29,14 @@ export function officialWebsiteSearchUrl(companyName: string): string {
   return googleSearch(`${companyName} official website`);
 }
 
-export function linkedinSearchUrl(companyName: string, founderName?: string | null): string {
-  const query = founderName ? `${founderName} ${companyName}` : companyName;
-  const type = founderName ? "people" : "companies";
-  return `https://www.linkedin.com/search/results/${type}/?keywords=${encodeURIComponent(query)}`;
+export function linkedinCompanySearchUrl(companyName: string, domain?: string | null): string {
+  const domainHint = domain && !isSyntheticDomain(domain)
+    ? ` ${domain.split("/")[0].replace(/^www\./i, "")}`
+    : "";
+  // LinkedIn's own search forces a sign-in wall on some mobile browsers. Use
+  // public web search for company pages instead; direct sourced URLs still go
+  // straight to LinkedIn and can be claimed by its iOS/Android app links.
+  return googleSearch(`site:linkedin.com/company/ "${companyName}"${domainHint}`);
 }
 
 export function businessEmailSearchUrl(

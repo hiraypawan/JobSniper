@@ -5,7 +5,7 @@ import { Briefcase, Copy, ExternalLink, Flame, Globe, Linkedin, Mail, Search, Se
 import {
   businessEmailSearchUrl,
   isUsableSourceWebsite,
-  linkedinSearchUrl,
+  linkedinCompanySearchUrl,
   officialWebsiteSearchUrl,
 } from "@/lib/companyLinks";
 import { Company, OutreachStatus } from "@/lib/types";
@@ -232,25 +232,23 @@ export function CompanyCard({
             </a>
           )}
 
-          {company.founder_linkedin ? (
+          <a
+            href={linkedinCompanySearchUrl(company.name, company.domain)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 transition-all"
+            title="Search public web results for this company's LinkedIn page; avoids LinkedIn's sign-in search wall"
+          >
+            <Search className="w-3 h-3" /> Company LinkedIn
+          </a>
+
+          {company.founder_linkedin && (
             <a
               href={company.founder_linkedin}
-              target="_blank"
-              rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-sky-400 hover:bg-sky-500/10 transition-all"
-              title="Open LinkedIn profile listed by a source; verify identity before contacting"
+              title="Open the source-listed founder profile; your phone may open the LinkedIn app"
             >
-              <Linkedin className="w-3 h-3" /> Source LinkedIn
-            </a>
-          ) : (
-            <a
-              href={linkedinSearchUrl(company.name, company.founder_name)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-medium text-slate-400 hover:text-sky-400 hover:bg-sky-500/10 transition-all"
-              title="Search LinkedIn; this is not a verified founder profile"
-            >
-              <Linkedin className="w-3 h-3" /> Find LinkedIn
+              <Linkedin className="w-3 h-3" /> Founder profile
             </a>
           )}
 

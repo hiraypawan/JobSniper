@@ -32,7 +32,7 @@ import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
 import {
   businessEmailSearchUrl,
   isUsableSourceWebsite,
-  linkedinSearchUrl,
+  linkedinCompanySearchUrl,
   officialWebsiteSearchUrl,
 } from "@/lib/companyLinks";
 
@@ -444,26 +444,24 @@ export function CompanyDrawer({
               </a>
             )}
 
-            {company.founder_linkedin ? (
+            <a
+              href={linkedinCompanySearchUrl(company.name, company.domain)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-sky-600 dark:text-sky-400 border border-sky-500/20 hover:bg-sky-500/10 transition-all"
+              title="Search public web results for this company's LinkedIn page; avoids LinkedIn's sign-in search wall"
+            >
+              <Search className="w-3.5 h-3.5" /> Search company LinkedIn page
+            </a>
+
+            {company.founder_linkedin && (
               <a
                 href={company.founder_linkedin}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs font-medium border border-sky-500/30 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-all"
-                title="LinkedIn profile listed in source data; verify identity before contacting"
+                title="Open the source-listed founder profile; your phone may open the LinkedIn app"
               >
-                <Linkedin className="w-3 h-3" /> Source-listed LinkedIn
+                <Linkedin className="w-3 h-3" /> Founder profile
                 <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : (
-              <a
-                href={linkedinSearchUrl(company.name, company.founder_name)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-4 py-3 rounded-2xl text-xs text-sky-600 dark:text-sky-400 border border-sky-500/20 hover:bg-sky-500/10 transition-all"
-                title="Search LinkedIn; search results are not verified founder profiles"
-              >
-                <Linkedin className="w-3 h-3" /> Search LinkedIn
               </a>
             )}
           </div>
