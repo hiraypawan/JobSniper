@@ -20,11 +20,3 @@ export function isUsableSourceWebsite(website: string | null | undefined, domain
     return false;
   }
 }
-
-function googleSearch(query: string): string {
-  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-}
-
-export function officialWebsiteSearchUrl(companyName: string): string {
-  return googleSearch(`${companyName} official website`);
-}

@@ -16,129 +16,105 @@ const KPI_CONFIG: Array<{
   value: (stats: DashboardStats) => string;
   sub: (stats: DashboardStats) => string;
   icon: React.ElementType;
-  variant: "lime" | "cyan" | "pink" | "slate";
+  iconColor: string;
+  iconSurface: string;
 }> = [
   {
     id: "all",
-    label: "Tracked Startups",
+    label: "Tracked startups",
     value: (s) => s.totalCompanies.toLocaleString(),
-    sub: () => "Deduplicated by domain",
+    sub: () => "Unique companies",
     icon: Layers,
-    variant: "slate",
+    iconColor: "text-slate-700 dark:text-slate-200",
+    iconSurface: "bg-slate-100 dark:bg-slate-800",
   },
   {
     id: "funded12mo",
-    label: "Funded < 12 Months",
+    label: "Funded in 12 months",
     value: (s) => s.fundedLast12Mo.toLocaleString(),
-    sub: () => "W25-F26 + Seed rounds",
+    sub: () => "Recent rounds + seed",
     icon: Sparkles,
-    variant: "lime",
+    iconColor: "text-lime-700 dark:text-lime-300",
+    iconSurface: "bg-lime-100 dark:bg-lime-900/30",
   },
   {
     id: "hiring",
-    label: "Hiring Right Now",
+    label: "Hiring now",
     value: (s) => s.hiringNow.toLocaleString(),
     sub: (s) => `${s.totalOpenRoles.toLocaleString()} open roles`,
     icon: Briefcase,
-    variant: "cyan",
+    iconColor: "text-cyan-700 dark:text-cyan-300",
+    iconSurface: "bg-cyan-100 dark:bg-cyan-900/30",
   },
   {
     id: "remote",
-    label: "Remote Friendly",
+    label: "Remote friendly",
     value: (s) => s.remoteCompanies.toLocaleString(),
-    sub: () => "Async build friendly",
+    sub: () => "Remote teams",
     icon: Globe2,
-    variant: "cyan",
+    iconColor: "text-cyan-700 dark:text-cyan-300",
+    iconSurface: "bg-cyan-100 dark:bg-cyan-900/30",
   },
   {
     id: "hot",
-    label: "Hot Build Fit",
+    label: "Strong fit",
     value: (s) => s.hotLeadsCount.toLocaleString(),
-    sub: () => "Score 80+",
+    sub: () => "Score 80 or higher",
     icon: Flame,
-    variant: "pink",
+    iconColor: "text-pink-700 dark:text-pink-300",
+    iconSurface: "bg-pink-100 dark:bg-pink-900/30",
   },
   {
     id: "pipeline",
-    label: "Outreach Pipeline",
+    label: "Outreach pipeline",
     value: (s) => {
-      const pitchedTotal =
-        (s.pipelineCounts.pitched || 0) +
+      const inProgress = (s.pipelineCounts.pitched || 0) +
         (s.pipelineCounts.demo_sent || 0) +
         (s.pipelineCounts.replied || 0);
-      return `${pitchedTotal} / ${s.pipelineCounts.saved || 0}`;
+      return `${inProgress} / ${s.pipelineCounts.saved || 0}`;
     },
-    sub: (s) =>
-      (s.followUpDueCount || 0) > 0
-        ? `${s.followUpDueCount} follow-up due`
-        : "Pitched / saved",
+    sub: (s) => (s.followUpDueCount || 0) > 0
+      ? `${s.followUpDueCount} follow-up due`
+      : "Contacted / saved",
     icon: Send,
-    variant: "slate",
+    iconColor: "text-lime-700 dark:text-lime-300",
+    iconSurface: "bg-lime-100 dark:bg-lime-900/30",
   },
 ];
 
-const VARIANT_CLASSES: Record<string, { bg: string; border: string; text: string; icon: string }> = {
-  lime: {
-    bg: "bg-[var(--pastel-mintSoft)]",
-    border: "border-[var(--pastel-mint)]/40",
-    text: "text-[var(--text-warm)]",
-    icon: "text-[var(--pastel-mint)]",
-  },
-  cyan: {
-    bg: "bg-[var(--pastel-cyan)]/20",
-    border: "border-[var(--pastel-cyan)]/30",
-    text: "text-[var(--text-warm)]",
-    icon: "text-[var(--pastel-cyan)]",
-  },
-  pink: {
-    bg: "bg-[var(--pastel-pink)]/20",
-    border: "border-[var(--pastel-pink)]/30",
-    text: "text-[var(--text-warm)]",
-    icon: "text-[var(--pastel-pink)]",
-  },
-  slate: {
-    bg: "bg-[var(--pastel-butterSoft)]",
-    border: "border-[var(--pastel-butter)]/40",
-    text: "text-[var(--text-warm)]",
-    icon: "text-[var(--pastel-amber)]",
-  },
-};
-
 export function KpiStrip({ stats, activeQuickLens, onSelectLens }: Props) {
   return (
-    <section className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-      {KPI_CONFIG.map((c) => {
-        const Icon = c.icon;
-        const variant = VARIANT_CLASSES[c.variant];
-        const active = activeQuickLens === c.id;
-        const value = stats ? c.value(stats) : (c.id === "all" ? "-" : "-");
-        const sub = stats ? c.sub(stats) : "";
+    <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6" aria-label="Pipeline overview">
+      {KPI_CONFIG.map((metric) => {
+        const Icon = metric.icon;
+        const active = activeQuickLens === metric.id;
+        const value = stats ? metric.value(stats) : "...";
+        const sub = stats ? metric.sub(stats) : "Loading";
         return (
           <button
-            key={c.id}
+            key={metric.id}
             type="button"
-            onClick={() => onSelectLens(c.id)}
-            className={`text-left p-4 rounded-3xl border transition-all duration-300 ${
+            aria-pressed={active}
+            onClick={() => onSelectLens(metric.id)}
+            className={`group min-w-0 rounded-xl border p-3.5 text-left transition-all duration-200 sm:p-4 ${
               active
-                ? `${variant.border.replace("/40", "/60")} ${variant.bg.replace("Soft", "Soft")} shadow-[0_6px_20px_-8px_rgba(42,83,59,0.12)]`
-                : `${variant.border} ${variant.bg} hover:border-[var(--pastel-peach)]/50 hover:bg-[var(--pastel-butterSoft)]`
+                ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-sm"
+                : "border-[var(--border-soft)] bg-[var(--surface-card)] hover:-translate-y-0.5 hover:border-[var(--accent)]/45 hover:shadow-md"
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-                  {c.label}
-                </span>
-                <Icon className={`w-4 h-4 ${variant.icon}`} />
-              </div>
+            <div className="flex items-start justify-between gap-2">
+              <span className="min-w-0 text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-[var(--text-muted)]">
+                {metric.label}
+              </span>
+              <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${metric.iconSurface} ${metric.iconColor}`}>
+                <Icon className="h-4 w-4" aria-hidden="true" />
+              </span>
             </div>
-            <div className="mt-2">
-              <div className={`text-base sm:text-lg font-mono font-bold ${variant.text} whitespace-nowrap`}>
-                {value}
-              </div>
-              <div className="text-[10px] text-[var(--text-muted)] truncate mt-0.5">
-                {sub}
-              </div>
+            <div className="mt-3 truncate text-xl font-semibold tracking-tight text-[var(--text-warm)] sm:text-2xl">
+              {value}
+            </div>
+            <div className="mt-0.5 truncate text-[10px] text-[var(--text-muted)]">
+              {sub}
             </div>
           </button>
         );

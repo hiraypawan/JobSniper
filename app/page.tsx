@@ -529,7 +529,25 @@ export default function DashboardPage() {
       />
 
       <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-        <div className="flex w-fit items-center gap-1 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] p-1 shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-[var(--border-soft)] pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">Workspace · Live signals</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-warm)]">
+              {activeSection === "indie" ? "Indie launch radar" : "Startup pipeline"}
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--text-muted)]">
+              {activeSection === "indie"
+                ? "New products, source listings, and verified revenue evidence."
+                : "Qualified teams, current roles, and direct contact routes."}
+            </p>
+          </div>
+          <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]">
+            <span className={`h-2 w-2 rounded-full ${loading ? "animate-pulse bg-amber-500" : "bg-lime-600 dark:bg-lime-300"}`} />
+            {loading ? "Updating results…" : `${total.toLocaleString()} matching records`}
+          </div>
+        </div>
+
+        <div className="flex w-fit items-center gap-1 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] p-1 shadow-sm">
           {([
             ["leads", "Startup & funding leads"],
             ["indie", "Indie launches"],
@@ -680,7 +698,7 @@ export default function DashboardPage() {
                       setEarningOnly(false);
                       setActiveLens("all");
                     }}
-                    className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition"
+                    className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition"
                   >
                     Clear filters
                   </button>
@@ -688,7 +706,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => fetchCompaniesPage(1, false)}
-                    className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] transition"
+                    className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)] transition"
                   >
                     Retry dashboard
                   </button>
@@ -773,6 +791,7 @@ export default function DashboardPage() {
           pitchSettings={pitchSettings}
           onClose={() => setSelectedCompany(null)}
           onCompanyUpdated={handleCompanyUpdated}
+          onCheckCompanyContacts={handleCheckCompanyContacts}
           onOpenAIJobHunt={() => {
             if (selectedCompany) setAiJobHuntCompany(selectedCompany);
           }}
