@@ -24,6 +24,8 @@ import {
 const DEFAULT_FILTERS: FilterState = {
   funded12mo: false,
   fresh14d: false,
+  indiaOnly: false,
+  fresherOnly: false,
   remote: false,
   hiring: false,
   smallTeam: false,
@@ -38,7 +40,9 @@ const DEFAULT_FILTERS: FilterState = {
 function getActiveFilterLabels(filters: FilterState): string[] {
   const labels: string[] = [];
   if (filters.funded12mo) labels.push("Funded in the last 12 months");
-  if (filters.fresh14d) labels.push("Funding date within 14 days");
+  if (filters.fresh14d) labels.push("Funding or job posted within 14 days");
+  if (filters.indiaOnly) labels.push("India/Asia/worldwide eligibility listed");
+  if (filters.fresherOnly) labels.push("Fresher/entry-level terms in role posting");
   if (filters.remote) labels.push("Remote");
   if (filters.hiring) labels.push("Hiring");
   if (filters.smallTeam) labels.push("Team size up to 15");
@@ -197,6 +201,8 @@ export default function DashboardPage() {
           pipeline: activeSection === "indie" ? "all" : filters.pipeline,
           funded12mo: String(activeSection === "indie" ? false : filters.funded12mo),
           fresh14d: String(activeSection === "indie" ? false : filters.fresh14d),
+          indiaOnly: String(activeSection === "indie" ? false : filters.indiaOnly),
+          fresherOnly: String(activeSection === "indie" ? false : filters.fresherOnly),
           remote: String(activeSection === "indie" ? false : filters.remote),
           hiring: String(activeSection === "indie" ? false : filters.hiring),
           smallTeam: String(activeSection === "indie" ? false : filters.smallTeam),
@@ -265,6 +271,8 @@ export default function DashboardPage() {
       filters.pipeline,
       filters.funded12mo,
       filters.fresh14d,
+      filters.indiaOnly,
+      filters.fresherOnly,
       filters.remote,
       filters.hiring,
       filters.smallTeam,

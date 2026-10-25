@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, Clock, Database, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Database, X } from "lucide-react";
 import { SyncSourceSummary } from "@/lib/types";
 
 interface Props {
@@ -35,7 +35,15 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   },
   hn_hiring: {
     name: "HN Who is Hiring?",
-    desc: "Remote startup engineering roles & founder emails",
+    desc: "Hiring-post roles and source-stated locations; poster identities are not assumed to be founders",
+  },
+  remotive: {
+    name: "Remotive public jobs API",
+    desc: "Remote roles whose source-listed eligibility includes India, Asia, or worldwide",
+  },
+  jobicy: {
+    name: "Jobicy public jobs API",
+    desc: "Remote roles whose source-listed geography includes India, Asia, or worldwide",
   },
   trustmrr: {
     name: "TrustMRR",
@@ -101,6 +109,7 @@ export function SourceHealthPopover({
             const meta = SOURCE_LABELS[key];
             const sum = summaryMap.get(key as SyncSourceSummary["source"]);
             const dbCount = bySource[key] ?? sum?.count ?? 0;
+            const hasIssue = sum?.mode === "unavailable" || Boolean(sum?.error);
 
             return (
               <div
@@ -109,21 +118,30 @@ export function SourceHealthPopover({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--pastel-mint)] shrink-0" />
+                    {hasIssue ? (
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[var(--pastel-mint)] shrink-0" />
+                    )}
                       <span className="text-xs font-semibold truncate text-[var(--text-warm)]">
                       {meta.name}
                     </span>
                   </div>
                     <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                     {sum?.note || meta.desc}
+                    {sum?.error && (
+                      <span className="mt-1 block text-[10px] text-rose-400" title={sum.error}>
+                        Error: {sum.error}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-xs font-semibold text-[var(--text-warm)]">
-                    {sum?.count ?? dbCount} leads
+                    {sum ? `${sum.count} fetched · ${dbCount} in D1` : `${dbCount} in D1`}
                   </div>
-                  <div className="font-mono text-[10px] text-[var(--pastel-mint)]">
-                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "synced"}
+                  <div className={`font-mono text-[10px] ${hasIssue ? "text-rose-400" : "text-[var(--pastel-mint)]"}`}>
+                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "stored"}
                   </div>
                 </div>
               </div>

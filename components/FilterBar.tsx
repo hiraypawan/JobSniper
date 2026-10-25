@@ -7,6 +7,8 @@ import { DashboardStats } from "@/lib/types";
 export interface FilterState {
   funded12mo: boolean;
   fresh14d: boolean;
+  indiaOnly: boolean;
+  fresherOnly: boolean;
   remote: boolean;
   hiring: boolean;
   smallTeam: boolean;
@@ -129,7 +131,20 @@ export function FilterBar({
                 sort: !filters.fresh14d ? "newest" : filters.sort,
               })
             }
-            label="Fresh 14d"
+            label="Recent activity 14d"
+            title="Funding announced or a source-listed job posted within the last 14 days"
+          />
+          <ToggleChip
+            active={filters.indiaOnly}
+            onClick={() => onChange({ indiaOnly: !filters.indiaOnly })}
+            label="India-eligible"
+            title="India, Asia/APAC, worldwide, or anywhere eligibility explicitly listed by the source"
+          />
+          <ToggleChip
+            active={filters.fresherOnly}
+            onClick={() => onChange({ fresherOnly: !filters.fresherOnly })}
+            label="Fresher keywords"
+            title="Only roles whose source-listed title or details contain fresher, entry-level, junior, graduate, intern, trainee, or similar terms"
           />
           <ToggleChip
             active={filters.remote}
@@ -161,6 +176,8 @@ export function FilterBar({
               { value: "producthunt", label: "Product Hunt" },
               { value: "indie", label: "Indie / HN" },
               { value: "hn_hiring", label: "HN Hiring" },
+              { value: "remotive", label: "Remotive" },
+              { value: "jobicy", label: "Jobicy" },
               { value: "trustmrr", label: "TrustMRR" },
             ]}
           />
@@ -230,15 +247,19 @@ function ToggleChip({
   active,
   onClick,
   label,
+  title,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  title?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={title}
+      aria-pressed={active}
       className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium transition-all ${
         active
           ? "bg-[var(--pastel-mintSoft)] border-[var(--pastel-mint)]/50 text-[var(--text-warm)]"

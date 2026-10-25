@@ -620,11 +620,12 @@ export async function deduplicateAndUpsertCompanies(
   >();
 
   for (const item of rawInputs) {
-    if (!item.name || !item.website) continue;
+    const remoteJobSource = item.source === "remotive" || item.source === "jobicy";
+    if (!item.name || (!item.website && !remoteJobSource)) continue;
     const cleanedWebsite = cleanWebsiteUrl(item.website);
-    if (!cleanedWebsite) continue;
+    if (!cleanedWebsite && !remoteJobSource) continue;
 
-    const domain = normalizeDomain(cleanedWebsite, item.name);
+    const domain = normalizeDomain(cleanedWebsite, remoteJobSource ? `${item.source}-${item.name}` : item.name);
     const companyId = makeCompanyId(domain);
     const existing = mergedByDomain.get(domain);
 
@@ -961,6 +962,8 @@ export interface CompanyQueryFilters {
   hiring?: boolean;
   funded12mo?: boolean;
   fresh14d?: boolean;
+  indiaOnly?: boolean;
+  fresherOnly?: boolean;
   launchOnly?: boolean;
   launchWindow?: string;
   earningOnly?: boolean;
@@ -1008,8 +1011,57 @@ export async function queryCompanies(
     const cutoff14d = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 10);
-    where.push("(last_funding_date IS NOT NULL AND last_funding_date >= ?)");
-    params.push(cutoff14d);
+    where.push(`(
+      (last_funding_date IS NOT NULL AND last_funding_date >= ?)
+      OR EXISTS (
+        SELECT 1 FROM jobs recent_job
+        WHERE recent_job.company_id = companies.id
+          AND recent_job.posted_at IS NOT NULL
+          AND recent_job.posted_at >= ?
+      )
+    )`);
+    params.push(cutoff14d, cutoff14d);
+  }
+
+  if (filters.indiaOnly) {
+    const indiaTerms = [
+      "india", "bengaluru", "bangalore", "mumbai", "pune", "new delhi",
+      "delhi", "noida", "gurugram", "gurgaon", "hyderabad", "chennai",
+      "kolkata", "ahmedabad", "jaipur", "kochi", "indore", "chandigarh",
+      "asia", "apac", "worldwide", "anywhere",
+    ];
+    const companyLocation = indiaTerms.map(() => "LOWER(COALESCE(location, '')) LIKE ?");
+    const jobLocation = indiaTerms.map(() => "LOWER(COALESCE(india_job.location, '')) LIKE ?");
+    where.push(`(
+      ${companyLocation.join(" OR ")}
+      OR EXISTS (
+        SELECT 1 FROM jobs india_job
+        WHERE india_job.company_id = companies.id
+          AND (${jobLocation.join(" OR ")})
+      )
+    )`);
+    params.push(...indiaTerms.map((term) => `%${term}%`), ...indiaTerms.map((term) => `%${term}%`));
+  }
+
+  if (filters.fresherOnly) {
+    const earlyCareerTerms = [
+      "fresher", "freshers", "entry-level", "entry level", "junior",
+      "graduate", "new grad", "new graduate", "early career", "trainee",
+      "intern", "internship", "0-2 years", "0 to 2 years",
+      "1-2 years", "campus hire",
+    ];
+    const roleText = `LOWER(COALESCE(early_job.title, '') || ' ' || COALESCE(early_job.department, '') || ' ' || COALESCE(early_job.description, ''))`;
+    const keywordMatches = earlyCareerTerms.map(() => `${roleText} LIKE ?`).join(" OR ");
+    where.push(`EXISTS (
+      SELECT 1 FROM jobs early_job
+      WHERE early_job.company_id = companies.id
+        AND (${keywordMatches})
+        AND ${roleText} NOT LIKE '%not open to fresher%'
+        AND ${roleText} NOT LIKE '%not for fresher%'
+        AND ${roleText} NOT LIKE '%no fresher%'
+        AND ${roleText} NOT LIKE '%not open to graduate%'
+    )`);
+    params.push(...earlyCareerTerms.map((term) => `%${term}%`));
   }
 
   if (filters.launchOnly) {
@@ -1073,8 +1125,10 @@ export async function queryCompanies(
     ? "ORDER BY launch_date DESC, COALESCE(trustmrr_last30, 0) DESC, COALESCE(trustmrr_mrr, 0) DESC"
     : "ORDER BY sniper_score DESC, COALESCE(last_funding_date, '2000-01-01') DESC, open_roles_count DESC";
   if (!filters.launchOnly && filters.sort === "newest") {
-    orderSql =
-      "ORDER BY COALESCE(last_funding_date, '2000-01-01') DESC, sniper_score DESC";
+    orderSql = `ORDER BY MAX(
+      COALESCE(last_funding_date, '2000-01-01'),
+      COALESCE((SELECT MAX(recent_job.posted_at) FROM jobs recent_job WHERE recent_job.company_id = companies.id), '2000-01-01')
+    ) DESC, sniper_score DESC`;
   } else if (!filters.launchOnly && filters.sort === "roles") {
     orderSql = "ORDER BY open_roles_count DESC, sniper_score DESC";
   } else if (!filters.launchOnly && filters.sort === "smallest_team") {

@@ -21,6 +21,7 @@ import { detectCompanyHiringAndSignals } from "@/workers/enrichment/hiringDetect
 import { fetchHnWhoIsHiring } from "@/workers/fetchers/hnHiring";
 import { fetchIndieShowHn } from "@/workers/fetchers/indie";
 import { fetchProductHuntLaunches } from "@/workers/fetchers/producthunt";
+import { fetchJobicyJobs, fetchRemotiveJobs } from "@/workers/fetchers/openRemoteJobs";
 import { fetchTrustMrrStartups } from "@/workers/fetchers/trustmrr";
 import { fetchWellfoundFunded } from "@/workers/fetchers/wellfound";
 import { fetchWorkAtAStartup } from "@/workers/fetchers/workatastartup";
@@ -100,6 +101,8 @@ export async function syncAllSources(
       { source: "indie", run: fetchIndieShowHn(env, options) },
       { source: "trustmrr", run: fetchTrustMrrStartups(env, options) },
       { source: "hn_hiring", run: fetchHnWhoIsHiring(env, options) },
+      { source: "remotive", run: fetchRemotiveJobs(env, options) },
+      { source: "jobicy", run: fetchJobicyJobs(env, options) },
     ];
 
     const settled = await Promise.allSettled(fetcherTasks.map((task) => task.run));

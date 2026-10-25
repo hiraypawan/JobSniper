@@ -88,6 +88,7 @@ export async function fetchWellfoundFunded(
   const companies: NormalizedCompanyInput[] = [];
   let sourceAvailable = false;
   let anyLive = false;
+  const feedErrors: string[] = [];
 
   // 1. Try public startup funding RSS feeds (FinSMEs + EU-Startups + TechCrunch Funding)
   const rssUrls = [
@@ -106,14 +107,18 @@ export async function fetchWellfoundFunded(
     )
   );
 
-  for (const res of feedCalls) {
+  feedCalls.forEach((res, index) => {
     if (res.status === "fulfilled") {
       sourceAvailable = true;
       if (!res.value.fromCache) anyLive = true;
       companies.push(...parseFundingRssXml(res.value.text));
+    } else {
+      const detail = res.reason instanceof Error ? res.reason.message : String(res.reason);
+      let host = `feed ${index + 1}`;
+      try { host = new URL(rssUrls[index]).hostname; } catch { /* static URLs */ }
+      feedErrors.push(`${host}: ${detail}`);
     }
-  }
-
+  });
 
   return {
     source: "wellfound",
@@ -121,7 +126,8 @@ export async function fetchWellfoundFunded(
     durationMs: Date.now() - started,
     mode: anyLive ? "live" : sourceAvailable ? "cached" : "unavailable",
     note: sourceAvailable
-      ? `Parsed ${companies.length} funding reports from the RSS feeds`
+      ? `Parsed ${companies.length} funding reports from ${rssUrls.length - feedErrors.length}/${rssUrls.length} RSS feeds`
       : "Funding feeds were unavailable; no synthetic company or job listings were added",
+    ...(feedErrors.length ? { error: feedErrors.join("; ").slice(0, 360) } : {}),
   };
 }

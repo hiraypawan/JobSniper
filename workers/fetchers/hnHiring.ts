@@ -36,6 +36,7 @@ export async function fetchHnWhoIsHiring(
   const companies: NormalizedCompanyInput[] = [];
   let sourceAvailable = false;
   let anyLive = false;
+  let fetchError: string | undefined;
 
   try {
     const searchRes = await cachedFetchJson<{
@@ -92,7 +93,14 @@ export async function fetchHnWhoIsHiring(
         // domain or use an arbitrary job-board URL as the company's website.
         if (!companyWebsite) continue;
 
-        const isRemote = /remote/i.test(header);
+        const headerDetails = parts.slice(1).join(" | ");
+        const isRemote = /remote/i.test(headerDetails);
+        const explicitLocation = [
+          "India", "Bengaluru", "Bangalore", "Mumbai", "Pune", "New Delhi",
+          "Delhi", "Noida", "Gurugram", "Gurgaon", "Hyderabad", "Chennai",
+          "Kolkata", "Ahmedabad", "Jaipur", "Kochi", "Indore", "Chandigarh",
+          "Asia", "APAC", "Worldwide", "Anywhere",
+        ].find((candidate) => new RegExp(`\\b${candidate}\\b`, "i").test(headerDetails)) || null;
         const roleCandidate = parts.find((part) =>
           /engineer|developer|designer|researcher|recruiter|sales|marketing|product manager|operations|founding/i.test(part)
         );
@@ -105,9 +113,11 @@ export async function fetchHnWhoIsHiring(
               id: makeJobId(companyId, roleCandidate, roleUrl),
               title: roleCandidate.slice(0, 80),
               url: roleUrl,
-              location: isRemote ? "Remote" : null,
+              location: explicitLocation || (isRemote ? "Remote" : null),
               remote: isRemote,
               department: null,
+              description: lines.slice(1).join(" ").slice(0, 1200),
+              posted_at: comment.created_at ? comment.created_at.slice(0, 10) : null,
             }]
           : [];
 
@@ -119,7 +129,7 @@ export async function fetchHnWhoIsHiring(
           description: lines.slice(1).join(" ").slice(0, 1000) || header,
           one_liner: header.slice(0, 140),
           website: companyWebsite,
-          location: isRemote ? "Remote" : null,
+          location: explicitLocation || (isRemote ? "Remote" : null),
           team_size: null,
           is_remote: isRemote,
           last_funding_date: null,
@@ -135,10 +145,10 @@ export async function fetchHnWhoIsHiring(
         });
       }
     }
-  } catch {
+  } catch (error) {
     // HN feed unavailable; return no invented fallback leads
+    fetchError = error instanceof Error ? error.message : String(error);
   }
-
 
   return {
     source: "hn_hiring",
@@ -146,5 +156,6 @@ export async function fetchHnWhoIsHiring(
     durationMs: Date.now() - started,
     mode: anyLive ? "live" : sourceAvailable ? "cached" : "unavailable",
     note: `Read ${companies.length} companies from the hiring thread`,
+    ...(fetchError ? { error: fetchError.slice(0, 240) } : {}),
   };
 }

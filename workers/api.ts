@@ -128,6 +128,8 @@ export async function handleApiRequest(
         pipeline: url.searchParams.get("pipeline") || "all",
         funded12mo: parseBoolParam(url.searchParams.get("funded12mo"), false),
         fresh14d: parseBoolParam(url.searchParams.get("fresh14d"), false),
+        indiaOnly: parseBoolParam(url.searchParams.get("indiaOnly"), false),
+        fresherOnly: parseBoolParam(url.searchParams.get("fresherOnly"), false),
         launchOnly: parseBoolParam(url.searchParams.get("launchOnly"), false),
         launchWindow: url.searchParams.get("launchWindow") || "all",
         earningOnly: parseBoolParam(url.searchParams.get("earningOnly"), false),

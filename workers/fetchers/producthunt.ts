@@ -109,6 +109,7 @@ export async function fetchProductHuntLaunches(
   const companies: NormalizedCompanyInput[] = [];
   let directLive = false;
   let feedAvailable = false;
+  let feedError: string | undefined;
 
   // 1. Primary: Official public Product Hunt Atom feed (last 7 days launches)
   try {
@@ -128,10 +129,10 @@ export async function fetchProductHuntLaunches(
     feedAvailable = true;
     directLive = !feedRes.fromCache;
     companies.push(...parseProductHuntAtom(feedRes.text));
-  } catch {
+  } catch (error) {
     // Report the source as unavailable instead of substituting unrelated data.
+    feedError = error instanceof Error ? error.message : String(error);
   }
-
 
   return {
     source: "producthunt",
@@ -139,5 +140,6 @@ export async function fetchProductHuntLaunches(
     durationMs: Date.now() - started,
     mode: directLive ? "live" : feedAvailable ? "cached" : "unavailable",
     note: `Synced ${companies.length} launches from the last week`,
+    ...(feedError ? { error: feedError.slice(0, 240) } : {}),
   };
 }
