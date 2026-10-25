@@ -17,7 +17,6 @@ import {
   X,
 } from "lucide-react";
 import { copyTextSafe } from "@/lib/clipboard";
-import { buildOutreachPitches } from "@/lib/pitchTemplates";
 import { computeSniperScore } from "@/lib/scoring";
 import {
   generateAIPitches,

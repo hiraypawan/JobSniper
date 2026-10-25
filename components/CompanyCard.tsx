@@ -22,6 +22,8 @@ const SOURCE_BADGES: Record<string, string> = {
   producthunt: "Product Hunt",
   indie: "Indie / HN",
   hn_hiring: "HN Hiring",
+  remotive: "Remotive",
+  jobicy: "Jobicy",
   trustmrr: "TrustMRR",
 };
 
@@ -64,10 +66,16 @@ export function CompanyCard({
     .toUpperCase();
 
   const statusInfo = STATUS_META[company.outreach_status] || STATUS_META.new;
+  const canCopyPitch = Boolean(
+    pitchSettings?.customToolIdea?.trim() &&
+    (company.jobs?.[0]?.title || company.one_liner || company.description)
+  );
 
   const handleCopyPitch = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const pitches = buildOutreachPitches(company, pitchSettings || { aiProvider: "gemini", senderName: "", customToolIdea: "", similarCompanyProof: "", deliveryDays: 5, demoOffer: "", geminiApiKey: undefined, openrouterApiKey: undefined });
+    if (!pitchSettings || !canCopyPitch) return;
+    const pitches = buildOutreachPitches(company, pitchSettings);
+    if (!pitches.classicSpecDm) return;
     await copyTextSafe(pitches.classicSpecDm);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -105,7 +113,9 @@ export function CompanyCard({
                 )}
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)] truncate">
-                <span className="truncate">{company.domain}</span>
+                <span className="truncate">
+                  {company.domain.endsWith(".startup.local") ? "Company site not listed" : company.domain}
+                </span>
                 <span className="mx-0.5">·</span>
                 <span className="text-[9px] font-medium text-[var(--text-muted)]">
                   {company.sources.map((s) => SOURCE_BADGES[s] || s).join(" + ")}
@@ -207,7 +217,9 @@ export function CompanyCard({
           <button
             type="button"
             onClick={handleCopyPitch}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all shadow-sm ${
+            disabled={!canCopyPitch}
+            title={canCopyPitch ? "Copy a pitch grounded in the role/company source details" : "Add your specific offer in Pitch Settings; no generic pitch is copied"}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-semibold transition-all shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${
               copied
                 ? "bg-[var(--accent-soft)] text-[var(--text-warm)]"
                 : "bg-[var(--pastel-butterSoft)] text-[var(--text-warm)] hover:bg-[var(--pastel-peach)] border border-[var(--pastel-butter)]/40"

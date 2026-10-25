@@ -5,7 +5,9 @@ export type CompanySource =
   | "producthunt"
   | "indie"
   | "trustmrr"
-  | "hn_hiring";
+  | "hn_hiring"
+  | "remotive"
+  | "jobicy";
 
 export type HiringProvider =
   | "greenhouse"

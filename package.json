@@ -15,7 +15,9 @@
     "sync": "node scripts/with-ca.mjs npx tsx scripts/run-sync.ts",
     "typecheck": "tsc --noEmit",
     "check:copy": "node scripts/check-copy.mjs",
-    "test:trustmrr": "tsx scripts/test-trustmrr.ts"
+    "test:trustmrr": "tsx scripts/test-trustmrr.ts",
+    "test:remote-jobs": "tsx scripts/test-open-remote-jobs.ts",
+    "test:filters": "tsx scripts/test-company-filters.ts"
   },
   "dependencies": {
     "framer-motion": "^14.5.0",

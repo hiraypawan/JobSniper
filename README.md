@@ -13,8 +13,8 @@ that loop in one page.
 
 ## What it does
 
-- Pulls startups from six public feeds and dedupes them by domain.
-- Reads ATS boards (Greenhouse, Lever, Ashby, Workable) to count real open roles.
+- Pulls companies and job listings from public startup feeds and no-key remote-job APIs, then dedupes verified company sites by domain.
+- Reads public ATS boards (Greenhouse, Lever, Ashby, Workable) to count real open roles.
 - Scores every lead from 0 to 100 so the small funded teams with open roles show up first.
 - Writes four pitch formats per lead: short DM, role based DM, LinkedIn note under 300 characters, and a cold email.
 - Tracks outreach status (new, saved, pitched, demo sent, replied, archived) with notes and follow up reminders.
@@ -31,7 +31,9 @@ that loop in one page.
 | Show HN | Hacker News Algolia API for `show_hn` posts from the last week; source post time and permalink are retained | `workers/fetchers/indie.ts` |
 | GitHub projects | Newly created repositories (21-day search) with an explicitly linked project website; repository creation date and repo URL are retained | `workers/fetchers/indie.ts` |
 | TrustMRR | Uses the bearer-key API when configured; otherwise tries a robots-checked public-page scrape. Only explicit positive MRR, last-30-day receipts, or lifetime revenue is retained. API pages cache for 6h; public listing pages for 6h and profile pages for 24h, with three profiles checked per sync. | `workers/fetchers/trustmrr.ts` |
-| HN "Who is hiring?" | The newest monthly thread, parsed for remote roles and founder emails | `workers/fetchers/hnHiring.ts` |
+| HN "Who is hiring?" | The newest monthly thread, parsed for roles and source-stated locations. A hiring-post author is not labeled as a founder. | `workers/fetchers/hnHiring.ts` |
+| Remotive | Public remote-jobs API; keeps roles only when the listing explicitly includes India, Asia/APAC, worldwide, or anywhere eligibility. Employer websites are not inferred. | `workers/fetchers/openRemoteJobs.ts` |
+| Jobicy | Public remote-jobs API with the same explicit-location rule; employer websites are not inferred. | `workers/fetchers/openRemoteJobs.ts` |
 
 The **Indie launches** tab is separate from startup/funding leads. Its 1 day,
 1 week, 1 month, and 1 year filters use source publication/listing timestamps,
@@ -39,6 +41,14 @@ not the company row's `updated_at`. The one-year view grows from the launch data
 collected by scheduled syncs; upstream feeds do not provide complete historical
 backfills. TrustMRR revenue metrics are displayed separately: zero MRR does not
 hide positive receipts or lifetime revenue.
+
+The **Recent activity 14d** filter matches a source-listed funding date or a
+job posting date within the last 14 days. **India-eligible** requires an
+explicit India/city, Asia/APAC, worldwide, or anywhere location in the source;
+a generic remote label is not enough. **Fresher keywords** searches source-listed
+role titles, levels, and descriptions for fresher, entry-level, junior, graduate,
+trainee, intern, and similar terms. These text matches are useful discovery
+signals, not a guarantee that an employer accepts applicants without experience.
 
 TrustMRR's API requires a bearer API key; whether a key can be obtained without
 payment was not verified, and this feature must not prompt a paid purchase. With
@@ -58,20 +68,20 @@ path and falls back to seed stage companies with verified job boards.
 
 ## How a page load works
 
-1. `GET /api/companies` reads straight from D1. The first paint usually lands
-   under 50ms because nothing is fetched upstream on that path.
-2. If the cached feed is older than 15 minutes, the worker schedules a refresh
-   with `ctx.waitUntil` and returns the stale rows anyway. You never wait for a
-   network round trip on load.
-3. Pressing **Sync Live** runs every fetcher in parallel, then enriches ATS data
-   in batches of 12 companies. Each batch is a separate request, so each one
-   gets its own 50 subrequest budget on the Cloudflare free plan.
-4. Opening a company calls `POST /api/companies/:id/enrich`, which checks that
-   one site and its job board right before you copy the pitch.
+1. `GET /api/companies` reads D1 and does not trigger upstream fetches.
+2. Pressing **Sync Live** runs the sources in parallel. Feed responses use
+   source-specific D1 cache windows (one hour for the two remote-job APIs), and
+   a five-minute sync cooldown prevents accidental duplicate runs.
+3. Full sync enriches a bounded batch of ATS data; additional enrichment is
+   explicitly requested in small batches.
+4. Opening a company can scan a verified source-listed website and its job board.
+   Job-only API records with no employer website are not scanned and show no
+   invented company contact links.
 
-Upstream responses are cached in SQLite inside D1 (the `http_cache` table)
-instead of KV, because the free KV tier allows 1,000 writes per day and D1
-allows 100,000. That is what makes the Force button safe to spam.
+Upstream responses are cached in D1's `http_cache` table. Source health reports
+per-feed failures where the fetcher provides them and does not replace unavailable
+feeds with fabricated records. Syncs are intentionally bounded: Cloudflare D1's
+free quotas are finite, so avoid repeated forced syncs and use the normal cache.
 
 ## Fit score
 
@@ -124,8 +134,8 @@ npm run deploy:pages
 ```
 
 Then open the Pages project, go to Settings, Functions, D1 database bindings,
-and bind `DB` to `startupsniper-db`. No cron job is required: the refresh
-happens inside the request that needs it.
+and bind `DB` to `startupsniper-db`. No cron job is required: use **Sync Live**
+to refresh upstream feeds; normal dashboard reads only query D1.
 
 ### One Worker for everything
 
