@@ -113,7 +113,7 @@ export default function DashboardPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_PITCH_KEY);
-      let parsed: Partial<PitchSettings> = saved ? JSON.parse(saved) : {};
+      let parsed: Partial<PitchSettings> = (() => { try { const value = saved ? JSON.parse(saved) : {}; return value && typeof value === "object" ? value : {}; } catch { return {}; } })();
 
       // Phase D migration: copy legacy per-provider localStorage slots into
       // pitch_settings_v1 when no key is stored there yet (single source of truth).
@@ -541,12 +541,12 @@ export default function DashboardPage() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--accent)]">Workspace · Live signals</p>
             <h2 className="mt-1 text-2xl font-semibold tracking-tight text-[var(--text-warm)]">
-              {activeSection === "indie" ? "Indie launch radar" : "Startup pipeline"}
+              {activeSection === "indie" ? "Indie launch radar" : "Find jobs and research companies"}
             </h2>
             <p className="mt-1 max-w-2xl text-sm text-[var(--text-muted)]">
               {activeSection === "indie"
                 ? "New products, source listings, and verified revenue evidence."
-                : "Qualified teams, current roles, and direct contact routes."}
+                : "Start with India-eligible and Fresher keywords, then open a company and review its jobs. Filters match company records, not necessarily the same role. Confirm the location, experience, closing status and application link at the original source before applying."}
             </p>
           </div>
           <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]">
