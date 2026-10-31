@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StartupSniper · Funded startups that are hiring",
+  title: "JobSniper | Discover jobs and research companies",
   description:
-    "Startups funded in the last year, pulled from YC, Work at a Startup, funding news, Product Hunt and Hacker News. Real job boards, a 0-100 fit score and a first pitch you can send.",
+    "Explore startup and remote job leads, find India-eligible and entry-level signals, and research companies. Check the original listing before applying.",
 };
 
 export default function RootLayout({
