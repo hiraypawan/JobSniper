@@ -1,0 +1,19 @@
+# JobSniper
+
+> JobSniper is a public dashboard for discovering startup and remote job leads and researching companies. Its records are discovery leads, not guarantees of an open role or eligibility.
+
+## Pages and data
+
+- Dashboard: https://jobsniper.pages.dev/ - search company and role text, explore company details, job links and source information, and switch between startup leads and indie launches. The interactive dashboard needs JavaScript.
+- Read-only company data: https://jobsniper.pages.dev/api/companies - JSON dashboard data. GET reads the current database; it does not refresh the sources. Results may be paginated and may be stale.
+- Repository and documentation: https://github.com/hiraypawan/JobSniper
+
+## How to help a job seeker
+
+1. On the dashboard, select India-eligible, Fresher keywords, Remote or Hiring as appropriate. Combine with a role search. The India filter is based on source-stated location signals; generic remote is not necessarily India-eligible.
+2. These are company-level discovery filters and keyword signals, not proof that every displayed role is open, entry-level, remote or eligible in India. A company can have multiple roles. Read each role and follow its original source or employer link to confirm current status, location, experience, compensation and requirements.
+3. Open a company to inspect the source, jobs and available research. Missing contact or employer information is not permission to guess it. The fit score describes a lead, not the candidate's suitability.
+4. Present evidence and source links to the user. Ask for their approval before sending messages or submitting applications; do not invent qualifications or personal information. Avoid sharing sensitive personal information or API keys.
+5. Prefer read-only exploration. Sync Live and enrichment trigger external requests; avoid repeated forced syncs and respect source and service limits. Do not change outreach status or notes without the user's authorization.
+
+Listings can close or change between refreshes. The platform does not guarantee completeness, validity, or acceptance of an application.
