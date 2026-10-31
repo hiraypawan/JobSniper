@@ -1,6 +1,6 @@
-# StartupSniper
+# JobSniper
 
-A small lead board for people who sell 5-day builds to early startups.
+A job and company discovery dashboard, including an India fresher quick start. Visit https://jobsniper.pages.dev/ and use **Find fresher leads in India** to apply the India-eligible and fresher keyword filters. Add Remote if useful, open a company, and review its jobs. Filters are company-level discovery signals: check each role's location, experience, closing status and application link at the original source before applying. Automated assistants can read https://jobsniper.pages.dev/llms.txt and use the public read-only company API. The project originated as a startup outreach lead board and retains those tools.
 
 It pulls freshly funded companies from public sources, checks their job boards,
 gives each one a fit score, and drafts the first DM or email. Everything you
