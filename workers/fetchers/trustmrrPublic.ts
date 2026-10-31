@@ -6,7 +6,7 @@ import { cachedFetchText, readD1Cache, writeD1Cache } from "@/workers/httpCache"
 const ORIGIN = "https://trustmrr.com";
 const ROBOTS_KEY = "trustmrr_public_robots";
 const CURSOR_KEY = "trustmrr_public_scrape_cursor";
-const LISTING_PATHS = ["/recently-added", "/?sort_by=mrr"];
+const LISTING_PATHS = ["/startups"];
 const DETAILS_PER_SYNC = 3;
 const LISTING_TTL = 6 * 60 * 60;
 const DETAIL_TTL = 24 * 60 * 60;
@@ -102,7 +102,7 @@ export function parseTrustMrrListingLinks(html: string): LinkCandidate[] {
     if (parsed.hostname.toLowerCase() !== "trustmrr.com" || !/^\/startup\/[^/]+\/?$/i.test(parsed.pathname)) continue;
     const slug = parsed.pathname.split("/").filter(Boolean).at(-1) || "";
     if (!slug) continue;
-    const name = textFromHtml(match[3]).join(" ").slice(0, 100) || slug.replace(/-/g, " ");
+    const name = textFromHtml(match[3].match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i)?.[1] || "").join(" ").slice(0, 100) || slug.replace(/-/g, " ");
     const index = match.index ?? 0;
     const context = html.slice(Math.max(0, index - 450), Math.min(html.length, index + match[0].length + 450));
     links.push({
@@ -195,7 +195,7 @@ export function parseTrustMrrPublicProduct(candidate: LinkCandidate, html: strin
       const host = new URL(cleaned).hostname.toLowerCase().replace(/^www\./, "");
       if (host === "trustmrr.com" || host.endsWith(".trustmrr.com") || /(^|\.)(x\.com|twitter\.com|linkedin\.com|github\.com|instagram\.com)$/.test(host)) continue;
       if (attrs.rel?.toLowerCase() === "nofollow" && !/website|visit|official|home/i.test(label)) continue;
-      if (/website|visit site|official site|homepage/i.test(label)) {
+      if (/website|\bvisit\b|official site|homepage/i.test(label)) {
         website = cleaned;
         break;
       }

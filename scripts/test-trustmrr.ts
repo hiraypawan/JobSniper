@@ -43,11 +43,11 @@ assert.equal(
 
 const listingLinks = parseTrustMrrListingLinks(`
   <div class="startup-card">
-    <a href="/startup/public-revenue-product">Public Revenue Product</a>
+    <a href="/startup/public-revenue-product"><h2>Public Revenue Product</h2><p>A product description</p><p>MRR</p><p>$125</p></a>
     <span>Listed 2 days ago</span>
   </div>
 `);
-assert.equal(listingLinks.length, 1);
+assert.equal(listingLinks.length, 1); assert.equal(listingLinks[0].name, "Public Revenue Product");
 assert.equal(listingLinks[0].url, "https://trustmrr.com/startup/public-revenue-product");
 assert.ok(listingLinks[0].listedAt, "relative listing time from the source is retained");
 
@@ -58,7 +58,7 @@ const publicPageProduct = parseTrustMrrPublicProduct(listingLinks[0], `
     <div>MRR</div><div>$0</div>
     <div>Last 30 Days Revenue</div><div>$125</div>
     <div>Total Revenue</div><div>$825</div>
-    <a href="https://public-revenue.example" aria-label="Official website">Visit</a>
+    <a href="https://public-revenue.example">Visit</a>
   </body></html>
 `);
 assert.ok(publicPageProduct, "public scrape retains explicit one-time receipts with zero MRR");
@@ -118,11 +118,11 @@ async function testCachedPublicFallback(): Promise<void> {
     networkRequests++;
     const url = new URL(String(input));
     if (url.pathname === "/robots.txt") return new Response("User-agent: *\nAllow: /\n");
-    if (url.pathname === "/recently-added" || url.searchParams.has("sort_by")) {
-      return new Response(`<div><a href="/startup/public-revenue-product">Public Revenue Product</a><span>Listed 2 days ago</span></div>`);
+    if (url.pathname === "/startups") {
+      return new Response(`<div><a href="/startup/public-revenue-product"><h2>Public Revenue Product</h2><p>A product description</p><p>MRR</p><p>$125</p></a><span>Listed 2 days ago</span></div>`);
     }
     if (url.pathname === "/startup/public-revenue-product") {
-      return new Response(`<h1>Public Revenue Product</h1><meta property="og:description" content="Source details" /><div>MRR</div><div>$0</div><div>Last 30 Days Revenue</div><div>$125</div><div>Total Revenue</div><div>$825</div><a href="https://public-revenue.example" aria-label="Official website">Visit</a>`);
+      return new Response(`<h1>Public Revenue Product</h1><meta property="og:description" content="Source details" /><div>MRR</div><div>$0</div><div>Last 30 Days Revenue</div><div>$125</div><div>Total Revenue</div><div>$825</div><a href="https://public-revenue.example">Visit</a>`);
     }
     return new Response("not found", { status: 404 });
   }) as typeof fetch;
