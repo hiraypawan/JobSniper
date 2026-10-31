@@ -592,7 +592,7 @@ export default function DashboardPage() {
           />
         ) : (
           <>
-            <KpiStrip
+            <section aria-label="Fresher quick start" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] p-4">               <div>                 <h3 className="font-semibold text-[var(--text-warm)]">Looking for your first role?</h3>                 <p className="text-sm text-[var(--text-muted)]">Start with India and entry-level keywords. This resets other filters; verify each role at its source.</p>               </div>               <button type="button" onClick={() => { setActiveLens("all"); setFilters({ ...DEFAULT_FILTERS, indiaOnly: true, fresherOnly: true }); }} className="rounded-xl border border-[var(--border-soft)] px-4 py-2 text-sm font-semibold text-[var(--text-warm)] hover:bg-[var(--pastel-peach)]/20 focus-visible:outline focus-visible:outline-2">                 Find fresher leads in India               </button>             </section>             <KpiStrip
               stats={stats}
               activeQuickLens={activeLens}
               onSelectLens={handleSelectQuickLens}
