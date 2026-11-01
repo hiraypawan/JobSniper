@@ -19,6 +19,7 @@ import {
   DashboardStats,
   OutreachStatus,
   PitchSettings,
+  SyncSourceSummary,
 } from "@/lib/types";
 
 const DEFAULT_FILTERS: FilterState = {
@@ -332,26 +333,28 @@ export default function DashboardPage() {
 
       const upserted = Number(syncJson.upsertedCount ?? 0).toLocaleString();
       const totalAfterSync = Number(syncJson.stats?.totalCompanies ?? -1);
-      const failedSources = (syncJson.sources || [])
-        .filter((source: { mode?: string; error?: string }) =>
-          source.mode === "unavailable" || Boolean(source.error)
-        )
-        .map((source: { source?: string }) => source.source)
-        .filter(Boolean);
+      const failedSources = ((syncJson.sources || []) as SyncSourceSummary[]).flatMap((source) => {
+        const failedFeeds = (source.feedStatuses || [])
+          .filter((feed) => feed.status === "blocked" || feed.status === "unavailable")
+          .map((feed) => `${feed.name}: ${feed.reason || feed.status}`);
+        if (failedFeeds.length) return failedFeeds;
+        return source.mode === "unavailable" || source.error
+          ? [`${source.source}: ${source.error || source.note || "unavailable"}`]
+          : [];
+      });
       setSyncStatusText(
         `Sync wrote ${upserted} changed companies in ${syncJson.durationMs}ms.`
       );
 
       const refreshedSuccessfully = await fetchCompaniesPage(1, false);
       if (!refreshedSuccessfully) return;
-      if (totalAfterSync === 0) {
-        setSyncStatusText(
-          "Sync checked the feeds, but D1 has no startup records. Open Sources for feed errors."
-        );
-      } else if (failedSources.length > 0) {
-        setSyncStatusText(
-          `Sync finished with unavailable feeds: ${failedSources.join(", ")}. Existing D1 records were kept; open Sources for details.`
-        );
+      if (failedSources.length > 0) {
+        const recordMessage = totalAfterSync === 0
+          ? "D1 currently has no startup records."
+          : "Existing D1 records were kept and are available in the refreshed dashboard.";
+        setSyncStatusText(`Sync finished with failed sources: ${failedSources.join("; ")}. ${recordMessage} Open Sources for details.`);
+      } else if (totalAfterSync === 0) {
+        setSyncStatusText("Sync checked the feeds, but D1 has no startup records.");
       } else {
         setSyncStatusText("All sources checked; hiring-board checks are manual.");
         setTimeout(() => setSyncStatusText(null), 4000);
