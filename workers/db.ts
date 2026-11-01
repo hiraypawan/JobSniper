@@ -1023,45 +1023,31 @@ export async function queryCompanies(
     params.push(cutoff14d, cutoff14d);
   }
 
+  // Match all selected job filters against the same posting, not separate jobs
+  // or the company's headquarters. These conservative signals are not guarantees.
+  const jobConditions: string[] = [];
   if (filters.indiaOnly) {
-    const indiaTerms = [
-      "india", "bengaluru", "bangalore", "mumbai", "pune", "new delhi",
-      "delhi", "noida", "gurugram", "gurgaon", "hyderabad", "chennai",
-      "kolkata", "ahmedabad", "jaipur", "kochi", "indore", "chandigarh",
-      "asia", "apac", "worldwide", "anywhere",
-    ];
-    const companyLocation = indiaTerms.map(() => "LOWER(COALESCE(location, '')) LIKE ?");
-    const jobLocation = indiaTerms.map(() => "LOWER(COALESCE(india_job.location, '')) LIKE ?");
-    where.push(`(
-      ${companyLocation.join(" OR ")}
-      OR EXISTS (
-        SELECT 1 FROM jobs india_job
-        WHERE india_job.company_id = companies.id
-          AND (${jobLocation.join(" OR ")})
-      )
-    )`);
-    params.push(...indiaTerms.map((term) => `%${term}%`), ...indiaTerms.map((term) => `%${term}%`));
+    const location = "LOWER(COALESCE(job.location, ''))";
+    const indiaTerms = ["india", "bengaluru", "bangalore", "mumbai", "pune", "new delhi", "delhi", "noida", "gurugram", "gurgaon", "hyderabad", "chennai", "kolkata", "ahmedabad", "jaipur", "kochi", "indore", "chandigarh"];
+    const regionalTerms = ["asia", "apac", "worldwide", "anywhere"];
+    const india = indiaTerms.map((term) => `${location} LIKE '%${term}%'`).join(" OR ");
+    const regional = regionalTerms.map((term) => `${location} LIKE '%${term}%'`).join(" OR ");
+    jobConditions.push(`((${india}) OR ((job.remote = 1 OR ${location} LIKE '%remote%') AND (${regional})))`);
   }
-
   if (filters.fresherOnly) {
-    const earlyCareerTerms = [
-      "fresher", "freshers", "entry-level", "entry level", "junior",
-      "graduate", "new grad", "new graduate", "early career", "trainee",
-      "intern", "internship", "0-2 years", "0 to 2 years",
-      "1-2 years", "campus hire",
-    ];
-    const roleText = `LOWER(COALESCE(early_job.title, '') || ' ' || COALESCE(early_job.department, '') || ' ' || COALESCE(early_job.description, ''))`;
-    const keywordMatches = earlyCareerTerms.map(() => `${roleText} LIKE ?`).join(" OR ");
-    where.push(`EXISTS (
-      SELECT 1 FROM jobs early_job
-      WHERE early_job.company_id = companies.id
-        AND (${keywordMatches})
-        AND ${roleText} NOT LIKE '%not open to fresher%'
-        AND ${roleText} NOT LIKE '%not for fresher%'
-        AND ${roleText} NOT LIKE '%no fresher%'
-        AND ${roleText} NOT LIKE '%not open to graduate%'
-    )`);
-    params.push(...earlyCareerTerms.map((term) => `%${term}%`));
+    const title = "LOWER(COALESCE(job.title, ''))";
+    const earlyTerms = ["fresher", "entry-level", "entry level", "junior", "graduate", "new grad", "early career", "trainee", "intern", "campus hire"];
+    const seniorTerms = ["senior", "staff", "principal", "lead", "manager", "director", "head of", "chief", "architect"];
+    jobConditions.push(`(${earlyTerms.map((term) => `${title} LIKE '%${term}%'`).join(" OR ")})`);
+    jobConditions.push(...seniorTerms.map((term) => `${title} NOT LIKE '%${term}%'`));
+    const text = "LOWER(COALESCE(job.description, ''))";
+    jobConditions.push(...["not open to fresher", "not for fresher", "no fresher", "not open to graduate"].map((term) => `${text} NOT LIKE '%${term}%'`));
+  }
+  if (jobConditions.length) {
+    // Explicit closures are not eligible. Ambiguous descriptions still require
+    // checking at the original source before applying.
+    jobConditions.push("LOWER(COALESCE(job.title, '') || ' ' || COALESCE(job.description, '')) NOT LIKE '%closed now%'");
+    where.push(`EXISTS (SELECT 1 FROM jobs job WHERE job.company_id = companies.id AND ${jobConditions.join(" AND ")})`);
   }
 
   if (filters.launchOnly) {
@@ -1162,7 +1148,7 @@ export async function queryCompanies(
     const placeholders = companyIds.map(() => "?").join(",");
     const jobsRes = await env.DB.prepare(
       `SELECT id, company_id, title, url, location, remote, department, posted_at
-       FROM jobs WHERE company_id IN (${placeholders})`
+       FROM jobs job WHERE job.company_id IN (${placeholders}) ${jobConditions.length ? `AND ${jobConditions.join(" AND ")}` : ""}`
     )
       .bind(...companyIds)
       .all<{
