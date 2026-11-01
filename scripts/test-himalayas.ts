@@ -1,3 +1,4 @@
+import { shouldRemoveHimalayasJob } from "@/workers/fetchers/himalayas";
 import assert from "node:assert/strict";
 import { parseHimalayasJob } from "@/workers/fetchers/himalayas";
 
@@ -42,3 +43,14 @@ assert.equal(parseHimalayasJob({ ...base, guid: "https://himalayas.app/companies
 assert.equal(parseHimalayasJob(null, now), null);
 
 console.log("Himalayas parser fixtures passed; source remains disabled.");
+// A partial page must never be treated as evidence of closure.
+assert.equal(shouldRemoveHimalayasJob(now, null, now), true, "expiry boundary removes");
+assert.equal(shouldRemoveHimalayasJob(now - 1, 200, now), true, "expiry overrides stale open response");
+assert.equal(shouldRemoveHimalayasJob(now + 100, 410, now), true, "410 is explicitly closed");
+assert.equal(shouldRemoveHimalayasJob(null, 410, now), true);
+assert.equal(shouldRemoveHimalayasJob(now + 100, 200, now), false);
+for (const status of [null, 404, 429, 500, 503]) {
+  assert.equal(shouldRemoveHimalayasJob(now + 100, status, now), false, "unknown status retains");
+}
+assert.equal(shouldRemoveHimalayasJob(null, null, now), false);
+assert.equal(shouldRemoveHimalayasJob(Number.NaN, null, now), false);
