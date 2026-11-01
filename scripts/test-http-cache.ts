@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { cachedFetchText } from "@/workers/httpCache";
-import { fetchHimalayasFirstPage } from "@/workers/fetchers/himalayas";
+import { fetchHimalayasFirstPage, storeHimalayasPage } from "@/workers/fetchers/himalayas";
 import type { WorkerEnv } from "@/lib/cf-types";
 
 // Run the reservation SQL against real SQLite, without making network requests.
@@ -30,6 +30,11 @@ async function main() {
         },
       };
       return statement;
+    },
+    async batch(statements: Array<{ run(): Promise<{ meta: { changes: number } }> }>) {
+      const results = [];
+      for (const statement of statements) results.push(await statement.run());
+      return results;
     },
   };
   const env = { DB: db } as unknown as WorkerEnv;
@@ -95,7 +100,23 @@ async function main() {
     await assert.rejects(fetchHimalayasFirstPage(env), /cooldown/);
     assert.equal(himalayasCalls, 1, "cache loss cannot bypass the daily reservation");
 
-    console.log("HTTP cache cooldown tests passed.");
+    // Exercise isolated storage with real SQLite. Missing jobs on a partial page
+    // remain stored; expiry is the only automatic removal in this helper.
+    const early = page.jobs[0];
+    const retained = { ...early, guid: "https://himalayas.app/companies/example/jobs/retained", expiryDate: nowSeconds + 7200 };
+    await storeHimalayasPage(env, [early, retained], nowSeconds);
+    const countStored = () => (sqlite.prepare("SELECT COUNT(*) AS n FROM himalayas_source_jobs").get() as { n: number }).n;
+    const stored = sqlite.prepare("SELECT payload FROM himalayas_source_jobs WHERE guid = ?").get(early.guid) as { payload: string };
+    assert.equal(JSON.parse(stored.payload).applicationLink, applicationLink, "application link is unchanged in storage");
+    assert.equal(countStored(), 2);
+    await storeHimalayasPage(env, [], nowSeconds + 1);
+    assert.equal(countStored(), 2, "absence from a partial page does not remove jobs");
+    await storeHimalayasPage(env, [{ ...retained, title: "Updated" }], nowSeconds + 3600);
+    assert.equal(countStored(), 1, "jobs are removed at their expiry boundary");
+    const updated = sqlite.prepare("SELECT payload FROM himalayas_source_jobs WHERE guid = ?").get(retained.guid) as { payload: string };
+    assert.equal(JSON.parse(updated.payload).title, "Updated", "existing records are updated");
+    await assert.rejects(storeHimalayasPage(env, Array(21).fill(retained), nowSeconds), /Invalid Himalayas page/);
+    console.log("HTTP cache and Himalayas storage tests passed.");
   } finally {
     globalThis.fetch = originalFetch;
     sqlite.close();
