@@ -28,7 +28,7 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
 // that permission cannot be obtained; unavailable sites are not assumed closed.
 const PENDING_SOURCES = [
   ["RareRoles", "disabled", "Public API found, but integration permission is unverified; the draft parser is not synced."],
-  ["Himalayas", "disabled", "Public API found; application links, attribution, expiry and closure handling need implementation before enabling."],
+  ["Himalayas", "disabled", "Integration safeguards pending: sync wiring, attribution, lifecycle handling and exclusion from public feeds and JobPosting structured data are not yet complete."],
   ["Career Hound", "disabled", "Terms prohibit automated access without written permission; no approved feed is configured."],
   ["SkipTheDrive", "disabled", "Likely the requested site, but its identity is uncertain. Job and search paths are restricted in robots.txt; no permitted feed established."],
   ["Built In", "disabled", "A permitted public jobs API or feed has not been established."],
