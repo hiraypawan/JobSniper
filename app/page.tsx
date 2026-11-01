@@ -232,6 +232,9 @@ export default function DashboardPage() {
         // the newest response is allowed to replace the dashboard snapshot.
         if (requestId !== latestCompaniesRequest.current) return false;
 
+        setSyncStatusText((current) =>
+          current?.startsWith("Dashboard data error:") ? null : current
+        );
         setCompanies((prev) =>
           append ? [...prev, ...data.companies] : data.companies
         );
@@ -252,7 +255,13 @@ export default function DashboardPage() {
 
         return true;
       } catch (err) {
+        if (requestId !== latestCompaniesRequest.current) return false;
         console.error("Failed loading startups:", err);
+        // Never present an old, unfiltered snapshot as a successful new result.
+        setCompanies([]);
+        setTotal(0);
+        setHasMore(false);
+        setPage(1);
         const reason = getErrorMessage(err);
         setSyncStatusText(
           `Dashboard data error: ${reason}`
@@ -522,7 +531,7 @@ export default function DashboardPage() {
         ...(filters.search.trim() ? [`Search: “${filters.search.trim()}”`] : []),
       ]
     : getActiveFilterLabels(filters);
-  const hasFilteredEmptyState = total === 0 && activeFilterLabels.length > 0;
+  const hasFilteredEmptyState = total === 0 && activeFilterLabels.length > 0 && !syncStatusText?.startsWith("Dashboard data error:");
   const trustMrrSummary = stats?.lastSyncSummary.find((summary) => summary.source === "trustmrr");
 
   return (
@@ -554,7 +563,7 @@ export default function DashboardPage() {
           </div>
           <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]">
             <span className={`h-2 w-2 rounded-full ${loading ? "animate-pulse bg-amber-500" : "bg-lime-600 dark:bg-lime-300"}`} />
-            {loading ? "Updating results…" : `${total.toLocaleString()} matching records`}
+            {loading ? "Updating results…" : syncStatusText?.startsWith("Dashboard data error:") ? "Results unavailable" : `${total.toLocaleString()} matching records`}
           </div>
         </div>
 
