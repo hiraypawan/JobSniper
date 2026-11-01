@@ -27,7 +27,7 @@ async function main() {
   assert.match(combined.sql, /EXISTS \(SELECT 1 FROM jobs job WHERE job\.company_id = companies\.id/);
   assert.match(combined.sql, /job\.location/);
   assert.match(combined.sql, /job\.title/);
-  assert.match(combined.sql, /NOT LIKE '%senior%'/);
+  assert.match(combined.sql, /NOT LIKE '% senior %'/);
   assert.match(combined.sql, /NOT LIKE '%closed now%'/);
 
   // Execute the generated SQL against isolated in-memory fixtures (Node 22+).
@@ -41,9 +41,11 @@ async function main() {
   };
   const sqlite = new DatabaseSync(":memory:");
   sqlite.exec(`
-    CREATE TABLE companies (id TEXT PRIMARY KEY, outreach_status TEXT);
+    CREATE TABLE companies (id TEXT PRIMARY KEY, outreach_status TEXT, domain TEXT, one_liner TEXT, description TEXT);
     CREATE TABLE jobs (id TEXT, company_id TEXT, title TEXT, location TEXT, remote INTEGER, description TEXT);
-    INSERT INTO companies VALUES ('split','new'), ('india','new'), ('remote','new'), ('senior','new'), ('closed','new'), ('us','new');
+    INSERT INTO companies (id, outreach_status) VALUES ('split','new'), ('india','new'), ('remote','new'), ('senior','new'), ('closed','new'), ('us','new'), ('indiana','new'), ('international','new'), ('excluded','new'), ('publisher','new'), ('closedcompany','new');
+    UPDATE companies SET domain = 'news.ycombinator.com' WHERE id = 'publisher';
+    UPDATE companies SET one_liner = 'CLOSED NOW' WHERE id = 'closedcompany';
     INSERT INTO jobs VALUES
       ('a','split','Senior Engineer','Bengaluru, India',0,''),
       ('b','split','Junior Engineer','New York, USA',0,''),
@@ -51,7 +53,12 @@ async function main() {
       ('d','remote','Graduate Engineer','Remote worldwide',1,''),
       ('e','senior','Senior Engineer','Mumbai, India',0,'Mentors junior engineers'),
       ('f','closed','Junior Engineer','India',0,'CLOSED NOW'),
-      ('g','us','Junior Engineer','New York, USA',0,'');
+      ('g','us','Junior Engineer','New York, USA',0,''),
+      ('h','indiana','Junior Engineer','Indiana, USA',0,''),
+      ('i','international','International Engineer','India',0,''),
+      ('j','excluded','Junior Engineer','Remote worldwide',1,'Not open to India'),
+      ('k','publisher','Junior Engineer','India',0,''),
+      ('l','closedcompany','Junior Engineer','India',0,'');
   `);
   const idsFor = (query: { sql: string; params: unknown[] }) =>
     sqlite.prepare(query.sql.replace("SELECT COUNT(*) AS cnt", "SELECT id")).all(...query.params).map((row) => row.id).sort();
@@ -59,6 +66,11 @@ async function main() {
   assert(idsFor(await capture({})).includes("senior"), "unfiltered results retain senior roles");
   assert(!idsFor(await capture({ indiaOnly: true })).includes("us"), "US in-person role is not India eligible");
   assert(!idsFor(await capture({ fresherOnly: true })).includes("senior"), "senior title is not made junior by description");
+  assert(!idsFor(await capture({ indiaOnly: true })).includes("indiana"), "Indiana is not India");
+  assert(!idsFor(await capture({ fresherOnly: true })).includes("international"), "international is not intern");
+  assert(!idsFor(combined).includes("excluded"), "explicit India exclusions are respected");
+  assert(!idsFor(combined).includes("publisher"), "shared publisher records are excluded");
+  assert(!idsFor(combined).includes("closedcompany"), "company excerpt marks the listing closed");
   sqlite.close();
 
   const recent = await capture({ fresh14d: true, hiring: true, sort: "newest" });
