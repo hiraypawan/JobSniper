@@ -1038,7 +1038,7 @@ export async function queryCompanies(
     const regional = regionalTerms.map((term) => `${location} LIKE '% ${term} %'`).join(" OR ");
     jobConditions.push(`((${india}) OR ((job.remote = 1 OR ${rawLocation} LIKE '%remote%') AND (${regional})))`);
     const eligibilityText = "LOWER(COALESCE(job.location, '') || ' ' || COALESCE(job.description, ''))";
-    jobConditions.push(...["not available in india", "not open to india", "excluding india", "except india", "india not eligible"].map((term) => `${eligibilityText} NOT LIKE '%${term}%'`));
+    jobConditions.push(...["not available in india", "not open to india", "excluding india", "excluding candidates in india", "except india", "except for india", "india excluded", "india not eligible", "india is not eligible", "india not included", "us only", "usa only", "u.s. only", "united states only", "europe only", "uk only", "united kingdom only", "must be based in the us", "must reside in the us"].map((term) => `${eligibilityText} NOT LIKE '%${term}%'`));
   }
   if (filters.fresherOnly) {
     const title = words("job.title");
@@ -1048,6 +1048,12 @@ export async function queryCompanies(
     jobConditions.push(...seniorTerms.map((term) => `${title} NOT LIKE '% ${term} %'`));
     const text = "LOWER(COALESCE(job.description, ''))";
     jobConditions.push(...["not open to fresher", "not for fresher", "no fresher", "not open to graduate"].map((term) => `${text} NOT LIKE '%${term}%'`));
+    // Exclude common explicit multi-year requirements, even on junior-labelled posts.
+    const experienceTerms = Array.from({ length: 18 }, (_, i) => i + 3).flatMap((years) => [
+      `${years}+ years`, `${years} + years`, `${years} years of experience`,
+      `${years} years experience`, `${years}+ yrs`, `${years} yrs experience`,
+    ]);
+    jobConditions.push(...experienceTerms.map((term) => `${text} NOT LIKE '%${term}%'`));
   }
   if (jobConditions.length) {
     jobConditions.push("LOWER(COALESCE(job.title, '') || ' ' || COALESCE(job.description, '')) NOT LIKE '%closed now%'");
