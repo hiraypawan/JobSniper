@@ -43,7 +43,7 @@ async function main() {
   sqlite.exec(`
     CREATE TABLE companies (id TEXT PRIMARY KEY, outreach_status TEXT, domain TEXT, one_liner TEXT, description TEXT);
     CREATE TABLE jobs (id TEXT, company_id TEXT, title TEXT, location TEXT, remote INTEGER, description TEXT);
-    INSERT INTO companies (id, outreach_status) VALUES ('split','new'), ('india','new'), ('remote','new'), ('senior','new'), ('closed','new'), ('us','new'), ('indiana','new'), ('international','new'), ('excluded','new'), ('publisher','new'), ('closedcompany','new');
+    INSERT INTO companies (id, outreach_status) VALUES ('split','new'), ('india','new'), ('remote','new'), ('senior','new'), ('closed','new'), ('us','new'), ('indiana','new'), ('international','new'), ('excluded','new'), ('publisher','new'), ('closedcompany','new'), ('usonly','new'), ('experiencedjunior','new');
     UPDATE companies SET domain = 'news.ycombinator.com' WHERE id = 'publisher';
     UPDATE companies SET one_liner = 'CLOSED NOW' WHERE id = 'closedcompany';
     INSERT INTO jobs VALUES
@@ -58,7 +58,9 @@ async function main() {
       ('i','international','International Engineer','India',0,''),
       ('j','excluded','Junior Engineer','Remote worldwide',1,'Not open to India'),
       ('k','publisher','Junior Engineer','India',0,''),
-      ('l','closedcompany','Junior Engineer','India',0,'');
+      ('l','closedcompany','Junior Engineer','India',0,''),
+      ('m','usonly','Junior Engineer','Remote worldwide',1,'US only'),
+      ('n','experiencedjunior','Junior Engineer','India',0,'Requires 5+ years of experience');
   `);
   const idsFor = (query: { sql: string; params: unknown[] }) =>
     sqlite.prepare(query.sql.replace("SELECT COUNT(*) AS cnt", "SELECT id")).all(...query.params).map((row) => row.id).sort();
@@ -71,6 +73,9 @@ async function main() {
   assert(!idsFor(combined).includes("excluded"), "explicit India exclusions are respected");
   assert(!idsFor(combined).includes("publisher"), "shared publisher records are excluded");
   assert(!idsFor(combined).includes("closedcompany"), "company excerpt marks the listing closed");
+  assert(!idsFor(combined).includes("usonly"), "US-only remote is not India eligible");
+  assert(!idsFor(combined).includes("experiencedjunior"), "junior title requiring five years is not fresher appropriate");
+  assert(idsFor(await capture({})).includes("experiencedjunior"), "unfiltered results retain experienced roles");
   sqlite.close();
 
   const recent = await capture({ fresh14d: true, hiring: true, sort: "newest" });
