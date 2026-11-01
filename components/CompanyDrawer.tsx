@@ -197,6 +197,8 @@ export function CompanyDrawer({
   }, [company?.id, runAiGeneration]);
 
   if (!company || !generated) return null;
+  const sourceClosed = /\bclosed now\b/i.test(`${company.one_liner || ""} ${company.description || ""}`);
+  const sharedPublisher = ["news.ycombinator.com", "mercurynews.com"].includes(company.domain.toLowerCase());
 
   const patchOutreach = async (patch: {
     outreach_status?: OutreachStatus;
@@ -324,7 +326,7 @@ export function CompanyDrawer({
             onCheckCompanyContacts={onCheckCompanyContacts}
           />
 
-          {(company.hiring_page_url || company.yc_url) && (
+          {!sourceClosed && !sharedPublisher && (company.hiring_page_url || company.yc_url) && (
             <section className="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)] p-4">
               <h3 className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Company links</h3>
               <div className="flex flex-wrap gap-2">
@@ -335,7 +337,7 @@ export function CompanyDrawer({
                   className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2.5 text-xs font-semibold text-[var(--text-warm)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent-soft)]"
                 >
                   <Briefcase className="h-3.5 w-3.5 text-[var(--accent)]" />
-                  Careers{company.open_roles_count > 0 ? ` · ${company.open_roles_count} roles` : ""}
+                  Careers (status unverified)
                   {company.hiring_provider && <span className="text-[10px] text-[var(--text-muted)]">{company.hiring_provider}</span>}
                   <ExternalLink className="h-3 w-3 opacity-60" />
                 </a>
@@ -527,7 +529,7 @@ export function CompanyDrawer({
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <Briefcase className="w-4 h-4 text-lime-500" />
-                Open Roles ({company.jobs?.length || company.open_roles_count})
+                {sourceClosed ? "Closed in source excerpt" : "Source-listed roles (status unknown)"}
               </h3>
               {company.hiring_provider && (
                 <span className="text-[10px] font-mono uppercase px-2.5 py-0.5 rounded-md bg-slate-700/20 text-slate-500 dark:text-slate-400 border border-slate-700/40">
@@ -536,7 +538,7 @@ export function CompanyDrawer({
               )}
             </div>
 
-            {company.jobs && company.jobs.length > 0 ? (
+            {!sourceClosed && !sharedPublisher && company.jobs && company.jobs.length > 0 ? (
               <div className="space-y-2">
                 {company.jobs.map((job) => (
                   <div key={job.id} className="p-3 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-muted)] flex items-center justify-between gap-3">
@@ -571,7 +573,7 @@ export function CompanyDrawer({
               </div>
             ) : (
               <div className="p-4 rounded-2xl border border-dashed border-[var(--border-soft)] bg-[var(--surface-muted)] text-xs text-slate-500 dark:text-slate-400 text-center">
-                No public job board found for this one. A direct pitch to the founder still works.
+                {sourceClosed ? "The source excerpt says this listing is closed." : sharedPublisher ? "Roles are hidden because this shared publisher record may contain unrelated postings." : "No public job board found. Verify hiring status directly with the company."}
               </div>
             )}
           </section>
