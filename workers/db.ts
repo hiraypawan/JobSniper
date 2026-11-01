@@ -1023,45 +1023,44 @@ export async function queryCompanies(
     params.push(cutoff14d, cutoff14d);
   }
 
+  // Match all selected job filters against the same posting, not separate jobs
+  // or the company's headquarters. These conservative signals are not guarantees.
+  const jobConditions: string[] = [];
+  // Normalize punctuation and match complete words rather than substrings.
+  const words = (column: string) =>
+    `(' ' || REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(${column}, '')), ',', ' '), '.', ' '), '/', ' '), '-', ' '), '(', ' '), ')', ' '), ':', ' ') || ' ')`;
   if (filters.indiaOnly) {
-    const indiaTerms = [
-      "india", "bengaluru", "bangalore", "mumbai", "pune", "new delhi",
-      "delhi", "noida", "gurugram", "gurgaon", "hyderabad", "chennai",
-      "kolkata", "ahmedabad", "jaipur", "kochi", "indore", "chandigarh",
-      "asia", "apac", "worldwide", "anywhere",
-    ];
-    const companyLocation = indiaTerms.map(() => "LOWER(COALESCE(location, '')) LIKE ?");
-    const jobLocation = indiaTerms.map(() => "LOWER(COALESCE(india_job.location, '')) LIKE ?");
-    where.push(`(
-      ${companyLocation.join(" OR ")}
-      OR EXISTS (
-        SELECT 1 FROM jobs india_job
-        WHERE india_job.company_id = companies.id
-          AND (${jobLocation.join(" OR ")})
-      )
-    )`);
-    params.push(...indiaTerms.map((term) => `%${term}%`), ...indiaTerms.map((term) => `%${term}%`));
+    const location = words("job.location");
+    const rawLocation = "LOWER(COALESCE(job.location, ''))";
+    const indiaTerms = ["india", "bengaluru", "bangalore", "mumbai", "pune", "new delhi", "delhi", "noida", "gurugram", "gurgaon", "hyderabad", "chennai", "kolkata", "ahmedabad", "jaipur", "kochi", "indore", "chandigarh"];
+    const regionalTerms = ["asia", "apac", "worldwide", "anywhere"];
+    const india = indiaTerms.map((term) => `${location} LIKE '% ${term} %'`).join(" OR ");
+    const regional = regionalTerms.map((term) => `${location} LIKE '% ${term} %'`).join(" OR ");
+    jobConditions.push(`((${india}) OR ((job.remote = 1 OR ${rawLocation} LIKE '%remote%') AND (${regional})))`);
+    const eligibilityText = "LOWER(COALESCE(job.location, '') || ' ' || COALESCE(job.description, ''))";
+    jobConditions.push(...["not available in india", "not open to india", "excluding india", "excluding candidates in india", "except india", "except for india", "india excluded", "india not eligible", "india is not eligible", "india not included", "us only", "usa only", "u.s. only", "united states only", "europe only", "uk only", "united kingdom only", "must be based in the us", "must reside in the us"].map((term) => `${eligibilityText} NOT LIKE '%${term}%'`));
   }
-
   if (filters.fresherOnly) {
-    const earlyCareerTerms = [
-      "fresher", "freshers", "entry-level", "entry level", "junior",
-      "graduate", "new grad", "new graduate", "early career", "trainee",
-      "intern", "internship", "0-2 years", "0 to 2 years",
-      "1-2 years", "campus hire",
-    ];
-    const roleText = `LOWER(COALESCE(early_job.title, '') || ' ' || COALESCE(early_job.department, '') || ' ' || COALESCE(early_job.description, ''))`;
-    const keywordMatches = earlyCareerTerms.map(() => `${roleText} LIKE ?`).join(" OR ");
-    where.push(`EXISTS (
-      SELECT 1 FROM jobs early_job
-      WHERE early_job.company_id = companies.id
-        AND (${keywordMatches})
-        AND ${roleText} NOT LIKE '%not open to fresher%'
-        AND ${roleText} NOT LIKE '%not for fresher%'
-        AND ${roleText} NOT LIKE '%no fresher%'
-        AND ${roleText} NOT LIKE '%not open to graduate%'
-    )`);
-    params.push(...earlyCareerTerms.map((term) => `%${term}%`));
+    const title = words("job.title");
+    const earlyTerms = ["fresher", "entry level", "junior", "graduate", "new grad", "early career", "trainee", "intern", "interns", "internship", "campus hire"];
+    const seniorTerms = ["senior", "sr", "staff", "principal", "lead", "manager", "director", "head of", "chief", "architect", "experienced"];
+    jobConditions.push(`(${earlyTerms.map((term) => `${title} LIKE '% ${term} %'`).join(" OR ")})`);
+    jobConditions.push(...seniorTerms.map((term) => `${title} NOT LIKE '% ${term} %'`));
+    const text = "LOWER(COALESCE(job.description, ''))";
+    jobConditions.push(...["not open to fresher", "not for fresher", "no fresher", "not open to graduate"].map((term) => `${text} NOT LIKE '%${term}%'`));
+    // Exclude common explicit multi-year requirements, even on junior-labelled posts.
+    const experienceTerms = Array.from({ length: 18 }, (_, i) => i + 3).flatMap((years) => [
+      `${years}+ years`, `${years} + years`, `${years} years of experience`,
+      `${years} years experience`, `${years}+ yrs`, `${years} yrs experience`,
+    ]);
+    jobConditions.push(...experienceTerms.map((term) => `${text} NOT LIKE '%${term}%'`));
+  }
+  if (jobConditions.length) {
+    jobConditions.push("LOWER(COALESCE(job.title, '') || ' ' || COALESCE(job.description, '')) NOT LIKE '%closed now%'");
+    // Shared publisher domains can have unrelated jobs merged into one company.
+    where.push("LOWER(COALESCE(companies.one_liner, '') || ' ' || COALESCE(companies.description, '')) NOT LIKE '%closed now%'");
+    where.push("LOWER(COALESCE(companies.domain, '')) NOT IN ('news.ycombinator.com', 'mercurynews.com')");
+    where.push(`EXISTS (SELECT 1 FROM jobs job WHERE job.company_id = companies.id AND ${jobConditions.join(" AND ")})`);
   }
 
   if (filters.launchOnly) {
@@ -1162,7 +1161,7 @@ export async function queryCompanies(
     const placeholders = companyIds.map(() => "?").join(",");
     const jobsRes = await env.DB.prepare(
       `SELECT id, company_id, title, url, location, remote, department, posted_at
-       FROM jobs WHERE company_id IN (${placeholders})`
+       FROM jobs job WHERE job.company_id IN (${placeholders}) ${jobConditions.length ? `AND ${jobConditions.join(" AND ")}` : ""}`
     )
       .bind(...companyIds)
       .all<{
