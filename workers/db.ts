@@ -1066,7 +1066,7 @@ export async function queryCompanies(
     jobConditions.push("LOWER(COALESCE(job.title, '') || ' ' || COALESCE(job.description, '')) NOT LIKE '%closed now%'");
     // Shared publisher domains can have unrelated jobs merged into one company.
     where.push("LOWER(COALESCE(companies.one_liner, '') || ' ' || COALESCE(companies.description, '')) NOT LIKE '%closed now%'");
-    where.push("LOWER(COALESCE(companies.domain, '')) NOT IN ('news.ycombinator.com', 'mercurynews.com')");
+    where.push("LOWER(COALESCE(companies.domain, '')) NOT IN ('news.ycombinator.com', 'mercurynews.com', 'grnh.se')");
     where.push(`EXISTS (SELECT 1 FROM jobs job WHERE job.company_id = companies.id AND ${jobConditions.join(" AND ")})`);
   }
 
