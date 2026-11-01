@@ -127,7 +127,7 @@ export function SourceHealthPopover({
           {keys.map((key) => {
             const meta = SOURCE_LABELS[key];
             const sum = summaryMap.get(key as SyncSourceSummary["source"]);
-            const dbCount = bySource[key] ?? sum?.count ?? 0;
+            const dbCount = bySource[key];
             const hasIssue = sum?.mode === "unavailable" || Boolean(sum?.error);
 
             return (
@@ -140,7 +140,7 @@ export function SourceHealthPopover({
                     {hasIssue ? (
                       <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
                     ) : (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[var(--pastel-mint)] shrink-0" />
+                      sum ? <CheckCircle2 className="w-3.5 h-3.5 text-[var(--pastel-mint)] shrink-0" /> : <Clock className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                     )}
                       <span className="text-xs font-semibold truncate text-[var(--text-warm)]">
                       {meta.name}
@@ -176,10 +176,10 @@ export function SourceHealthPopover({
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-xs font-semibold text-[var(--text-warm)]">
-                    {sum ? `${sum.count} fetched · ${dbCount} in D1` : `${dbCount} in D1`}
+                    {sum ? `${sum.count} fetched · ${dbCount ?? "unknown"} in D1` : `${dbCount ?? "unknown"} in D1`}
                   </div>
-                  <div className={`font-mono text-[10px] ${hasIssue ? "text-rose-400" : "text-[var(--pastel-mint)]"}`}>
-                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "stored"}
+                  <div className={`font-mono text-[10px] ${hasIssue ? "text-rose-400" : sum ? "text-[var(--pastel-mint)]" : "text-[var(--text-muted)]"}`}>
+                    {sum ? `${sum.durationMs}ms · ${sum.mode}` : "status unknown"}
                   </div>
                 </div>
               </div>
