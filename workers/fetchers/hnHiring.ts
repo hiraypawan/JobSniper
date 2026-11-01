@@ -83,7 +83,7 @@ export async function fetchHnWhoIsHiring(
             const host = new URL(candidate).hostname.toLowerCase();
             return !(
               /(^|\.)news\.ycombinator\.com$|(^|\.)linkedin\.com$|(^|\.)x\.com$|(^|\.)twitter\.com$/i.test(host) ||
-              /(^|\.)greenhouse\.io$|(^|\.)ashbyhq\.com$|(^|\.)lever\.co$|(^|\.)workable\.com$/i.test(host)
+              /(^|\.)greenhouse\.io$|(^|\.)grnh\.se$|(^|\.)ashbyhq\.com$|(^|\.)lever\.co$|(^|\.)workable\.com$/i.test(host)
             );
           } catch {
             return false;

@@ -19,6 +19,9 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:filters
+      - run: npm run test:remote-jobs
+      - run: npx tsx scripts/test-http-cache.ts
+      - run: npx tsx scripts/test-himalayas.ts
       - name: Build Cloudflare static export
         run: npm run build:cf
         env:

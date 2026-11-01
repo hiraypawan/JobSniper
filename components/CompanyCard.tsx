@@ -148,6 +148,12 @@ export function CompanyCard({
           `${company.name} is a startup.`}
         </p>
 
+        {company.sources.includes("remotive") && (
+          <p className="mt-2 text-[10px] text-[var(--text-muted)]" onClick={(event) => event.stopPropagation()}>
+            Company source: <a href="https://remotive.com/" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">Remotive</a>
+          </p>
+        )}
+
         <ContactChannels
           company={company}
           onCheckCompanyContacts={onCheckCompanyContacts}
@@ -274,7 +280,7 @@ export function CompanyCard({
               className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-[10px] font-semibold text-[var(--accent)] hover:bg-[var(--accent-soft)] transition-all"
               title="Open the source-listed careers page"
             >
-              <Briefcase className="w-3 h-3" /> Jobs
+              <Briefcase className="w-3 h-3" /> {company.hiring_page_url && /^https?:[/][/](www[.])?remotive[.]com([/:?#]|$)/i.test(company.hiring_page_url) ? "View on Remotive" : "Jobs"}
               <ExternalLink className="w-3 h-3" />
             </a>
           )}

@@ -14,7 +14,7 @@ export function isUsableSourceWebsite(website: string | null | undefined, domain
       hostname.endsWith(".local") ||
       hostname.endsWith(".invalid");
     // Publisher and social profiles are sources, not verified company websites.
-    const sourceHosts = ["news.ycombinator.com", "mercurynews.com", "finsmes.com", "eu-startups.com", "techcrunch.com", "linkedin.com", "facebook.com", "instagram.com", "twitter.com", "x.com", "reddit.com"];
+    const sourceHosts = ["news.ycombinator.com", "mercurynews.com", "grnh.se", "finsmes.com", "eu-startups.com", "techcrunch.com", "linkedin.com", "facebook.com", "instagram.com", "twitter.com", "x.com", "reddit.com"];
     const isSourceHost = sourceHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`));
     return ["http:", "https:"].includes(url.protocol) &&
       hostname.includes(".") &&

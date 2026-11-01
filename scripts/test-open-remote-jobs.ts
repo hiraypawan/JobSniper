@@ -34,7 +34,7 @@ const remotive = normalizeRemotiveJobs({
   ],
 });
 
-assert.equal(remotive.length, 1, "only explicit India-eligible, safe listings are retained");
+assert.equal(remotive.length, 2, "safe India and US listings remain in the dataset"); assert.equal(remotive[1].name, "US-only Co"); assert.equal(remotive[1].jobs?.[0].location, "United States"); assert.equal(remotive[1].website, "");
 assert.equal(remotive[0].name, "Verified India Co");
 assert.equal(remotive[0].website, "", "missing employer websites must remain missing");
 assert.match(remotive[0].id || "", /startup_local/, "internal key is visibly synthetic");
@@ -42,6 +42,26 @@ assert.equal(remotive[0].jobs?.[0].location, "India");
 assert.equal(remotive[0].jobs?.[0].posted_at, "2026-10-20");
 assert.equal(remotive[0].jobs?.[0].url, "https://remotive.com/remote-jobs/software-dev/india-engineer-11");
 assert.match(remotive[0].description, /does not provide a verified company website/);
+
+// Each newly imported Remotive job must link back to a Remotive listing.
+const remotiveUrlCases: Array<[string, boolean]> = [
+  ["https://remotive.com/remote-jobs/software-dev/engineer-11", true],
+  ["https://www.remotive.com/remote-jobs/design/designer-12?ref=api", true],
+  ["https://example.com/remote-jobs/software-dev/engineer-11", false],
+  ["https://remotive.com.example.org/remote-jobs/software-dev/engineer-11", false],
+  ["https://user:password@remotive.com/remote-jobs/software-dev/engineer-11", false],
+  ["http://remotive.com/remote-jobs/software-dev/engineer-11", false],
+  ["https://remotive.com/remote-jobs/software-dev", false],
+  ["https://remotive.com/", false],
+  ["javascript:alert(1)", false],
+];
+for (const [url, accepted] of remotiveUrlCases) {
+  const result = normalizeRemotiveJobs({ jobs: [{
+    url, title: "Engineer", company_name: "Example", candidate_required_location: "Worldwide",
+  }] });
+  assert.equal(result.length, accepted ? 1 : 0, `Remotive attribution URL: ${url}`);
+  if (accepted) assert.equal(result[0].jobs?.[0].url, url);
+}
 
 const groundedPitch = buildOutreachPitches(
   { ...remotive[0], jobs: remotive[0].jobs as Company["jobs"] } as unknown as Company,

@@ -337,7 +337,7 @@ export function CompanyDrawer({
                   className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2.5 text-xs font-semibold text-[var(--text-warm)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent-soft)]"
                 >
                   <Briefcase className="h-3.5 w-3.5 text-[var(--accent)]" />
-                  Careers (status unverified)
+                  {company.hiring_page_url && /^https?:[/][/](www[.])?remotive[.]com([/:?#]|$)/i.test(company.hiring_page_url) ? "View on Remotive" : "Careers (status unverified)"}
                   {company.hiring_provider && <span className="text-[10px] text-[var(--text-muted)]">{company.hiring_provider}</span>}
                   <ExternalLink className="h-3 w-3 opacity-60" />
                 </a>
@@ -565,7 +565,7 @@ export function CompanyDrawer({
                       rel="noopener noreferrer"
                       className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white dark:text-slate-950 hover:bg-[var(--accent-hover)] transition-all"
                     >
-                      Apply
+                      {/^https?:[/][/](www[.])?remotive[.]com([/:?#]|$)/i.test(job.url) ? "View on Remotive" : "Apply"}
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
