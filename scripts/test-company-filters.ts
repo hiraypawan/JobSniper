@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { queryCompanies } from "@/workers/db";
+import { queryCompanies } from "@/workers/db"; import { isUsableSourceWebsite } from "@/lib/companyLinks";
 import type { WorkerEnv } from "@/lib/cf-types";
 import { normalizeRareRolesJobs } from "@/workers/fetchers/rareRoles";
 
@@ -19,7 +19,7 @@ assert.equal(rareFixture[0].jobs?.[0].posted_at, "2026-10-01");
 assert.equal(rareFixture[0].jobs?.[1].location, "Remote - USA");
 assert.equal(rareFixture[0].jobs?.[1].remote, true);
 assert.equal(rareFixture[0].jobs?.[1].title, "Senior Engineer");
-assert.throws(() => normalizeRareRolesJobs({}));
+assert.throws(() => normalizeRareRolesJobs({})); assert.equal(isUsableSourceWebsite("https://grnh.se/example", "grnh.se"), false); assert.equal(isUsableSourceWebsite("https://example.com", "example.com"), true);
 
 
 
@@ -69,8 +69,8 @@ async function main() {
   sqlite.exec(`
     CREATE TABLE companies (id TEXT PRIMARY KEY, outreach_status TEXT, domain TEXT, one_liner TEXT, description TEXT);
     CREATE TABLE jobs (id TEXT, company_id TEXT, title TEXT, location TEXT, remote INTEGER, description TEXT);
-    INSERT INTO companies (id, outreach_status) VALUES ('split','new'), ('india','new'), ('remote','new'), ('senior','new'), ('closed','new'), ('us','new'), ('indiana','new'), ('international','new'), ('excluded','new'), ('publisher','new'), ('closedcompany','new'), ('usonly','new'), ('experiencedjunior','new');
-    UPDATE companies SET domain = 'news.ycombinator.com' WHERE id = 'publisher';
+    INSERT INTO companies (id, outreach_status) VALUES ('split','new'), ('india','new'), ('remote','new'), ('senior','new'), ('closed','new'), ('us','new'), ('indiana','new'), ('international','new'), ('excluded','new'), ('publisher','new'), ('shortlink','new'), ('closedcompany','new'), ('usonly','new'), ('experiencedjunior','new');
+    UPDATE companies SET domain = 'news.ycombinator.com' WHERE id = 'publisher';     UPDATE companies SET domain = 'grnh.se' WHERE id = 'shortlink';
     UPDATE companies SET one_liner = 'CLOSED NOW' WHERE id = 'closedcompany';
     INSERT INTO jobs VALUES
       ('a','split','Senior Engineer','Bengaluru, India',0,''),
@@ -83,7 +83,7 @@ async function main() {
       ('h','indiana','Junior Engineer','Indiana, USA',0,''),
       ('i','international','International Engineer','India',0,''),
       ('j','excluded','Junior Engineer','Remote worldwide',1,'Not open to India'),
-      ('k','publisher','Junior Engineer','India',0,''),
+      ('k','publisher','Junior Engineer','India',0,''), ('o','shortlink','Junior Engineer','India',0,''),
       ('l','closedcompany','Junior Engineer','India',0,''),
       ('m','usonly','Junior Engineer','Remote worldwide',1,'US only'),
       ('n','experiencedjunior','Junior Engineer','India',0,'Requires 5+ years of experience');
@@ -97,7 +97,7 @@ async function main() {
   assert(!idsFor(await capture({ indiaOnly: true })).includes("indiana"), "Indiana is not India");
   assert(!idsFor(await capture({ fresherOnly: true })).includes("international"), "international is not intern");
   assert(!idsFor(combined).includes("excluded"), "explicit India exclusions are respected");
-  assert(!idsFor(combined).includes("publisher"), "shared publisher records are excluded");
+  assert(!idsFor(combined).includes("publisher"), "shared publisher records are excluded"); assert(!idsFor(combined).includes("shortlink"), "shared shortlink identities are excluded from role filters"); assert(idsFor(await capture({})).includes("shortlink"), "unfiltered results retain shared-domain records");
   assert(!idsFor(combined).includes("closedcompany"), "company excerpt marks the listing closed");
   assert(!idsFor(combined).includes("usonly"), "US-only remote is not India eligible");
   assert(!idsFor(combined).includes("experiencedjunior"), "junior title requiring five years is not fresher appropriate");
