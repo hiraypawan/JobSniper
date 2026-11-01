@@ -19,3 +19,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run test:filters
+      - name: Build Cloudflare static export
+              run: npm run build:cf
+                      env:
+                                STATIC_EXPORT: 1
+                                
