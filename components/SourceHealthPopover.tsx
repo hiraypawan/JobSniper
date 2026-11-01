@@ -51,6 +51,25 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   },
 };
 
+// These sources are not yet connected to the sync. Do not present them as healthy
+// or imply their crawl permission has been established.
+const PENDING_SOURCES = [
+  ["RareRoles", "Public API found; permission and compliant sync still need review."],
+  ["Himalayas", "Public API found; attribution, application links and expiry handling still need implementation."],
+  ["Career Hound", "A permitted public jobs feed or API has not been established."],
+  ["SkipTheDrive", "Job and search paths are restricted in robots.txt; a permitted feed has not been established."],
+  ["Built In", "A permitted public jobs API or feed has not been established."],
+  ["Underdog.io", "A permitted public jobs API or feed has not been established."],
+  ["GitHub Jobs", "The jobs.github.com endpoint was unreachable; retirement evidence is still being checked."],
+  ["EuropeRemotely", "The site returned unavailable content; a permitted feed has not been established."],
+  ["Jobspresso", "A permitted jobs feed has not been established; robots.txt restricts query URLs."],
+  ["Dynamite Jobs", "robots.txt disallows /api/; another permitted feed has not been established."],
+  ["Pangian", "The site could not be verified; availability and permitted access remain unknown."],
+  ["Outsourcely", "The site could not be reached; availability and permitted access remain unknown."],
+  ["Virtual Vocations", "A permitted public jobs feed or API has not been established."],
+  ["CloudPeeps", "The site could not be reached; availability and permitted access remain unknown."],
+] as const;
+
 export function SourceHealthPopover({
   isOpen,
   onClose,
@@ -166,6 +185,18 @@ export function SourceHealthPopover({
               </div>
             );
           })}
+
+          <section aria-label="Sources pending integration" className="space-y-2">
+            <h4 className="text-xs font-semibold text-[var(--text-warm)]">Sources pending integration</h4>
+            {PENDING_SOURCES.map(([name, reason]) => (
+              <div key={name} className="p-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-muted)]">
+                <div className="text-xs font-semibold text-[var(--text-warm)]">{name}: disabled</div>
+                <p className="text-xs text-[var(--text-muted)] mt-1">{reason}</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Not synced by this integration; last successful sync and stored record count are unknown.</p>
+              </div>
+            ))}
+            <p className="text-xs text-[var(--text-muted)]">Genuine Wellfound jobs are not fetched by the existing funding RSS source; a permitted public jobs feed has not been established.</p>
+          </section>
         </div>
       </div>
     </div>
