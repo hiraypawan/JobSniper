@@ -66,7 +66,7 @@ const PENDING_SOURCES = [
   ["Dynamite Jobs", "robots.txt disallows /api/; another permitted feed has not been established."],
   ["Pangian", "pangian.com redirects to a domain-for-sale page; the job site is unavailable at that domain."],
   ["Outsourcely", "The site could not be reached; availability and permitted access remain unknown."],
-  ["Virtual Vocations", "A permitted public jobs feed or API has not been established."],
+  ["Virtual Vocations", "Terms prohibit automated access and scraping without prior written consent; no approved feed is configured."],
   ["CloudPeeps", "The site could not be reached; availability and permitted access remain unknown."],
 ] as const;
 
