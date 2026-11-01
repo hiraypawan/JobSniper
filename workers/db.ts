@@ -1029,31 +1029,38 @@ export async function queryCompanies(
   // Normalize punctuation and match complete words rather than substrings.
   const words = (column: string) =>
     `(' ' || REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(${column}, '')), ',', ' '), '.', ' '), '/', ' '), '-', ' '), '(', ' '), ')', ' '), ':', ' ') || ' ')`;
+  // Use a fixed-shape SQLite subquery rather than a growing AND/OR expression.
+  // Terms are internal constants; escape SQL quotes in their JSON representation.
+  const anyTerm = (column: string, terms: string[], wholeWords = false) => {
+    const json = JSON.stringify(terms).replace(/'/g, "''");
+    const pattern = wholeWords ? "'% ' || filter_term.value || ' %'" : "'%' || filter_term.value || '%'";
+    return `EXISTS (SELECT 1 FROM json_each('${json}') AS filter_term WHERE ${column} LIKE (${pattern}))`;
+  };
   if (filters.indiaOnly) {
     const location = words("job.location");
     const rawLocation = "LOWER(COALESCE(job.location, ''))";
     const indiaTerms = ["india", "bengaluru", "bangalore", "mumbai", "pune", "new delhi", "delhi", "noida", "gurugram", "gurgaon", "hyderabad", "chennai", "kolkata", "ahmedabad", "jaipur", "kochi", "indore", "chandigarh"];
     const regionalTerms = ["asia", "apac", "worldwide", "anywhere"];
-    const india = indiaTerms.map((term) => `${location} LIKE '% ${term} %'`).join(" OR ");
-    const regional = regionalTerms.map((term) => `${location} LIKE '% ${term} %'`).join(" OR ");
+    const india = anyTerm(location, indiaTerms, true);
+    const regional = anyTerm(location, regionalTerms, true);
     jobConditions.push(`((${india}) OR ((job.remote = 1 OR ${rawLocation} LIKE '%remote%') AND (${regional})))`);
     const eligibilityText = "LOWER(COALESCE(job.location, '') || ' ' || COALESCE(job.description, ''))";
-    jobConditions.push(...["not available in india", "not open to india", "excluding india", "excluding candidates in india", "except india", "except for india", "india excluded", "india not eligible", "india is not eligible", "india not included", "us only", "usa only", "u.s. only", "united states only", "europe only", "uk only", "united kingdom only", "must be based in the us", "must reside in the us"].map((term) => `${eligibilityText} NOT LIKE '%${term}%'`));
+    jobConditions.push(`NOT ${anyTerm(eligibilityText, ["not available in india", "not open to india", "excluding india", "excluding candidates in india", "except india", "except for india", "india excluded", "india not eligible", "india is not eligible", "india not included", "us only", "usa only", "u.s. only", "united states only", "europe only", "uk only", "united kingdom only", "must be based in the us", "must reside in the us"] )}`);
   }
   if (filters.fresherOnly) {
     const title = words("job.title");
     const earlyTerms = ["fresher", "entry level", "junior", "graduate", "new grad", "early career", "trainee", "intern", "interns", "internship", "campus hire"];
     const seniorTerms = ["senior", "sr", "staff", "principal", "lead", "manager", "director", "head of", "chief", "architect", "experienced"];
-    jobConditions.push(`(${earlyTerms.map((term) => `${title} LIKE '% ${term} %'`).join(" OR ")})`);
-    jobConditions.push(...seniorTerms.map((term) => `${title} NOT LIKE '% ${term} %'`));
+    jobConditions.push(anyTerm(title, earlyTerms, true));
+    jobConditions.push(`NOT ${anyTerm(title, seniorTerms, true)}`);
     const text = "LOWER(COALESCE(job.description, ''))";
-    jobConditions.push(...["not open to fresher", "not for fresher", "no fresher", "not open to graduate"].map((term) => `${text} NOT LIKE '%${term}%'`));
+    jobConditions.push(`NOT ${anyTerm(text, ["not open to fresher", "not for fresher", "no fresher", "not open to graduate"])}`);
     // Exclude common explicit multi-year requirements, even on junior-labelled posts.
     const experienceTerms = Array.from({ length: 18 }, (_, i) => i + 3).flatMap((years) => [
       `${years}+ years`, `${years} + years`, `${years} years of experience`,
       `${years} years experience`, `${years}+ yrs`, `${years} yrs experience`,
     ]);
-    jobConditions.push(...experienceTerms.map((term) => `${text} NOT LIKE '%${term}%'`));
+    jobConditions.push(`NOT ${anyTerm(text, experienceTerms)}`);
   }
   if (jobConditions.length) {
     jobConditions.push("LOWER(COALESCE(job.title, '') || ' ' || COALESCE(job.description, '')) NOT LIKE '%closed now%'");
