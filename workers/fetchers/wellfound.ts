@@ -120,9 +120,38 @@ export async function fetchWellfoundFunded(
     }
   });
 
+  const feedNames = ["FinSMEs", "EU-Startups", "TechCrunch"];
+  const feedStatuses = await Promise.all(feedCalls.map(async (result, index) => {
+    let lastSuccessfulAt: string | null = null;
+    try {
+      const row = await env.DB.prepare(
+        "SELECT updated_at FROM http_cache WHERE cache_key = ?"
+      ).bind(`funding_rss_${index}`).first<{ updated_at: string }>();
+      lastSuccessfulAt = row?.updated_at || null;
+    } catch {
+      // A missing cache timestamp is unknown, not a successful sync.
+    }
+    const common = { name: feedNames[index], url: rssUrls[index], lastSuccessfulAt };
+    if (result.status === "fulfilled") {
+      return {
+        ...common,
+        status: result.value.fromCache ? "cached" as const : "live" as const,
+        lastSuccessfulAt: result.value.fromCache ? lastSuccessfulAt : new Date().toISOString(),
+      };
+    }
+    const detail = result.reason instanceof Error ? result.reason.message : String(result.reason);
+    const blocked = /HTTP 403\b/i.test(detail);
+    return {
+      ...common,
+      status: blocked ? "blocked" as const : "unavailable" as const,
+      reason: blocked ? `HTTP 403 access denied (possibly a Cloudflare challenge): ${detail}` : detail,
+    };
+  }));
+
   return {
     source: "wellfound",
     companies,
+    feedStatuses,
     durationMs: Date.now() - started,
     mode: anyLive ? "live" : sourceAvailable ? "cached" : "unavailable",
     note: sourceAvailable
