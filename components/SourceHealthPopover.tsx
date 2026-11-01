@@ -39,7 +39,7 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
   },
   remotive: {
     name: "Remotive public jobs API",
-    desc: "Remote roles whose source-listed eligibility includes India, Asia, or worldwide",
+    desc: "Remote roles with source-listed location restrictions; filters apply per job",
   },
   jobicy: {
     name: "Jobicy public jobs API",
