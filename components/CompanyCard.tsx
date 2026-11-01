@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Briefcase, Check, Copy, ExternalLink, Users } from "lucide-react";
 import { copyTextSafe } from "@/lib/clipboard";
+import { isUsableSourceWebsite } from "@/lib/companyLinks";
 import { buildOutreachPitches } from "@/lib/pitchTemplates";
 import { Company, OutreachStatus, PitchSettings } from "@/lib/types";
 import { ContactChannels, ContactCheckResult } from "@/components/ContactChannels";
@@ -57,6 +58,8 @@ export function CompanyCard({
   onCheckCompanyContacts,
 }: Props) {
   const [copied, setCopied] = useState(false);
+  const sourceClosed = /\bclosed now\b/i.test(`${company.one_liner || ""} ${company.description || ""}`);
+  const showCompanySite = isUsableSourceWebsite(company.website, company.domain);
 
   const initials = company.name
     .split(/[\s-]+/)
@@ -114,7 +117,7 @@ export function CompanyCard({
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-[var(--text-muted)] truncate">
                 <span className="truncate">
-                  {company.domain.endsWith(".startup.local") ? "Company site not listed" : company.domain}
+                  {showCompanySite ? company.domain : "Company site unverified"}
                 </span>
                 <span className="mx-0.5">·</span>
                 <span className="text-[9px] font-medium text-[var(--text-muted)]">
@@ -153,7 +156,7 @@ export function CompanyCard({
 
         {/* Badges */}
         <div className="mt-4 flex flex-wrap gap-2">
-          {company.is_funded_last_12mo && (
+          {company.is_funded_last_12mo && !/hiring now/i.test(company.funding_amount || "") && (
             <span className="badge-soft bg-[var(--pastel-mintSoft)] text-[var(--text-warm)] border-[var(--pastel-mint)]/40">
               {company.funding_amount && !company.funding_amount.includes("Standard")
                 ? company.funding_amount
@@ -163,11 +166,10 @@ export function CompanyCard({
           {company.is_remote && (
             <span className="badge-soft bg-[var(--pastel-cyan)]/20 text-[var(--text-warm)] border-[var(--pastel-cyan)]/30">Remote</span>
           )}
-          {(company.open_roles_count > 0 || company.hiring_page_url) && (
+          {(sourceClosed || company.open_roles_count > 0 || company.hiring_page_url) && (
             <span className="badge-soft bg-[var(--pastel-peach)]/30 text-[var(--text-warm)] border-[var(--pastel-peach)]/40 flex items-center gap-1">
               <Briefcase className="w-3 h-3" />
-              Hiring
-              {company.open_roles_count > 0 && `(${company.open_roles_count})`}
+              {sourceClosed ? "Closed in source excerpt" : "Hiring status unknown"}
             </span>
           )}
           {company.team_size && (
@@ -256,7 +258,7 @@ export function CompanyCard({
         </div>
 
         <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          {(company.hiring_page_url || company.yc_url) && (
+          {!sourceClosed && (company.hiring_page_url || company.yc_url) && (
             <a
               href={company.hiring_page_url || `${company.yc_url}/jobs`}
               target="_blank"
