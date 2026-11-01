@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { cachedFetchText } from "@/workers/httpCache";
+import { fetchHimalayasFirstPage } from "@/workers/fetchers/himalayas";
 import type { WorkerEnv } from "@/lib/cf-types";
 
 // Run the reservation SQL against real SQLite, without making network requests.
@@ -63,6 +64,37 @@ async function main() {
     const broken = { DB: { prepare() { throw new Error("D1 unavailable"); } } } as unknown as WorkerEnv;
     await assert.rejects(cachedFetchText(broken, "source-c", "https://example.com/feed", options), /D1 unavailable/);
     assert.equal(calls, 2, "D1 failure does not permit an unreserved fetch");
+    // Exercise the dormant bounded fetch without touching the real API.
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const applicationLink = "https://apply.example.com/role?ref=himalayas";
+    const activeJob = {
+      guid: "https://himalayas.app/companies/example/jobs/junior",
+      applicationLink, companyName: "Example", companySlug: "example",
+      title: "Junior developer", expiryDate: nowSeconds + 3600,
+      locationRestrictions: ["India"], timezoneRestrictions: [5.5],
+    };
+    let himalayasCalls = 0;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      himalayasCalls++;
+      assert.equal(String(input), "https://himalayas.app/jobs/api?limit=20");
+      assert.match(new Headers(init?.headers).get("User-Agent") || "", /JobSniper/);
+      return new Response(JSON.stringify({
+        jobs: [activeJob, { ...activeJob, expiryDate: nowSeconds - 1 }, null],
+        nextCursor: "next-page",
+      }), { status: 200 });
+    }) as typeof fetch;
+    const page = await fetchHimalayasFirstPage(env);
+    assert.equal(page.fromCache, false);
+    assert.equal(page.jobs.length, 1, "expired and invalid records are filtered");
+    assert.equal(page.jobs[0].applicationLink, applicationLink);
+    assert.equal(page.nextCursor, "next-page", "a bounded page preserves its continuation");
+    const cachedPage = await fetchHimalayasFirstPage(env);
+    assert.equal(cachedPage.fromCache, true);
+    assert.equal(himalayasCalls, 1, "fresh page cache is reused");
+    sqlite.exec("DELETE FROM http_cache WHERE cache_key = 'himalayas_first_page_v1'");
+    await assert.rejects(fetchHimalayasFirstPage(env), /cooldown/);
+    assert.equal(himalayasCalls, 1, "cache loss cannot bypass the daily reservation");
+
     console.log("HTTP cache cooldown tests passed.");
   } finally {
     globalThis.fetch = originalFetch;
