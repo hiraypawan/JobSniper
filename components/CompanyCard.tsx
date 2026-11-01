@@ -148,6 +148,12 @@ export function CompanyCard({
           `${company.name} is a startup.`}
         </p>
 
+        {company.sources.includes("remotive") && (
+          <p className="mt-2 text-[10px] text-[var(--text-muted)]" onClick={(event) => event.stopPropagation()}>
+            Company source: <a href="https://remotive.com/" target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">Remotive</a>
+          </p>
+        )}
+
         <ContactChannels
           company={company}
           onCheckCompanyContacts={onCheckCompanyContacts}
