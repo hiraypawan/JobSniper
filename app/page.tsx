@@ -549,7 +549,7 @@ export default function DashboardPage() {
             <p className="mt-1 max-w-2xl text-sm text-[var(--text-muted)]">
               {activeSection === "indie"
                 ? "New products, source listings, and verified revenue evidence."
-                : "Start with India-eligible and Fresher keywords, then open a company and review its jobs. Filters match company records, not necessarily the same role. Confirm the location, experience, closing status and application link at the original source before applying."}
+                : "Start with India and fresher filters, then review the matching roles. Filters use available source text; confirm eligibility, closing status and the application link at the original source before applying."}
             </p>
           </div>
           <div className="inline-flex w-fit items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]">
