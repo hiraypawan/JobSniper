@@ -27,7 +27,12 @@ async function main() {
   assert.match(combined.sql, /EXISTS \(SELECT 1 FROM jobs job WHERE job\.company_id = companies\.id/);
   assert.match(combined.sql, /job\.location/);
   assert.match(combined.sql, /job\.title/);
-  assert.match(combined.sql, /NOT LIKE '% senior %'/);
+  // Regression: the quick-start query must not expand every term into a deep
+  // left-associated AND tree (D1 limits expression depth to 100).
+  assert.match(combined.sql, /json_each\(/);
+  assert.match(combined.sql, /"senior"/);
+  assert((combined.sql.match(/\bAND\b/g) || []).length < 25, "quick-start SQL stays shallow as term lists grow");
+  assert((combined.sql.match(/\bNOT LIKE\b/g) || []).length < 10, "term exclusions use a fixed-shape subquery");
   assert.match(combined.sql, /NOT LIKE '%closed now%'/);
 
   // Execute the generated SQL against isolated in-memory fixtures (Node 22+).
