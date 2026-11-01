@@ -565,7 +565,7 @@ export function CompanyDrawer({
                       rel="noopener noreferrer"
                       className="shrink-0 inline-flex items-center gap-1 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[var(--accent)] text-white dark:text-slate-950 hover:bg-[var(--accent-hover)] transition-all"
                     >
-                      Apply
+                      {/^https?:[/][/](www[.])?remotive[.]com([/:?#]|$)/i.test(job.url) ? "View on Remotive" : "Apply"}
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
