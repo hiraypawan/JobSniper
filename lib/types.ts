@@ -7,7 +7,8 @@ export type CompanySource =
   | "trustmrr"
   | "hn_hiring"
   | "remotive"
-  | "jobicy";
+  | "jobicy"
+  | "rareroles";
 
 export type HiringProvider =
   | "greenhouse"
