@@ -34,7 +34,7 @@ const remotive = normalizeRemotiveJobs({
   ],
 });
 
-assert.equal(remotive.length, 1, "only explicit India-eligible, safe listings are retained");
+assert.equal(remotive.length, 2, "safe India and US listings remain in the dataset"); assert.equal(remotive[1].name, "US-only Co"); assert.equal(remotive[1].jobs?.[0].location, "United States"); assert.equal(remotive[1].website, "");
 assert.equal(remotive[0].name, "Verified India Co");
 assert.equal(remotive[0].website, "", "missing employer websites must remain missing");
 assert.match(remotive[0].id || "", /startup_local/, "internal key is visibly synthetic");
