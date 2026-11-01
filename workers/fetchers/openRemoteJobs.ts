@@ -58,6 +58,18 @@ function safeListingUrl(raw: string | undefined): string | null {
   }
 }
 
+// Remotive's terms require a link back to the actual Remotive listing.
+// Do not import records for which that attribution cannot be supplied.
+function remotiveListingUrl(raw: string | undefined): string | null {
+  const safe = safeListingUrl(raw);
+  if (!safe) return null;
+  const url = new URL(safe);
+  if (url.protocol !== "https:" || url.username || url.password ||
+      !["remotive.com", "www.remotive.com"].includes(url.hostname) ||
+      !/^\/remote-jobs\/[^/]+\/[^/]+\/?$/.test(url.pathname)) return null;
+  return safe;
+}
+
 function normalizePostedDate(raw: string | undefined): string | null {
   if (!raw) return null;
   const timestamp = Date.parse(raw);
@@ -151,7 +163,7 @@ function groupJobs(
 export function normalizeRemotiveJobs(payload: { jobs?: RemotiveJob[] }): NormalizedCompanyInput[] {
   const roles = (Array.isArray(payload.jobs) ? payload.jobs : []).flatMap((job) => {
     const location = (job.candidate_required_location || "").trim();
-    const url = safeListingUrl(job.url);
+    const url = remotiveListingUrl(job.url);
     if (!url) return [];
     return [{
       companyName: job.company_name || "",
