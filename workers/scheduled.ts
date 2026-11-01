@@ -126,6 +126,7 @@ export async function syncAllSources(
           mode: res.mode,
           note: res.note,
           error: res.error,
+          feedStatuses: res.feedStatuses,
         });
       } else {
         summaries.push({
