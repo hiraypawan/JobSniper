@@ -54,3 +54,33 @@ for (const status of [null, 404, 429, 500, 503]) {
 }
 assert.equal(shouldRemoveHimalayasJob(null, null, now), false);
 assert.equal(shouldRemoveHimalayasJob(Number.NaN, null, now), false);
+
+import { checkHimalayasJobClosure } from "@/workers/fetchers/himalayas";
+
+async function testSingleJobClosure(): Promise<void> {
+  let calls = 0;
+  let status = 410;
+  const mockFetch: typeof fetch = async (input, init) => {
+    calls += 1;
+    assert.equal(String(input), "https://himalayas.app/jobs/api/companies/example/jobs/junior-engineer");
+    assert.equal(init?.redirect, "error");
+    return new Response(null, { status });
+  };
+  assert.equal(await checkHimalayasJobClosure(base, now, mockFetch), true);
+  for (status of [200, 404, 429, 500]) {
+    assert.equal(await checkHimalayasJobClosure(base, now, mockFetch), false);
+  }
+  const before = calls;
+  assert.equal(await checkHimalayasJobClosure({ ...base, expiryDate: now }, now, mockFetch), true);
+  assert.equal(await checkHimalayasJobClosure({ ...base, guid: "https://evil.example/companies/example/jobs/junior-engineer" }, now, mockFetch), false);
+  assert.equal(await checkHimalayasJobClosure({ ...base, guid: `${base.guid}?x=1` }, now, mockFetch), false);
+  assert.equal(calls, before, "expired and invalid URLs must not trigger a request");
+  const failingFetch: typeof fetch = async () => { throw new Error("network error"); };
+  assert.equal(await checkHimalayasJobClosure(base, now, failingFetch), false);
+  console.log("Himalayas single-job closure fixtures passed; source remains disabled.");
+}
+
+void testSingleJobClosure().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
