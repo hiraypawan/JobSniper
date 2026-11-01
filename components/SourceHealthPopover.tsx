@@ -135,6 +135,25 @@ export function SourceHealthPopover({
                       </span>
                     )}
                   </p>
+                  {key === "wellfound" && (
+                    <div className="mt-2 space-y-2" aria-label="Funding feed status">
+                      {sum?.feedStatuses?.length ? sum.feedStatuses.map((feed) => (
+                        <div key={feed.url} className="text-xs text-[var(--text-warm)]">
+                          <div className="font-semibold">{feed.name}: {feed.status}</div>
+                          {feed.reason && <div className="break-words">Reason: {feed.reason}</div>}
+                          <div className="text-[var(--text-muted)]">
+                            Last successful sync: {feed.lastSuccessfulAt && Number.isFinite(Date.parse(feed.lastSuccessfulAt))
+                              ? new Date(feed.lastSuccessfulAt).toLocaleString()
+                              : "Unknown"}
+                          </div>
+                        </div>
+                      )) : (
+                        <p className="text-xs text-[var(--text-muted)]">
+                          FinSMEs and EU-Startups: not yet checked individually; last successful sync unknown.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-xs font-semibold text-[var(--text-warm)]">
