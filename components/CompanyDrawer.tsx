@@ -337,7 +337,7 @@ export function CompanyDrawer({
                   className="inline-flex items-center gap-2 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 py-2.5 text-xs font-semibold text-[var(--text-warm)] transition-colors hover:border-[var(--accent)]/50 hover:bg-[var(--accent-soft)]"
                 >
                   <Briefcase className="h-3.5 w-3.5 text-[var(--accent)]" />
-                  Careers (status unverified)
+                  {company.hiring_page_url && /^https?:[/][/](www[.])?remotive[.]com([/:?#]|$)/i.test(company.hiring_page_url) ? "View on Remotive" : "Careers (status unverified)"}
                   {company.hiring_provider && <span className="text-[10px] text-[var(--text-muted)]">{company.hiring_provider}</span>}
                   <ExternalLink className="h-3 w-3 opacity-60" />
                 </a>
