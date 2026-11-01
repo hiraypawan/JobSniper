@@ -3,7 +3,7 @@ import { WorkerEnv } from "@/lib/cf-types";
 export interface FetchCacheOptions {
   ttlSeconds?: number;
   forceLive?: boolean;
-  timeoutMs?: number;
+  timeoutMs?: number; minIntervalMs?: number;
   headers?: Record<string, string>;
   method?: "GET" | "POST";
   body?: string;
@@ -73,7 +73,7 @@ export async function fetchWithResilience(
   options: FetchCacheOptions = {}
 ): Promise<{ text: string; status: number }> {
   const timeoutMs = options.timeoutMs ?? 6000;
-  const maxAttempts = 2;
+  const maxAttempts = options.minIntervalMs ? 1 : 2;
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -134,7 +134,7 @@ export async function cachedFetchText(
     }
   }
 
-  const { text } = await fetchWithResilience(url, options);
+  if (options.minIntervalMs && options.minIntervalMs > 0) { const now = Date.now(); const lock = await env.DB.prepare("INSERT INTO http_cache (cache_key, payload, content_type, expires_at, updated_at) VALUES (?, 'reserved', 'text/plain', ?, ?) ON CONFLICT(cache_key) DO UPDATE SET expires_at = excluded.expires_at, updated_at = excluded.updated_at WHERE http_cache.expires_at <= ?").bind(`fetch-cooldown:${cacheKey}`, now + options.minIntervalMs, new Date(now).toISOString(), now).run(); if (!lock.meta?.changes) throw new Error("Source cooldown active; existing records are retained."); } const { text } = await fetchWithResilience(url, options);
   await writeD1Cache(env, cacheKey, text, ttlSeconds, "text/plain");
   return { text, fromCache: false };
 }
