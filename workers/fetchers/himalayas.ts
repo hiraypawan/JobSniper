@@ -157,3 +157,38 @@ export async function storeHimalayasPage(
   ];
   await env.DB.batch(statements);
 }
+
+// Check a single source listing without interpreting an incomplete feed as an
+// inventory. Fail closed on malformed URLs, network errors, redirects or any
+// response other than the documented 410; expiry alone is sufficient.
+export async function checkHimalayasJobClosure(
+  job: Pick<HimalayasJob, "guid" | "expiryDate">,
+  nowSeconds = Date.now() / 1000,
+  fetcher: typeof fetch = fetch
+): Promise<boolean> {
+  if (shouldRemoveHimalayasJob(job.expiryDate, null, nowSeconds)) return true;
+  let path: string;
+  try {
+    const guid = new URL(job.guid);
+    if (guid.protocol !== "https:" || guid.hostname !== "himalayas.app" ||
+        guid.port || guid.username || guid.password || guid.search || guid.hash ||
+        !/^\/companies\/[^/]+\/jobs\/[^/]+\/?$/.test(guid.pathname)) return false;
+    path = guid.pathname;
+  } catch {
+    return false;
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 7000);
+  try {
+    const response = await fetcher(`https://himalayas.app/jobs/api${path}`, {
+      headers: { "User-Agent": "JobSniper/1.0 (+https://github.com/hiraypawan/JobSniper)" },
+      redirect: "error",
+      signal: controller.signal,
+    });
+    return shouldRemoveHimalayasJob(job.expiryDate, response.status, nowSeconds);
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
