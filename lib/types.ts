@@ -126,6 +126,14 @@ export interface Company {
   jobs?: JobPosting[];
 }
 
+export interface FeedStatus {
+  name: string;
+  url: string;
+  status: "live" | "cached" | "blocked" | "unavailable";
+  reason?: string;
+  lastSuccessfulAt: string | null;
+}
+
 export interface FetcherResult {
   source: CompanySource;
   companies: NormalizedCompanyInput[];
@@ -133,6 +141,7 @@ export interface FetcherResult {
   mode: "live" | "live+fallback" | "cached" | "unavailable";
   note?: string;
   error?: string;
+  feedStatuses?: FeedStatus[];
 }
 
 export interface SyncSourceSummary {
@@ -143,6 +152,7 @@ export interface SyncSourceSummary {
   mode: "live" | "live+fallback" | "cached" | "unavailable";
   note?: string;
   error?: string;
+  feedStatuses?: FeedStatus[];
 }
 
 export interface DashboardStats {
