@@ -81,3 +81,14 @@ export function parseHimalayasJob(value: unknown, nowSeconds = Date.now() / 1000
     expiryDate: job.expiryDate,
   };
 }
+// A limited feed page is not an authoritative inventory. Only a known
+// expiry or the single-job endpoint's explicit 410 proves a listing closed.
+// Treat 404, rate limits, network errors, and all other responses as unknown.
+export function shouldRemoveHimalayasJob(
+  expiryDate: number | null,
+  singleJobStatus: number | null,
+  nowSeconds = Date.now() / 1000
+): boolean {
+  return (expiryDate !== null && Number.isFinite(expiryDate) && expiryDate <= nowSeconds) ||
+    singleJobStatus === 410;
+}
