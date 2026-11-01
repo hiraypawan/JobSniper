@@ -56,10 +56,10 @@ const SOURCE_LABELS: Record<string, { name: string; desc: string }> = {
 const PENDING_SOURCES = [
   ["RareRoles", "Public API found; permission and compliant sync still need review."],
   ["Himalayas", "Public API found; attribution, application links and expiry handling still need implementation."],
-  ["Career Hound", "A permitted public jobs feed or API has not been established."],
+  ["Career Hound", "Terms prohibit automated access without written permission; no approved feed is configured."],
   ["SkipTheDrive", "Job and search paths are restricted in robots.txt; a permitted feed has not been established."],
   ["Built In", "A permitted public jobs API or feed has not been established."],
-  ["Underdog.io", "A permitted public jobs API or feed has not been established."],
+  ["Underdog.io", "Terms prohibit scraping or downloading website data; no approved feed is configured."],
   ["GitHub Jobs", "GitHub retired GitHub Jobs; jobs.github.com was sunset on March 21, 2024."],
   ["EuropeRemotely", "The site returned unavailable content; a permitted feed has not been established."],
   ["Jobspresso", "A permitted jobs feed has not been established; robots.txt restricts query URLs."],
