@@ -127,3 +127,33 @@ export async function fetchHimalayasFirstPage(env: WorkerEnv): Promise<{
     fromCache: result.fromCache,
   };
 }
+
+// Dormant isolated storage: no sync or public route calls this yet. Keeping
+// these rows outside the shared jobs table avoids accidentally exporting them.
+// A page is partial: never remove records merely absent from it.
+export async function storeHimalayasPage(
+  env: WorkerEnv,
+  jobs: HimalayasJob[],
+  nowSeconds = Date.now() / 1000
+): Promise<void> {
+  if (!Number.isFinite(nowSeconds) || jobs.length > 20) throw new Error("Invalid Himalayas page");
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS himalayas_source_jobs (
+      guid TEXT PRIMARY KEY,
+      expiry_date REAL NOT NULL,
+      payload TEXT NOT NULL
+    )`
+  ).run();
+  const validJobs = jobs.flatMap((job) => {
+    const parsed = parseHimalayasJob(job, nowSeconds);
+    return parsed ? [parsed] : [];
+  });
+  const statements = [
+    env.DB.prepare("DELETE FROM himalayas_source_jobs WHERE expiry_date <= ?").bind(nowSeconds),
+    ...validJobs.map((job) => env.DB.prepare(
+      `INSERT INTO himalayas_source_jobs (guid, expiry_date, payload) VALUES (?, ?, ?)
+       ON CONFLICT(guid) DO UPDATE SET expiry_date = excluded.expiry_date, payload = excluded.payload`
+    ).bind(job.guid, job.expiryDate, JSON.stringify(job))),
+  ];
+  await env.DB.batch(statements);
+}
