@@ -1,4 +1,7 @@
-// Parsing only: this module is not wired into sync or the public API.
+import { WorkerEnv } from "@/lib/cf-types";
+import { cachedFetchJson } from "@/workers/httpCache";
+
+// Dormant parser and fetch helper: not wired into sync or the public API.
 // Enabling the source also requires closure checks, attribution, and a way to
 // prevent onward feeds and JobPosting structured data.
 
@@ -91,4 +94,36 @@ export function shouldRemoveHimalayasJob(
 ): boolean {
   return (expiryDate !== null && Number.isFinite(expiryDate) && expiryDate <= nowSeconds) ||
     singleJobStatus === 410;
+}
+// This bounded first-page fetch is deliberately not connected to sync yet.
+// It is not a complete inventory and cannot justify deleting missing jobs.
+export async function fetchHimalayasFirstPage(env: WorkerEnv): Promise<{
+  jobs: HimalayasJob[];
+  nextCursor: string | null;
+  fromCache: boolean;
+}> {
+  const result = await cachedFetchJson<unknown>(
+    env,
+    "himalayas_first_page_v1",
+    "https://himalayas.app/jobs/api?limit=20",
+    {
+      ttlSeconds: 86400,
+      minIntervalMs: 86460000,
+      forceLive: false,
+      timeoutMs: 7000,
+      headers: { "User-Agent": "JobSniper/1.0 (+https://github.com/hiraypawan/JobSniper)" },
+    }
+  );
+  if (!result.data || typeof result.data !== "object") throw new Error("Invalid Himalayas feed");
+  const payload = result.data as Record<string, unknown>;
+  if (!Array.isArray(payload.jobs)) throw new Error("Invalid Himalayas jobs array");
+  const jobs = payload.jobs.flatMap((value: unknown) => {
+    const job = parseHimalayasJob(value);
+    return job ? [job] : [];
+  });
+  return {
+    jobs,
+    nextCursor: typeof payload.nextCursor === "string" ? payload.nextCursor : null,
+    fromCache: result.fromCache,
+  };
 }
