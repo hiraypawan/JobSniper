@@ -204,7 +204,7 @@ async function fetchFeed<T>(
     const result = await cachedFetchJson<T>(env, `open_remote_jobs_${source}_v1`, url, {
       ttlSeconds: source === "remotive" ? 21600 : 3600,
       forceLive: source === "remotive" ? false : Boolean(options.forceLive),
-      timeoutMs: 7000,
+      timeoutMs: 7000,       minIntervalMs: source === "remotive" ? 21660000 : undefined,
     });
     const companies = normalize(result.data);
     return {
