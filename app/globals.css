@@ -5,13 +5,13 @@
 @layer base {
   :root {
     color-scheme: light;
-    --bg-cream: #F2F6F5;
+    --bg-cream: #FFF8F1;
     --surface-white: #FFFFFF;
     --surface-card: #FFFFFF;
-    --surface-muted: #E9F0EE;
+    --surface-muted: #F5EDE8;
     --surface-input: #FCFEFD;
-    --surface-header: rgba(249, 251, 250, 0.97);
-    --border-soft: #D3E1DD;
+    --surface-header: rgba(255, 249, 243, 0.97);
+    --border-soft: #E7D9D1;
     --text-warm: #172E2A;
     --text-muted: #536B65;
     --accent: #146B60;
@@ -25,23 +25,23 @@
     --pastel-amber: #80682F;
     --pastel-slate: #61756F;
     --pastel-red: #9F594D;
-    --pastel-peach: #DCEDE7;
+    --pastel-peach: #FFE1D4;
     --pastel-mint: #156B60;
     --pastel-mintSoft: #E3F1ED;
-    --pastel-lavender: #DDE9EF;
-    --pastel-lavenderSoft: #EEF4F6;
+    --pastel-lavender: #E9DDF7;
+    --pastel-lavenderSoft: #F5EEFC;
     --pastel-butter: #DFD2AA;
-    --pastel-butterSoft: #F4F0E3;
+    --pastel-butterSoft: #FFF3CB;
     --font-body: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
   }
   .dark {
     color-scheme: dark;
-    --bg-cream: #111F1F;
+    --bg-cream: #1B1C28;
     --surface-white: #203333;
     --surface-card: #1B2E2D;
     --surface-muted: #243B39;
     --surface-input: #172927;
-    --surface-header: rgba(17, 31, 31, 0.98);
+    --surface-header: rgba(27, 28, 40, 0.98);
     --border-soft: #39514D;
     --text-warm: #EEF6F3;
     --text-muted: #B6CAC5;
@@ -74,6 +74,12 @@
     @apply antialiased bg-[var(--bg-cream)] text-[var(--text-warm)] font-sans;
     font-feature-settings: "cv11", "ss01";
     -webkit-overflow-scrolling: touch;
+    background-image: radial-gradient(ellipse at 5% 0%, rgba(255, 155, 128, 0.14), transparent 38%), radial-gradient(ellipse at 90% 8%, rgba(126, 192, 181, 0.16), transparent 38%);
+    background-attachment: fixed;
+  }
+
+  .dark body {
+    background-image: radial-gradient(ellipse at 5% 0%, rgba(140, 94, 132, 0.18), transparent 38%), radial-gradient(ellipse at 90% 8%, rgba(52, 131, 118, 0.16), transparent 38%);
   }
 
   ::selection {
@@ -107,6 +113,7 @@
 @layer components {
   .soft-card {
     @apply rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] backdrop-blur-sm p-5 transition-all duration-300;
+    box-shadow: 0 8px 24px rgba(71, 49, 54, 0.06);
   }
 
   .soft-card-hover {
@@ -115,6 +122,18 @@
 
   .btn-pastel {
     @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold text-sm transition-all duration-200 hover:bg-[var(--accent-hover)] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-pastel {
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--accent-hover) 65%, transparent);
+  }
+
+  .btn-pastel:hover:not(:disabled) {
+    transform: translateY(-2px);
+  }
+
+  .btn-pastel:active:not(:disabled) {
+    transform: translateY(1px);
   }
 
   .btn-ghost {
