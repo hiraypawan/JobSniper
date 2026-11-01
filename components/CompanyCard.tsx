@@ -213,6 +213,14 @@ export function CompanyCard({
         )}
       </div>
 
+      <a
+        href={`/companies/${encodeURIComponent(company.id)}`}
+        onClick={(event) => event.stopPropagation()}
+        className="mt-3 inline-block text-xs font-semibold text-[var(--accent)] underline underline-offset-2"
+      >
+        Company profile
+      </a>
+
       {/* Footer */}
       <div className="mt-5 pt-4 border-t border-[var(--border-soft)] flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
