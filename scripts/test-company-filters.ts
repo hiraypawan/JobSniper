@@ -1,6 +1,27 @@
 import assert from "node:assert/strict";
 import { queryCompanies } from "@/workers/db";
 import type { WorkerEnv } from "@/lib/cf-types";
+import { normalizeRareRolesJobs } from "@/workers/fetchers/rareRoles";
+
+// RareRoles fixtures retain each posting's own geography, level and apply URL.
+const rareFixture = normalizeRareRolesJobs({ jobs: [
+  { id: "1", company: "Example", title: "Junior Engineer", location: "Bengaluru, India", work_type: "On-site", experience_level: "Entry", apply_url: "https://example.org/jobs/1", posted_date: "2026-10-01T00:00:00Z" },
+  { id: "2", company: "Example", title: "Senior Engineer", location: "Remote - USA", work_type: "Remote", experience_level: "Senior", apply_url: "https://example.org/jobs/2" },
+  { id: "3", company: "Other", title: "Engineer", apply_url: "javascript:alert(1)" },
+] });
+assert.equal(rareFixture.length, 1);
+assert.equal(rareFixture[0].website, "");
+assert.equal(rareFixture[0].jobs?.length, 2);
+assert.equal(rareFixture[0].jobs?.[0].location, "Bengaluru, India");
+assert.equal(rareFixture[0].jobs?.[0].remote, false);
+assert.match(rareFixture[0].jobs?.[0].description || "", /Source-listed level: Entry/);
+assert.equal(rareFixture[0].jobs?.[0].posted_at, "2026-10-01");
+assert.equal(rareFixture[0].jobs?.[1].location, "Remote - USA");
+assert.equal(rareFixture[0].jobs?.[1].remote, true);
+assert.equal(rareFixture[0].jobs?.[1].title, "Senior Engineer");
+assert.throws(() => normalizeRareRolesJobs({}));
+
+
 
 class MockStatement {
   constructor(private readonly db: MockDatabase, private readonly sql: string) {}
