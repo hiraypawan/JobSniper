@@ -152,7 +152,7 @@ export function normalizeRemotiveJobs(payload: { jobs?: RemotiveJob[] }): Normal
   const roles = (Array.isArray(payload.jobs) ? payload.jobs : []).flatMap((job) => {
     const location = (job.candidate_required_location || "").trim();
     const url = safeListingUrl(job.url);
-    if (!url || !isIndiaEligibleLocation(location)) return [];
+    if (!url) return [];
     return [{
       companyName: job.company_name || "",
       title: job.title || "",
@@ -212,7 +212,7 @@ async function fetchFeed<T>(
       companies,
       durationMs: Date.now() - started,
       mode: result.fromCache ? "cached" : "live",
-      note: `Read ${companies.reduce((count, company) => count + (company.jobs?.length || 0), 0)} India/Asia/worldwide-eligible roles; only source-listed location eligibility is included.`,
+      note: `Read ${companies.reduce((count, company) => count + (company.jobs?.length || 0), 0)} roles with their source-listed locations; eligibility is not inferred from a generic remote label.`,
     };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
