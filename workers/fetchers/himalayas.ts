@@ -19,8 +19,8 @@ export interface HimalayasJob {
 }
 
 function strings(value: unknown): string[] | null {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) return null;
-  return value.map((item: string) => item.trim()).filter(Boolean);
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string" && item.trim().length > 0)) return null;
+  return value.map((item: string) => item.trim());
 }
 
 function validApplicationLink(value: unknown): value is string {
